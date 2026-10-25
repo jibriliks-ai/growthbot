@@ -1,6 +1,6 @@
 // ============================================================
 // GrowthBot — Main Express server
-// v3.1 — wires SEO, keywords, backlinks, video, social, and MOD 5 leads
+// v3.2 — SEO, keywords, backlinks, video, social, leads, Q&A module, multi-business
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -19,24 +19,43 @@ dotenv.config();
 // MODULES
 // ============================================================
 import {
+  // Schema init
   initSchema, initSocialSchema, initLeadsSchema,
+  // Blogs & plans
   getOrCreateBlog, getBlog, upgradeToPremium,
+  // Usage counters
   tryIncrementAudit, tryIncrementVideo,
+  // Audit history
   logAudit,
+  // Render jobs
   createRenderJob, updateRenderJob,
+  // Businesses (multi)
   createBusiness, getBusiness, getBusinessByApiKey, updateBusiness,
+  listBusinesses, deleteBusiness, getBusinessLimitForPlan,
+  // Campaigns & smart links
   createCampaign, getCampaign, listCampaigns, updateCampaign,
   createSmartLink, listSmartLinks,
+  // Leads
   createLead, listLeads, updateLead, markLeadDelivered,
+  // Reviews & analytics
   listReviews, getBusinessAnalytics,
+  // Social
   getSocialAccounts, upsertSocialAccount,
+  // Q&A module
+  saveQuestionFinds, listQuestionFinds, getQuestionFind,
+  saveDraft, listDrafts, updateDraftStatus,
 } from './db.js';
 
+// ============================================================
+// MODULE IMPORTS
+// ============================================================
 import { fullAudit } from './seoEngine.js';
 import { submitWithJobLog, verifyKeyFile, verifySitemap } from './indexnow.js';
 import { generateListingPackages } from './listingGenerator.js';
 import { analyzeKeywords } from './keywordEngine.js';
-import { createVideo, pollShotstackStatus, DURATION_PRESETS, STYLE_TEMPLATES } from './videoEngine.js';
+import {
+  createVideo, pollShotstackStatus, DURATION_PRESETS, STYLE_TEMPLATES,
+} from './videoEngine.js';
 import { postForAccount, encryptToken } from './socialPoster.js';
 import { startScheduler, runSocialNow } from './scheduler.js';
 import {
@@ -47,6 +66,8 @@ import {
   isWhatsAppConfigured,
   smartLinkUrl,
 } from './leadEngine.js';
+import { findQuestions, listSupportedCountries } from './questionFinder.js';
+import { generateDraft } from './draftGenerator.js';
 
 // ============================================================
 // CONFIG
@@ -76,14 +97,13 @@ if (AI_PROVIDER === 'deepseek' && process.env.DEEPSEEK_API_KEY) {
 // APP
 // ============================================================
 const app = express();
-app.set('trust proxy', 1); // Render / Render-like proxies
+app.set('trust proxy', 1);
 
 // ============================================================
 // MIDDLEWARE
 // ============================================================
 app.use(
   helmet({
-    // Dashboard + widget use inline scripts, and the widget is embedded cross-origin
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -92,12 +112,11 @@ app.use(
 
 app.use(
   cors({
-    origin: '*', // widget must load from any Blogger / blog domain
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   })
 );
 
-// Skip logging for static files and webhooks (PII in webhook payloads)
 app.use(
   morgan(NODE_ENV === 'production' ? 'combined' : 'dev', {
     skip: (req) =>
@@ -106,7 +125,6 @@ app.use(
   })
 );
 
-// Body parsers — webhook routes first so they get their own limit
 app.use('/api/webhook/flutterwave', express.json({ limit: '1mb' }));
 app.use('/api/webhook/whatsapp', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '5mb' }));
@@ -120,7 +138,6 @@ app.use(
     maxAge: NODE_ENV === 'production' ? '1h' : 0,
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('widget.js')) {
-        // Widget is loaded by every blog visitor — 5-minute cache
         res.setHeader('Cache-Control', 'public, max-age=300');
         res.setHeader('Access-Control-Allow-Origin', '*');
       }
@@ -141,7 +158,7 @@ const generalLimiter = rateLimit({
 
 const checkPlanLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30, // widget polls this
+  max: 30,
   message: { error: 'Too many plan checks' },
 });
 
@@ -159,8 +176,20 @@ const videoLimiter = rateLimit({
 
 const webhookLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 1000, // webhooks must succeed even under load
+  max: 1000,
   message: { error: 'Webhook rate limit exceeded' },
+});
+
+const questionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 15,
+  message: { error: 'Too many question searches — try again later' },
+});
+
+const draftLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 40,
+  message: { error: 'Too many draft requests — try again later' },
 });
 
 // ============================================================
@@ -202,7 +231,7 @@ function getClientIp(req) {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    version: '3.1.0',
+    version: '3.2.0',
     env: NODE_ENV,
     uptime: Math.round(process.uptime()),
     ai: AI_PROVIDER,
@@ -224,6 +253,9 @@ app.get('/health', (req, res) => {
       indexnow: Boolean(process.env.INDEXNOW_KEY),
       dataForSeo: Boolean(
         process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD
+      ),
+      googleCse: Boolean(
+        process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_ID
       ),
     },
     time: new Date().toISOString(),
@@ -254,6 +286,7 @@ app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => 
         freeAudits: Number(process.env.FREE_AUDITS_PER_DAY) || 3,
         premiumVideos: Number(process.env.PREMIUM_VIDEOS_PER_MONTH) || 30,
         backlinks: Number(process.env.PREMIUM_BACKLINKS_PER_DAY) || 10,
+        businesses: blog.plan === 'premium' ? 3 : 1,
         price: PREMIUM_PRICE_NGN,
       },
     });
@@ -496,12 +529,30 @@ app.post('/api/social/post-now', generalLimiter, requireApiKey, async (req, res)
 });
 
 // ============================================================
-// BUSINESSES
+// BUSINESSES — MULTI (up to 3 for premium, 1 for free)
 // ============================================================
 app.post('/api/businesses', generalLimiter, requireApiKey, async (req, res) => {
   try {
     const business = await createBusiness({ apiKey: req.apiKey, ...req.body });
     res.json({ business });
+  } catch (e) {
+    if (e.code === 'BUSINESS_LIMIT') {
+      return res.status(403).json({
+        error: 'BUSINESS_LIMIT',
+        message: e.message,
+        limit: e.limit,
+        count: e.count,
+      });
+    }
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/businesses/list', generalLimiter, requireApiKey, async (req, res) => {
+  try {
+    const businesses = await listBusinesses(req.apiKey);
+    const limit = await getBusinessLimitForPlan(req.apiKey);
+    res.json({ businesses, limit, count: businesses.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -528,6 +579,14 @@ app.get('/api/businesses/:id', generalLimiter, async (req, res) => {
 app.put('/api/businesses/:id', generalLimiter, requireApiKey, async (req, res) => {
   try {
     res.json({ business: await updateBusiness(Number(req.params.id), req.body) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/businesses/:id', generalLimiter, requireApiKey, async (req, res) => {
+  try {
+    res.json({ business: await deleteBusiness(Number(req.params.id)) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -696,6 +755,136 @@ app.get('/api/businesses/:id/analytics', generalLimiter, async (req, res) => {
 });
 
 // ============================================================
+// Q&A MODULE — Question Finder + AI Drafter
+// ============================================================
+app.get('/api/questions/sources', (req, res) => {
+  res.json({ countries: listSupportedCountries() });
+});
+
+app.post('/api/questions/find', questionLimiter, requireApiKey, async (req, res) => {
+  const { businessId, keyword, country = 'ng' } = req.body;
+  if (!businessId || !keyword) {
+    return res.status(400).json({ error: 'businessId and keyword required' });
+  }
+
+  // Premium-only feature
+  const blog = await getBlog(req.apiKey);
+  if (!blog || blog.plan !== 'premium') {
+    return res.status(403).json({
+      error: 'PREMIUM_REQUIRED',
+      message: 'Question Finder is a Premium feature',
+    });
+  }
+
+  try {
+    const found = await findQuestions({
+      keyword,
+      country,
+      limitPerSource: 10,
+    });
+    const saved = await saveQuestionFinds(
+      Number(businessId), keyword, country, found.results
+    );
+    res.json({
+      keyword,
+      country,
+      totalFound: found.totalFound,
+      newlySaved: saved.length,
+      sourceStatus: found.sourceStatus,
+      warnings: found.warnings,
+      questions: saved,
+    });
+  } catch (e) {
+    console.error('Question find error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/businesses/:id/questions', generalLimiter, requireApiKey, async (req, res) => {
+  try {
+    res.json({
+      questions: await listQuestionFinds(Number(req.params.id), {
+        status: req.query.status || null,
+        limit: Number(req.query.limit) || 100,
+      }),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, res) => {
+  const { blogUrl, blogTitle } = req.body;
+  if (!blogUrl) return res.status(400).json({ error: 'blogUrl required' });
+
+  const blog = await getBlog(req.apiKey);
+  if (!blog || blog.plan !== 'premium') {
+    return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
+  }
+
+  try {
+    const question = await getQuestionFind(Number(req.params.id));
+    if (!question) return res.status(404).json({ error: 'Question not found' });
+
+    const result = await generateDraft({
+      questionTitle: question.title,
+      questionUrl: question.question_url,
+      blogTitle: blogTitle || blog.url || 'Full guide',
+      blogUrl,
+    });
+
+    if (!result.ok) {
+      return res.status(422).json({
+        error: 'DRAFT_REJECTED',
+        reason: result.reason,
+        draft: result.draft,
+      });
+    }
+
+    const saved = await saveDraft({
+      businessId: question.business_id,
+      questionId: question.id,
+      draftText: result.draft,
+      blogUrl,
+      platform: result.platform,
+      wordCount: result.wordCount,
+    });
+
+    res.json({
+      draft: saved,
+      platform: result.platform,
+      wordCount: result.wordCount,
+    });
+  } catch (e) {
+    console.error('Draft error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/businesses/:id/drafts', generalLimiter, requireApiKey, async (req, res) => {
+  try {
+    res.json({
+      drafts: await listDrafts(Number(req.params.id), {
+        status: req.query.status || null,
+        limit: Number(req.query.limit) || 100,
+      }),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/drafts/:id/status', generalLimiter, requireApiKey, async (req, res) => {
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: 'status required' });
+  try {
+    res.json({ draft: await updateDraftStatus(Number(req.params.id), status) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================================
 // SMART LINK REDIRECT — /l/:slug
 // ============================================================
 app.get('/l/:slug', async (req, res) => {
@@ -706,7 +895,6 @@ app.get('/l/:slug', async (req, res) => {
       userAgent: req.headers['user-agent'] || null,
       referrer: req.headers['referer'] || null,
     });
-    // 302 not 301 — every click must hit the server for tracking
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.redirect(302, result.redirectUrl);
   } catch (e) {
@@ -722,7 +910,6 @@ app.get('/l/:slug', async (req, res) => {
 // WEBHOOK: FLUTTERWAVE
 // ============================================================
 app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
-  // 1. Verify verif-hash (direct comparison — Flutterwave's documented method)
   const expectedHash = process.env.FLUTTERWAVE_SECRET_HASH;
   const providedHash = req.headers['verif-hash'];
   if (!expectedHash) {
@@ -734,10 +921,8 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  // 2. Acknowledge immediately — Flutterwave retries on non-2xx
   res.status(200).json({ received: true });
 
-  // 3. Process asynchronously
   try {
     const event = req.body;
     if (event?.event !== 'charge.completed') {
@@ -756,7 +941,6 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
       return;
     }
 
-    // 4. Server-side verification — the security step that matters
     const verifyRes = await axios.get(
       `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`,
       {
@@ -770,7 +954,6 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
       return;
     }
 
-    // 5. Check amount + currency
     if (Number(verified.amount) < PREMIUM_PRICE_NGN) {
       console.warn(
         `❌ Amount mismatch: got ${verified.amount}, expected ${PREMIUM_PRICE_NGN}`
@@ -782,7 +965,6 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
       return;
     }
 
-    // 6. Upgrade the user
     const blog = await upgradeToPremium(apiKey, verified.customer?.email || email);
     if (!blog) {
       console.warn('❌ Could not upgrade blog:', apiKey);
@@ -799,7 +981,6 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
 // ============================================================
 // WEBHOOK: WHATSAPP
 // ============================================================
-// GET — verification challenge
 app.get('/api/webhook/whatsapp', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -811,7 +992,6 @@ app.get('/api/webhook/whatsapp', (req, res) => {
   res.status(403).send('Forbidden');
 });
 
-// POST — inbound messages
 app.post('/api/webhook/whatsapp', webhookLimiter, async (req, res) => {
   res.status(200).json({ received: true });
   try {
@@ -828,7 +1008,7 @@ app.post('/api/webhook/whatsapp', webhookLimiter, async (req, res) => {
 });
 
 // ============================================================
-// CRON TRIGGERS (external cron can call these)
+// CRON TRIGGERS
 // ============================================================
 app.post('/api/cron/social', requireCronSecret, async (req, res) => {
   try {
@@ -848,7 +1028,7 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
 });
 
 // ============================================================
-// PAYMENT INIT (for pay.html)
+// PAYMENT INIT
 // ============================================================
 app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) => {
   const txRef = `GB_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -863,7 +1043,6 @@ app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) =>
   });
 });
 
-// Demo upgrade — only when explicitly enabled
 app.post('/api/payment/demo-upgrade', generalLimiter, requireApiKey, async (req, res) => {
   if (process.env.DEMO_MODE !== 'true') {
     return res.status(403).json({ error: 'Demo mode is disabled' });
@@ -914,7 +1093,7 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 GrowthBot v3.1 on port ${PORT}`);
+      console.log(`🚀 GrowthBot v3.2 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
