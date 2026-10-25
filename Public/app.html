@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>GrowthBot — Business Tools</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#7c3aed" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #18181b;
+      --surface-2: #27272a;
+      --border: #27272a;
+      --border-strong: #3f3f46;
+      --text: #e4e4e7;
+      --muted: #a1a1aa;
+      --dim: #71717a;
+      --accent: #7c3aed;
+      --accent-2: #4f46e5;
+      --accent-light: #a78bfa;
+      --success: #4ade80;
+      --error: #f87171;
+      --warning: #facc15;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+    button, input, select, textarea { font-family: inherit; }
+    button { cursor: pointer; border: none; background: none; color: inherit; }
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: calc(12px + var(--safe-top)) 16px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(124,58,237,0.3);
+    }
+    .brand-text { min-width: 0; }
+    .brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+      font-weight: 500;
+    }
+    .plan-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: var(--surface-2);
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .plan-pill.premium {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+    }
+
+    /* Main */
+    .main {
+      flex: 1;
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px;
+      overflow-y: auto;
+      padding-bottom: 100px;
+    }
+
+    /* Mobile bottom nav */
+    .nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 20;
+      padding-bottom: var(--safe-bottom);
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 10px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      transition: color 0.15s ease;
+      min-height: 56px;
+    }
+    .nav-item .icon { font-size: 20px; line-height: 1; }
+    .nav-item.active { color: var(--accent-light); }
+    .nav-item.locked::after { content: ' 🔒'; font-size: 9px; }
+
+    /* Common UI */
+    .label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      margin: 14px 0 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .label:first-child { margin-top: 0; }
+    .input, .select, .textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s ease;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--accent); }
+    .textarea { resize: vertical; min-height: 70px; }
+    .select {
+      background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+                        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+      background-size: 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 34px;
+    }
+    .select option { background: var(--surface); color: var(--text); }
+    .btn {
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.15s ease;
+      margin-top: 12px;
+      min-height: 46px;
+    }
+    .btn:hover:not(:disabled) { background: #6d28d9; }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.secondary { background: var(--surface-2); color: var(--text); }
+    .btn.secondary:hover:not(:disabled) { background: var(--border-strong); }
+    .btn.small { padding: 8px 14px; font-size: 12px; width: auto; margin-top: 8px; min-height: 34px; }
+
+    /* Home */
+    .greet { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .title { font-size: 22px; font-weight: 800; margin-bottom: 4px; line-height: 1.2; }
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+    .section { margin-bottom: 24px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--dim);
+      margin-bottom: 10px;
+    }
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .quick {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 8px 14px;
+      text-align: center;
+      transition: all 0.15s ease;
+      min-height: 100px;
+    }
+    .quick:hover:not(:disabled) {
+      background: var(--surface-2);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .quick:disabled { opacity: 0.5; cursor: not-allowed; }
+    .quick .icon { font-size: 28px; display: block; margin-bottom: 6px; line-height: 1; }
+    .quick .lbl { font-size: 12px; font-weight: 600; }
+    .quick .sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-light), #60a5fa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-lbl {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .plan-card {
+      background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(79,70,229,0.08));
+      border: 1px solid rgba(124,58,237,0.35);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .plan-info { flex: 1; min-width: 140px; }
+    .plan-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: var(--surface-2);
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .plan-badge.premium {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+    }
+    .plan-name { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .plan-desc { font-size: 11px; color: var(--muted); }
+    .plan-upgrade {
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    /* Menu */
+    .menu-list {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      color: var(--text);
+      width: 100%;
+      text-align: left;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s ease;
+      min-height: 54px;
+    }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item:hover { background: var(--surface-2); }
+    .menu-item .icon { font-size: 20px; width: 24px; text-align: center; flex-shrink: 0; }
+    .menu-item .text { flex: 1; }
+    .menu-item .arrow { color: var(--dim); font-size: 18px; }
+
+    /* Status */
+    .status {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+    .status.info { background: rgba(124,58,237,0.12); color: var(--accent-light); }
+    .status.success { background: rgba(74,222,128,0.1); color: var(--success); }
+    .status.error { background: rgba(248,113,113,0.1); color: var(--error); }
+    .status.warning { background: rgba(250,204,21,0.1); color: var(--warning); }
+
+    /* List */
+    .list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .list-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      background: var(--surface);
+      border-left: 3px solid var(--border-strong);
+      color: #d4d4d8;
+      line-height: 1.5;
+    }
+    .list-item.error { border-left-color: var(--error); }
+    .list-item.warning { border-left-color: var(--warning); }
+    .list-item.success { border-left-color: var(--success); color: var(--success); }
+
+    /* Score */
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 20px 0;
+      margin-bottom: 12px;
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .score-num {
+      font-size: 44px;
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--accent-light), #60a5fa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .score-num.good {
+      background: linear-gradient(135deg, #4ade80, #22c55e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .score-lbl {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      text-align: center;
+    }
+    .score-arrow { color: var(--accent-light); font-size: 24px; }
+
+    /* Box / package */
+    .box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #d4d4d8;
+      margin-bottom: 12px;
+    }
+    .box strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .pkg {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .pkg-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .pkg-platform { font-weight: 700; font-size: 13px; }
+    .pkg-title { font-size: 12px; color: var(--accent-light); margin-bottom: 6px; word-break: break-word; }
+    .pkg-desc { font-size: 12px; color: var(--muted); line-height: 1.5; max-height: 100px; overflow-y: auto; }
+
+    /* Subtabs */
+    .subtabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      padding: 4px;
+      border-radius: 10px;
+    }
+    .subtab {
+      flex: 1;
+      padding: 9px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      transition: all 0.15s ease;
+    }
+    .subtab.active { background: var(--accent); color: #fff; }
+
+    /* Loading */
+    .spin {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Video preview */
+    .video-preview {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      max-height: 360px;
+      border-radius: 10px;
+      background: #000;
+      border: 1px solid var(--border);
+      margin-top: 12px;
+      overflow: hidden;
+    }
+    .video-preview video { width: 100%; height: 100%; object-fit: contain; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: calc(80px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--success);
+      color: #052e16;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 30;
+      animation: toast-in 0.2s ease-out;
+      pointer-events: none;
+      max-width: calc(100vw - 40px);
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translate(-50%, 8px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    /* Setup screen */
+    .setup {
+      max-width: 420px;
+      margin: 60px auto;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .setup-icon { font-size: 56px; margin-bottom: 20px; }
+    .setup h1 { font-size: 22px; margin-bottom: 10px; }
+    .setup p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+    .setup .input { max-width: 320px; margin: 0 auto; }
+    .setup .btn { max-width: 320px; margin: 10px auto 0; }
+
+    /* Desktop tabs */
+    .desktop-tabs { display: none; }
+    @media (min-width: 900px) {
+      .nav { display: none; }
+      .main { padding-bottom: 24px; }
+      .desktop-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 8px 16px 0;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        position: sticky;
+        top: 57px;
+        z-index: 19;
+      }
+      .desktop-tab {
+        padding: 10px 16px;
+        border-radius: 8px 8px 0 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        background: transparent;
+      }
+      .desktop-tab.active { color: var(--text); background: var(--bg); }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">
+    <div class="brand-mark">✨</div>
+    <div class="brand-text">
+      <div class="brand-title" id="brandTitle">GrowthBot</div>
+      <div class="brand-sub" id="brandSub">Business tools</div>
+    </div>
+  </div>
+  <span class="plan-pill" id="planPill">Loading…</span>
+</header>
+
+<nav class="desktop-tabs" id="desktopTabs"></nav>
+
+<main class="main" id="main">
+  <div style="text-align:center;padding:60px 20px;color:var(--muted)">Loading…</div>
+</main>
+
+<nav class="nav" id="mobileNav"></nav>
+
+<script>
+(function () {
+  'use strict';
+
+  const params = new URLSearchParams(location.search);
+  const BACKEND = location.origin;
+
+  const state = {
+    apiKey: params.get('key') || localStorage.getItem('gb_apikey') || '',
+    plan: 'free',
+    usage: {},
+    limits: { freeAudits: 3, premiumVideos: 30, backlinks: 10, price: 5000 },
+    business: null,
+    analytics: null,
+    tab: 'home',
+    subTab: 'indexnow',
+    pollTimer: null,
+  };
+
+  if (state.apiKey) {
+    try { localStorage.setItem('gb_apikey', state.apiKey); } catch {}
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const main = $('main');
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function toast(msg) {
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1800);
+  }
+
+  async function copy(text, label) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(label || 'Copied!');
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'absolute';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); toast(label || 'Copied!'); }
+      catch { toast('Copy failed'); }
+      finally { ta.remove(); }
+    }
+  }
+
+  async function api(path, opts) {
+    const options = Object.assign({ method: 'GET' }, opts || {});
+    if (options.body && typeof options.body !== 'string') {
+      options.body = JSON.stringify(options.body);
+      options.headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+    }
+    const res = await fetch(BACKEND + path, options);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(data.error || data.message || 'HTTP ' + res.status);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  }
+
+  function renderSetup() {
+    $('brandTitle').textContent = 'GrowthBot';
+    $('brandSub').textContent = 'Setup required';
+    $('planPill').textContent = 'No key';
+    $('planPill').classList.remove('premium');
+    $('mobileNav').innerHTML = '';
+    $('desktopTabs').innerHTML = '';
+    main.innerHTML = `
+      <div class="setup">
+        <div class="setup-icon">🔑</div>
+        <h1>Enter your API key</h1>
+        <p>Paste the key from your widget code (the <code>data-key</code> value).</p>
+        <input id="setupKey" class="input" placeholder="schoolcure_a1b2c3d4" />
+        <button id="setupGo" class="btn">Continue</button>
+        <div id="setupErr"></div>
+      </div>
+    `;
+    $('setupGo').addEventListener('click', () => {
+      const k = $('setupKey').value.trim();
+      if (k.length < 4) { $('setupErr').innerHTML = '<div class="status error">Key too short</div>'; return; }
+      state.apiKey = k;
+      try { localStorage.setItem('gb_apikey', k); } catch {}
+      init();
+    });
+    $('setupKey').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') $('setupGo').click();
+    });
+  }
+
+  const TABS = [
+    { key: 'home', icon: '🏠', label: 'Home' },
+    { key: 'seo', icon: '🔍', label: 'SEO' },
+    { key: 'video', icon: '🎬', label: 'Video', premium: true },
+    { key: 'links', icon: '🔗', label: 'Links', premium: true },
+    { key: 'more', icon: '⋯', label: 'More' },
+  ];
+
+  function renderNav() {
+    const isFree = state.plan === 'free';
+    $('mobileNav').innerHTML = TABS.map(t => `
+      <button class="nav-item ${state.tab === t.key ? 'active' : ''} ${t.premium && isFree ? 'locked' : ''}" data-tab="${t.key}">
+        <span class="icon">${t.icon}</span>
+        <span>${t.label}</span>
+      </button>
+    `).join('');
+    $('desktopTabs').innerHTML = TABS.map(t => `
+      <button class="desktop-tab ${state.tab === t.key ? 'active' : ''}" data-tab="${t.key}">
+        ${t.icon} ${t.label}${t.premium && isFree ? ' 🔒' : ''}
+      </button>
+    `).join('');
+    document.querySelectorAll('.nav-item, .desktop-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-tab');
+        if (target === state.tab) return;
+        const tabDef = TABS.find(t => t.key === target);
+        if (tabDef && tabDef.premium && state.plan === 'free') {
+          renderUpgradePrompt(target);
+          return;
+        }
+        stopPolling();
+        state.tab = target;
+        renderNav();
+        renderTab();
+      });
+    });
+  }
+
+  function updateHeader() {
+    $('brandTitle').textContent = state.business?.name || 'GrowthBot';
+    $('brandSub').textContent = state.business?.category || 'Business tools';
+    const pill = $('planPill');
+    if (state.plan === 'premium') {
+      pill.textContent = '⭐ Premium';
+      pill.classList.add('premium');
+    } else {
+      pill.textContent = 'Free plan';
+      pill.classList.remove('premium');
+    }
+  }
+
+  async function loadPlan() {
+    try {
+      const data = await api('/api/check-plan?key=' + encodeURIComponent(state.apiKey) + '&url=' + encodeURIComponent(location.href));
+      state.plan = data.plan || 'free';
+      state.usage = data.usage || {};
+      state.limits = Object.assign(state.limits, data.limits || {});
+    } catch (e) {
+      console.warn('[GrowthBot] Plan fetch failed:', e.message);
+    }
+  }
+
+  async function loadBusiness() {
+    try {
+      const r = await api('/api/businesses/me');
+      state.business = r.business;
+    } catch { state.business = null; }
+  }
+
+  async function loadAnalytics() {
+    if (!state.business) return;
+    try {
+      const r = await api('/api/businesses/' + state.business.id + '/analytics');
+      state.analytics = r.analytics;
+    } catch { state.analytics = null; }
+  }
+
+  function renderTab() {
+    main.scrollTop = 0;
+    if (state.tab === 'home') renderHome();
+    else if (state.tab === 'seo') renderSEO();
+    else if (state.tab === 'video') renderVideo();
+    else if (state.tab === 'links') renderLinks();
+    else if (state.tab === 'more') renderMore();
+  }
+
+  function renderHome() {
+    const isFree = state.plan === 'free';
+    const audits = state.usage.auditsToday || 0;
+    const videos = state.usage.videosMonth || 0;
+    const leads = state.analytics?.leads || 0;
+    const hour = new Date().getHours();
+    const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+    main.innerHTML = `
+      <div class="greet">${greet} 👋</div>
+      <div class="title">${esc(state.business?.name || 'Welcome')}</div>
+      <div class="subtitle">${state.business ? 'Grow your business today.' : 'Set up your business to unlock all features.'}</div>
+
+      <div class="section">
+        <div class="section-title">Quick actions</div>
+        <div class="quick-grid">
+          <button class="quick" data-go="seo">
+            <span class="icon">🔍</span>
+            <div class="lbl">Audit</div>
+            <div class="sub">${isFree ? (state.limits.freeAudits - audits) + ' left' : 'Unlimited'}</div>
+          </button>
+          <button class="quick" data-go="video" ${isFree ? 'disabled' : ''}>
+            <span class="icon">🎬</span>
+            <div class="lbl">Video</div>
+            <div class="sub">${isFree ? '🔒 Premium' : 'Create ad'}</div>
+          </button>
+          <button class="quick" data-go="links" ${isFree ? 'disabled' : ''}>
+            <span class="icon">🔗</span>
+            <div class="lbl">Links</div>
+            <div class="sub">${isFree ? '🔒 Premium' : 'Index & list'}</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">This month</div>
+        <div class="stats">
+          <div class="stat"><div class="stat-num">${audits}</div><div class="stat-lbl">Audits</div></div>
+          <div class="stat"><div class="stat-num">${videos}</div><div class="stat-lbl">Videos</div></div>
+          <div class="stat"><div class="stat-num">${leads}</div><div class="stat-lbl">Leads</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="plan-card">
+          <div class="plan-info">
+            <div class="plan-badge ${isFree ? '' : 'premium'}">${isFree ? 'Free' : '⭐ Premium'}</div>
+            <div class="plan-name">${isFree ? 'Upgrade to Premium' : 'Premium active'}</div>
+            <div class="plan-desc">${isFree ? 'Unlimited audits, videos, backlinks' : 'All features unlocked'}</div>
+          </div>
+          ${isFree ? `<a class="plan-upgrade" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener">Upgrade ₦${(state.limits.price || 5000).toLocaleString()}</a>` : ''}
+        </div>
+      </div>
+
+      ${!state.business ? `
+        <div class="section">
+          <button class="btn" id="openDashboard">Set up your business →</button>
+          <div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px">
+            Opens the dashboard
+          </div>
+        </div>
+      ` : ''}
+    `;
+
+    main.querySelectorAll('[data-go]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.getAttribute('data-go');
+        if (btn.disabled) return;
+        const tabDef = TABS.find(x => x.key === t);
+        if (tabDef && tabDef.premium && state.plan === 'free') {
+          renderUpgradePrompt(t);
+          return;
+        }
+        state.tab = t;
+        renderNav();
+        renderTab();
+      });
+    });
+
+    const od = $('openDashboard');
+    if (od) od.addEventListener('click', () => {
+      window.open(BACKEND + '/dashboard.html', '_blank');
+    });
+  }
+
+  function renderSEO() {
+    main.innerHTML = `
+      <label class="label">Page URL</label>
+      <input id="seoUrl" class="input" type="url" value="${esc(location.href)}" />
+      <label class="label">Target keyword (optional)</label>
+      <input id="seoKw" class="input" type="text" placeholder="e.g. jamb caps 2026" />
+      <button id="seoGo" class="btn">Audit & Auto-fix</button>
+      <div id="seoResult" aria-live="polite"></div>
+    `;
+    $('seoGo').addEventListener('click', async function () {
+      const btn = this;
+      const url = $('seoUrl').value.trim();
+      const keyword = $('seoKw').value.trim();
+      const result = $('seoResult');
+      if (!url) return;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span>Auditing…';
+      result.innerHTML = '<div class="status info">Analyzing page…</div>';
+      try {
+        const data = await api('/api/audit', {
+          method: 'POST',
+          body: { url, keyword, key: state.apiKey, autoFix: true },
+        });
+        renderAuditResult(result, data);
+        loadPlan().then(updateHeader);
+      } catch (e) {
+        if (e.status === 403 && e.data?.error === 'FREE_LIMIT') {
+          result.innerHTML = `<div class="status warning">Daily free limit reached. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700">Upgrade →</a></div>`;
+        } else {
+          result.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Audit & Auto-fix';
+      }
+    });
+  }
+
+  function renderAuditResult(container, data) {
+    const b = data.before || { score: 0, issues: [] };
+    const a = data.after;
+    const fixes = data.fixes || [];
+    let html = '<div class="score-row">';
+    html += `<div><div class="score-num">${b.score}</div><div class="score-lbl">Before</div></div>`;
+    if (a) html += `<div class="score-arrow">→</div><div><div class="score-num good">${a.score}</div><div class="score-lbl">After</div></div>`;
+    html += '</div>';
+    const issues = b.issues || [];
+    if (issues.length) {
+      html += '<div class="section-title">Issues (' + issues.length + ')</div><ul class="list">';
+      issues.slice(0, 8).forEach(i => {
+        const sev = i.severity === 'error' ? 'error' : 'warning';
+        html += `<li class="list-item ${sev}">${esc(i.message || i)}</li>`;
+      });
+      html += '</ul>';
+    } else {
+      html += '<div class="status success">✓ No critical issues</div>';
+    }
+    if (fixes.length) {
+      html += '<div class="section-title">Fixes (' + fixes.length + ')</div><ul class="list">';
+      fixes.slice(0, 8).forEach(f => {
+        html += `<li class="list-item success">${esc(f)}</li>`;
+      });
+      html += '</ul>';
+    }
+    html += '<button id="copyReport" class="btn secondary">Copy report</button>';
+    container.innerHTML = html;
+    $('copyReport').addEventListener('click', () => {
+      const txt = ['GrowthBot SEO Report', 'URL: ' + data.url, 'Score: ' + (b.score || 0) + (a ? ' → ' + a.score : ''), '', 'Issues:', ...(b.issues || []).map(i => '  - ' + (i.message || i)), '', 'Fixes:', ...(data.fixes || []).map(f => '  - ' + f)].join('\n');
+      copy(txt, 'Report copied!');
+    });
+  }
+
+  function renderVideo() {
+    main.innerHTML = `
+      <label class="label">Topic</label>
+      <input id="vidTopic" class="input" placeholder="Fresh cows available in Warri" />
+      <label class="label">Business name</label>
+      <input id="vidBiz" class="input" value="${esc(state.business?.name || '')}" />
+      <label class="label">Duration</label>
+      <select id="vidDur" class="select">
+        <option value="10">10 seconds</option>
+        <option value="15" selected>15 seconds</option>
+        <option value="20">20 seconds</option>
+        <option value="25">25 seconds</option>
+      </select>
+      <label class="label">Style</label>
+      <select id="vidStyle" class="select">
+        <option value="documentary">Documentary</option>
+        <option value="infomercial">Infomercial</option>
+        <option value="tutorial">Tutorial</option>
+        <option value="testimonial">Testimonial</option>
+        <option value="product-showcase">Product Showcase</option>
+      </select>
+      <button id="vidGo" class="btn">Generate Video</button>
+      <div id="vidResult" aria-live="polite"></div>
+    `;
+    $('vidGo').addEventListener('click', async function () {
+      const btn = this;
+      const topic = $('vidTopic').value.trim();
+      const businessName = $('vidBiz').value.trim();
+      const durationSeconds = Number($('vidDur').value);
+      const style = $('vidStyle').value;
+      const result = $('vidResult');
+      if (!topic) { result.innerHTML = '<div class="status warning">Enter a topic</div>'; return; }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span>Generating…';
+      result.innerHTML = '<div class="status info">Writing script + voiceover…</div>';
+      try {
+        const data = await api('/api/create-video', {
+          method: 'POST',
+          body: { key: state.apiKey, topic, businessName, durationSeconds, style },
+        });
+        let html = '';
+        if (data.script) {
+          html += '<div class="box"><strong>Script</strong>' + esc(data.script.fullScript || '') + '</div>';
+          if (data.script.caption) html += '<div class="box"><strong>Caption</strong>' + esc(data.script.caption) + '</div>';
+        }
+        if (data.renderId && data.pollUrl) {
+          html += '<div class="status info" id="vidStatus">Rendering MP4…</div><div id="vidPreview"></div>';
+          result.innerHTML = html;
+          startPolling(data.pollUrl, result);
+        } else {
+          result.innerHTML = html + '<div class="status success">Ready</div>';
+        }
+      } catch (e) {
+        if (e.status === 403) {
+          result.innerHTML = `<div class="status warning">Premium required. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700">Upgrade →</a></div>`;
+        } else {
+          result.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Video';
+      }
+    });
+  }
+
+  function startPolling(pollUrl, container) {
+    stopPolling();
+    const tick = async () => {
+      try {
+        const data = await api(pollUrl);
+        const s = container.querySelector('#vidStatus');
+        const p = container.querySelector('#vidPreview');
+        if (data.status === 'done' && data.url) {
+          if (s) { s.className = 'status success'; s.textContent = '✓ Ready!'; }
+          if (p) {
+            p.innerHTML = `
+              <div class="video-preview"><video src="${esc(data.url)}" controls muted playsinline></video></div>
+              <a class="btn" href="${esc(data.url)}" target="_blank" rel="noopener" download style="display:block;text-align:center;margin-top:10px;text-decoration:none">⬇ Download MP4</a>
+            `;
+          }
+          return;
+        }
+        if (data.status === 'failed') {
+          if (s) { s.className = 'status error'; s.textContent = 'Render failed'; }
+          return;
+        }
+        state.pollTimer = setTimeout(tick, 5000);
+      } catch { state.pollTimer = setTimeout(tick, 8000); }
+    };
+    tick();
+  }
+  function stopPolling() {
+    if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
+  }
+
+  function renderLinks() {
+    main.innerHTML = `
+      <div class="subtabs">
+        <button class="subtab ${state.subTab === 'indexnow' ? 'active' : ''}" data-sub="indexnow">IndexNow</button>
+        <button class="subtab ${state.subTab === 'listing' ? 'active' : ''}" data-sub="listing">Listings</button>
+      </div>
+      <div id="linksContent"></div>
+    `;
+    main.querySelectorAll('.subtab').forEach(t => t.addEventListener('click', () => {
+      state.subTab = t.getAttribute('data-sub');
+      renderLinks();
+    }));
+    if (state.subTab === 'indexnow') renderIndexNow($('linksContent'));
+    else renderListing($('linksContent'));
+  }
+
+  function renderIndexNow(container) {
+    container.innerHTML = `
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">Submit a URL to Bing, Yandex, Naver, Seznam.</p>
+      <label class="label">Page URL</label>
+      <input id="inUrl" class="input" type="url" value="${esc(location.href)}" />
+      <button id="inGo" class="btn">Submit to IndexNow</button>
+      <div id="inResult"></div>
+    `;
+    $('inGo').addEventListener('click', async function () {
+      const btn = this;
+      const url = $('inUrl').value.trim();
+      if (!url) return;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span>Submitting…';
+      try {
+        const data = await api('/api/backlink/indexnow', {
+          method: 'POST',
+          body: { key: state.apiKey, urls: [url], siteUrl: url },
+        });
+        const ok = data.ok !== false;
+        $('inResult').innerHTML = `<div class="status ${ok ? 'success' : 'error'}">${esc(data.message || (ok ? 'Submitted' : 'Failed'))}</div>`;
+      } catch (e) {
+        $('inResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Submit to IndexNow';
+      }
+    });
+  }
+
+  function renderListing(container) {
+    container.innerHTML = `
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">Copy-paste listings for Jiji, GBP, VConnect, Yellow Pages.</p>
+      <label class="label">Business name</label>
+      <input id="lbName" class="input" value="${esc(state.business?.name || '')}" />
+      <label class="label">Phone</label>
+      <input id="lbPhone" class="input" value="${esc(state.business?.phone || '')}" />
+      <label class="label">City</label>
+      <input id="lbCity" class="input" value="${esc(state.business?.city || '')}" />
+      <label class="label">Category</label>
+      <input id="lbCat" class="input" value="${esc(state.business?.category || '')}" />
+      <label class="label">Description</label>
+      <textarea id="lbDesc" class="textarea">${esc(state.business?.description || '')}</textarea>
+      <button id="lbGo" class="btn">Generate Listings</button>
+      <div id="lbResult"></div>
+    `;
+    $('lbGo').addEventListener('click', async function () {
+      const btn = this;
+      const profile = {
+        name: $('lbName').value.trim(),
+        phone: $('lbPhone').value.trim(),
+        city: $('lbCity').value.trim(),
+        category: $('lbCat').value.trim(),
+        description: $('lbDesc').value.trim(),
+      };
+      if (!profile.name) { $('lbResult').innerHTML = '<div class="status warning">Business name required</div>'; return; }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span>Generating…';
+      try {
+        const data = await api('/api/backlink/listing', {
+          method: 'POST',
+          body: { key: state.apiKey, profile },
+        });
+        let html = '';
+        if (data.napCheck && !data.napCheck.ok) html += '<div class="status warning">' + esc(data.napCheck.message) + '</div>';
+        Object.entries(data.packages || {}).forEach(([k, pkg]) => {
+          html += `
+            <div class="pkg">
+              <div class="pkg-head">
+                <span class="pkg-platform">${esc(pkg.platform)}</span>
+                <button class="btn small secondary" data-copy-pkg="${esc(k)}">Copy</button>
+              </div>
+              <div class="pkg-title">${esc(pkg.title)}</div>
+              <div class="pkg-desc">${esc(pkg.description)}</div>
+            </div>
+          `;
+        });
+        $('lbResult').innerHTML = html;
+        $('lbResult').querySelectorAll('[data-copy-pkg]').forEach(b => {
+          b.addEventListener('click', () => {
+            const key = b.getAttribute('data-copy-pkg');
+            const pkg = data.packages[key];
+            if (!pkg) return;
+            copy(`Title: ${pkg.title}\n\n${pkg.description}\n\nName: ${pkg.name}\nAddress: ${pkg.address}\nPhone: ${pkg.phone}\nCategory: ${pkg.category}`, pkg.platform + ' copied!');
+          });
+        });
+      } catch (e) {
+        $('lbResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Listings';
+      }
+    });
+  }
+
+  function renderMore() {
+    const isFree = state.plan === 'free';
+    main.innerHTML = `
+      <div class="section">
+        <div class="section-title">Account</div>
+        <div class="menu-list">
+          <button class="menu-item" data-link="dashboard"><span class="icon">📊</span><span class="text">Full dashboard</span><span class="arrow">→</span></button>
+          <button class="menu-item" data-link="dashboard"><span class="icon">🏢</span><span class="text">${state.business ? 'Edit business' : 'Set up business'}</span><span class="arrow">→</span></button>
+          <button class="menu-item" data-link="dashboard"><span class="icon">📣</span><span class="text">Campaigns</span><span class="arrow">→</span></button>
+          <button class="menu-item" data-link="dashboard"><span class="icon">👥</span><span class="text">Leads inbox</span><span class="arrow">→</span></button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Plan</div>
+        <div class="menu-list">
+          <button class="menu-item" data-link="pay"><span class="icon">${isFree ? '⭐' : '✅'}</span><span class="text">${isFree ? 'Upgrade' : 'Manage'}</span><span class="arrow">→</span></button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Developer</div>
+        <div class="menu-list">
+          <button class="menu-item" id="copyKey"><span class="icon">🔑</span><span class="text">Copy API key</span><span class="arrow">→</span></button>
+        </div>
+        <div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px">
+          Key: <code style="color:var(--accent-light)">${state.apiKey ? esc(state.apiKey.slice(0, 8)) + '…' : 'none'}</code>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:11px;color:var(--dim);padding:24px 0;line-height:1.6">
+        GrowthBot v4.0 · Made for Nigerian businesses
+      </div>
+    `;
+
+    main.querySelectorAll('[data-link]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const link = btn.getAttribute('data-link');
+        if (link === 'pay') window.open(BACKEND + '/pay.html?key=' + encodeURIComponent(state.apiKey), '_blank');
+        else window.open(BACKEND + '/dashboard.html', '_blank');
+      });
+    });
+    $('copyKey').addEventListener('click', () => {
+      if (!state.apiKey) return toast('No API key');
+      copy(state.apiKey, 'API key copied!');
+    });
+  }
+
+  function renderUpgradePrompt(tab) {
+    const feature = tab === 'video' ? 'Video generation' : 'Backlink tools';
+    main.innerHTML = `
+      <div style="text-align:center;padding:40px 20px">
+        <div style="font-size:56px;margin-bottom:14px">🔒</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">${feature} is Premium</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:24px">
+          Unlock unlimited audits, AI videos, IndexNow, and directory listings.
+        </div>
+        <a class="btn" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">
+          Upgrade for ₦${(state.limits.price || 5000).toLocaleString()}/month
+        </a>
+        <button class="btn secondary" id="backHome">← Back</button>
+      </div>
+    `;
+    $('backHome').addEventListener('click', () => {
+      state.tab = 'home';
+      renderNav();
+      renderHome();
+    });
+  }
+
+  function postHeightToParent() {
+    if (window.parent === window) return;
+    try {
+      window.parent.postMessage({ type: 'growthbot:height', height: document.body.scrollHeight }, '*');
+    } catch {}
+  }
+  window.addEventListener('load', postHeightToParent);
+  new MutationObserver(postHeightToParent).observe(document.body, { childList: true, subtree: true });
+
+  async function init() {
+    if (!state.apiKey) { renderSetup(); return; }
+    updateHeader();
+    await Promise.all([loadPlan(), loadBusiness()]);
+    await loadAnalytics();
+    updateHeader();
+    renderNav();
+    renderTab();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
