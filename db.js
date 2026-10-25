@@ -1,13 +1,12 @@
 // ============================================================
 // GrowthBot — PostgreSQL data layer
-// v3.1 — adds businesses, campaigns, smart_links, leads, reviews
+// v3.2.1 — multi-business support, Q&A module, index-after-column fix
 // ============================================================
 import pg from 'pg';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const { Pool } = pg;
-
 const useSSL = process.env.NODE_ENV === 'production';
 
 export const pool = new Pool({
@@ -23,14 +22,13 @@ pool.on('error', (err) => {
 });
 
 // ============================================================
-// SCHEMA — idempotent, safe to run repeatedly
+// SCHEMA — CORE
 // ============================================================
 export async function initSchema() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // --- blogs: one row per widget installation (freemium SEO) ---
     await client.query(`
       CREATE TABLE IF NOT EXISTS blogs (
         api_key      TEXT PRIMARY KEY,
@@ -50,7 +48,6 @@ export async function initSchema() {
       );
     `);
 
-    // --- audit_history ---
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_history (
         id            SERIAL PRIMARY KEY,
@@ -69,7 +66,6 @@ export async function initSchema() {
       `CREATE INDEX IF NOT EXISTS idx_audit_api_key ON audit_history(api_key, created_at DESC);`
     );
 
-    // --- backlink_jobs ---
     await client.query(`
       CREATE TABLE IF NOT EXISTS backlink_jobs (
         id          SERIAL PRIMARY KEY,
@@ -87,7 +83,6 @@ export async function initSchema() {
       `CREATE INDEX IF NOT EXISTS idx_backlink_api_key ON backlink_jobs(api_key, created_at DESC);`
     );
 
-    // --- render_jobs ---
     await client.query(`
       CREATE TABLE IF NOT EXISTS render_jobs (
         render_id   TEXT PRIMARY KEY,
@@ -115,7 +110,7 @@ export async function initSchema() {
 }
 
 // ============================================================
-// SOCIAL ACCOUNTS SCHEMA
+// SCHEMA — SOCIAL
 // ============================================================
 export async function initSocialSchema() {
   const client = await pool.connect();
@@ -158,23 +153,24 @@ export async function initSocialSchema() {
 }
 
 // ============================================================
-// MOD 5 SCHEMA — businesses, campaigns, smart_links, leads, reviews
+// SCHEMA — LEADS + MULTI-BUSINESS + Q&A
 // ============================================================
 export async function initLeadsSchema() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // --- businesses: real-world business profiles ---
+    // ---- 1. Base table (no-op on v3.1 upgrades) ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS businesses (
         id                SERIAL PRIMARY KEY,
-        api_key           TEXT UNIQUE REFERENCES blogs(api_key) ON DELETE SET NULL,
+        api_key           TEXT REFERENCES blogs(api_key) ON DELETE SET NULL,
         name              TEXT NOT NULL,
         description       TEXT NOT NULL DEFAULT '',
         address           TEXT NOT NULL DEFAULT '',
         city              TEXT NOT NULL DEFAULT '',
         state             TEXT NOT NULL DEFAULT '',
+        country           TEXT NOT NULL DEFAULT 'ng',
         phone             TEXT NOT NULL DEFAULT '',
         whatsapp          TEXT NOT NULL DEFAULT '',
         email             TEXT NOT NULL DEFAULT '',
@@ -182,15 +178,44 @@ export async function initLeadsSchema() {
         category          TEXT NOT NULL DEFAULT '',
         logo_url          TEXT,
         google_review_url TEXT,
+        is_primary        BOOLEAN NOT NULL DEFAULT FALSE,
+        display_order     INT NOT NULL DEFAULT 0,
         created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+
+    // ---- 2. Drop old UNIQUE constraint if present (v3.1 → v3.2) ----
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'businesses_api_key_key'
+        ) THEN
+          ALTER TABLE businesses DROP CONSTRAINT businesses_api_key_key;
+        END IF;
+      END $$;
+    `);
+
+    // ---- 3. Add v3.2 columns to old tables ----
+    await client.query(`
+      ALTER TABLE businesses ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'ng';
+    `);
+    await client.query(`
+      ALTER TABLE businesses ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT FALSE;
+    `);
+    await client.query(`
+      ALTER TABLE businesses ADD COLUMN IF NOT EXISTS display_order INT NOT NULL DEFAULT 0;
+    `);
+
+    // ---- 4. Index created AFTER columns exist ----
     await client.query(
-      `CREATE INDEX IF NOT EXISTS idx_businesses_api_key ON businesses(api_key);`
+      `CREATE INDEX IF NOT EXISTS idx_businesses_api_key
+       ON businesses(api_key, display_order);`
     );
 
-    // --- campaigns: one ad theme with content + media ---
+    // ---- 5. Campaigns ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaigns (
         id            SERIAL PRIMARY KEY,
@@ -211,7 +236,7 @@ export async function initLeadsSchema() {
       `CREATE INDEX IF NOT EXISTS idx_campaigns_business ON campaigns(business_id, created_at DESC);`
     );
 
-    // --- smart_links: unique tracked URL per campaign+platform ---
+    // ---- 6. Smart links ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS smart_links (
         id              SERIAL PRIMARY KEY,
@@ -229,7 +254,7 @@ export async function initLeadsSchema() {
       `CREATE INDEX IF NOT EXISTS idx_smart_links_campaign ON smart_links(campaign_id);`
     );
 
-    // --- leads: humans who clicked or messaged ---
+    // ---- 7. Leads ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS leads (
         id              SERIAL PRIMARY KEY,
@@ -262,7 +287,7 @@ export async function initLeadsSchema() {
       `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);`
     );
 
-    // --- reviews: review requests sent to leads ---
+    // ---- 8. Reviews ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS reviews (
         id                SERIAL PRIMARY KEY,
@@ -285,8 +310,51 @@ export async function initLeadsSchema() {
        ON reviews(status) WHERE status IN ('sent', 'pending');`
     );
 
+    // ---- 9. Question finds (Q&A module) ----
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS question_finds (
+        id            SERIAL PRIMARY KEY,
+        business_id   INT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        keyword       TEXT NOT NULL,
+        country       TEXT NOT NULL DEFAULT 'ng',
+        source        TEXT NOT NULL,
+        title         TEXT NOT NULL,
+        question_url  TEXT NOT NULL,
+        snippet       TEXT NOT NULL DEFAULT '',
+        status        TEXT NOT NULL DEFAULT 'new',
+        found_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (business_id, question_url)
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_question_finds_business
+       ON question_finds(business_id, found_at DESC);`
+    );
+
+    // ---- 10. Drafts (Q&A module) ----
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS drafts (
+        id              SERIAL PRIMARY KEY,
+        business_id     INT NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+        question_id     INT NOT NULL REFERENCES question_finds(id) ON DELETE CASCADE,
+        draft_text      TEXT NOT NULL,
+        blog_url        TEXT NOT NULL,
+        platform        TEXT NOT NULL DEFAULT 'generic',
+        word_count      INT NOT NULL DEFAULT 0,
+        status          TEXT NOT NULL DEFAULT 'pending',
+        posted_at       TIMESTAMPTZ,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_drafts_business ON drafts(business_id, created_at DESC);`
+    );
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_drafts_status ON drafts(business_id, status);`
+    );
+
     await client.query('COMMIT');
-    console.log('✅ Leads schema ready');
+    console.log('✅ Leads + Multi-business + Q&A schema ready');
   } catch (e) {
     await client.query('ROLLBACK');
     throw e;
@@ -331,13 +399,12 @@ export async function upgradeToPremium(apiKey, email = '') {
 }
 
 // ============================================================
-// USAGE INCREMENTS — atomic
+// USAGE INCREMENTS
 // ============================================================
 async function incrementUsage(apiKey, field, dateField, isMonthly, freeLimit) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-
     const { rows } = await client.query(
       'SELECT * FROM blogs WHERE api_key = $1 FOR UPDATE',
       [apiKey]
@@ -347,24 +414,19 @@ async function incrementUsage(apiKey, field, dateField, isMonthly, freeLimit) {
       await client.query('ROLLBACK');
       return null;
     }
-
     const today = new Date().toISOString().slice(0, 10);
     const thisMonth = today.slice(0, 7);
     const periodKey = isMonthly ? thisMonth : today;
-
     const lastField = isMonthly ? 'lastVideoDate' : dateField;
     const last = blog.usage?.[lastField] || '';
     const isNewPeriod = isMonthly
       ? last.slice(0, 7) !== periodKey
       : last !== periodKey;
-
     const current = isNewPeriod ? 0 : (blog.usage?.[field] || 0);
-
     if (blog.plan === 'free' && freeLimit !== null && current >= freeLimit) {
       await client.query('ROLLBACK');
       return null;
     }
-
     const updated = await client.query(
       `UPDATE blogs
        SET usage = jsonb_set(
@@ -376,7 +438,6 @@ async function incrementUsage(apiKey, field, dateField, isMonthly, freeLimit) {
        RETURNING *;`,
       [apiKey, `{${field}}`, current + 1, `{${lastField}}`, periodKey]
     );
-
     await client.query('COMMIT');
     return updated.rows[0];
   } catch (e) {
@@ -572,22 +633,66 @@ export async function getSocialAccounts(apiKey) {
 }
 
 // ============================================================
-// MOD 5 — BUSINESSES
+// BUSINESSES — MULTI
 // ============================================================
+export async function getBusinessLimitForPlan(apiKey) {
+  const blog = await getBlog(apiKey);
+  if (!blog) return 1;
+  return blog.plan === 'premium' ? 3 : 1;
+}
+
+export async function listBusinesses(apiKey) {
+  const { rows } = await pool.query(
+    `SELECT * FROM businesses
+     WHERE api_key = $1
+     ORDER BY is_primary DESC, display_order ASC, created_at ASC;`,
+    [apiKey]
+  );
+  return rows;
+}
+
+export async function countBusinesses(apiKey) {
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM businesses WHERE api_key = $1',
+    [apiKey]
+  );
+  return rows[0]?.n || 0;
+}
+
 export async function createBusiness({
   apiKey = null, name, description = '', address = '',
-  city = '', state = '', phone = '', whatsapp = '',
-  email = '', website = '', category = '',
-  logoUrl = null, googleReviewUrl = null,
+  city = '', state = '', country = 'ng',
+  phone = '', whatsapp = '', email = '', website = '',
+  category = '', logoUrl = null, googleReviewUrl = null,
+  isPrimary = false,
 }) {
+  if (apiKey) {
+    const limit = await getBusinessLimitForPlan(apiKey);
+    const count = await countBusinesses(apiKey);
+    if (count >= limit) {
+      const err = new Error(
+        `Business limit reached (${count}/${limit}). ${
+          limit === 1 ? 'Upgrade to Premium for up to 3 businesses.' : ''
+        }`.trim()
+      );
+      err.code = 'BUSINESS_LIMIT';
+      err.limit = limit;
+      err.count = count;
+      throw err;
+    }
+    if (count === 0) isPrimary = true;
+  }
+
   const { rows } = await pool.query(
     `INSERT INTO businesses
-       (api_key, name, description, address, city, state,
-        phone, whatsapp, email, website, category, logo_url, google_review_url)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       (api_key, name, description, address, city, state, country,
+        phone, whatsapp, email, website, category, logo_url, google_review_url,
+        is_primary, display_order)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
      RETURNING *;`,
-    [apiKey, name, description, address, city, state,
-     phone, whatsapp, email, website, category, logoUrl, googleReviewUrl]
+    [apiKey, name, description, address, city, state, country,
+     phone, whatsapp, email, website, category, logoUrl, googleReviewUrl,
+     isPrimary, 0]
   );
   return rows[0];
 }
@@ -598,18 +703,15 @@ export async function getBusiness(id) {
 }
 
 export async function getBusinessByApiKey(apiKey) {
-  const { rows } = await pool.query(
-    'SELECT * FROM businesses WHERE api_key = $1',
-    [apiKey]
-  );
-  return rows[0] || null;
+  const list = await listBusinesses(apiKey);
+  return list[0] || null;
 }
 
 export async function updateBusiness(id, patch) {
   const allowed = [
-    'name', 'description', 'address', 'city', 'state',
+    'name', 'description', 'address', 'city', 'state', 'country',
     'phone', 'whatsapp', 'email', 'website', 'category',
-    'logo_url', 'google_review_url',
+    'logo_url', 'google_review_url', 'is_primary', 'display_order',
   ];
   const sets = [];
   const values = [];
@@ -630,14 +732,21 @@ export async function updateBusiness(id, patch) {
   return rows[0] || null;
 }
 
+export async function deleteBusiness(id) {
+  const { rows } = await pool.query(
+    'DELETE FROM businesses WHERE id = $1 RETURNING *',
+    [id]
+  );
+  return rows[0] || null;
+}
+
 // ============================================================
-// MOD 5 — CAMPAIGNS
+// CAMPAIGNS
 // ============================================================
 export async function createCampaign({
   businessId, name, text = '', images = [],
   videoUrl = null, videoRenderId = null,
-  durationSeconds = 15, style = 'documentary',
-  status = 'draft',
+  durationSeconds = 15, style = 'documentary', status = 'draft',
 }) {
   const { rows } = await pool.query(
     `INSERT INTO campaigns
@@ -658,20 +767,16 @@ export async function getCampaign(id) {
 
 export async function listCampaigns(businessId, limit = 50) {
   const { rows } = await pool.query(
-    `SELECT * FROM campaigns
-     WHERE business_id = $1
-     ORDER BY created_at DESC
-     LIMIT $2;`,
+    `SELECT * FROM campaigns WHERE business_id = $1
+     ORDER BY created_at DESC LIMIT $2;`,
     [businessId, limit]
   );
   return rows;
 }
 
 export async function updateCampaign(id, patch) {
-  const allowed = [
-    'name', 'text', 'images', 'video_url', 'video_render_id',
-    'duration_seconds', 'style', 'status',
-  ];
+  const allowed = ['name', 'text', 'images', 'video_url', 'video_render_id',
+    'duration_seconds', 'style', 'status'];
   const sets = [];
   const values = [];
   let i = 1;
@@ -692,11 +797,9 @@ export async function updateCampaign(id, patch) {
 }
 
 // ============================================================
-// MOD 5 — SMART LINKS
+// SMART LINKS
 // ============================================================
-export async function createSmartLink({
-  campaignId, slug, platform, destinationUrl,
-}) {
+export async function createSmartLink({ campaignId, slug, platform, destinationUrl }) {
   const { rows } = await pool.query(
     `INSERT INTO smart_links (campaign_id, slug, platform, destination_url)
      VALUES ($1, $2, $3, $4)
@@ -721,11 +824,8 @@ export async function getSmartLinkBySlug(slug) {
 
 export async function recordSmartLinkClick(slug) {
   const { rows } = await pool.query(
-    `UPDATE smart_links
-     SET clicks = clicks + 1,
-         last_clicked_at = NOW()
-     WHERE slug = $1
-     RETURNING *;`,
+    `UPDATE smart_links SET clicks = clicks + 1, last_clicked_at = NOW()
+     WHERE slug = $1 RETURNING *;`,
     [slug]
   );
   return rows[0] || null;
@@ -733,9 +833,7 @@ export async function recordSmartLinkClick(slug) {
 
 export async function listSmartLinks(campaignId) {
   const { rows } = await pool.query(
-    `SELECT * FROM smart_links
-     WHERE campaign_id = $1
-     ORDER BY created_at DESC;`,
+    `SELECT * FROM smart_links WHERE campaign_id = $1 ORDER BY created_at DESC;`,
     [campaignId]
   );
   return rows;
@@ -747,21 +845,19 @@ export async function listSmartLinksByBusiness(businessId, limit = 100) {
      FROM smart_links sl
      JOIN campaigns c ON c.id = sl.campaign_id
      WHERE c.business_id = $1
-     ORDER BY sl.created_at DESC
-     LIMIT $2;`,
+     ORDER BY sl.created_at DESC LIMIT $2;`,
     [businessId, limit]
   );
   return rows;
 }
 
 // ============================================================
-// MOD 5 — LEADS
+// LEADS
 // ============================================================
 export async function createLead({
   businessId, campaignId = null, smartLinkId = null,
-  sourcePlatform = 'direct', name = '', phone = '',
-  email = '', ipAddress = null, ipCity = null,
-  userAgent = null, referrer = null,
+  sourcePlatform = 'direct', name = '', phone = '', email = '',
+  ipAddress = null, ipCity = null, userAgent = null, referrer = null,
   intent = 'unknown', status = 'new', notes = '',
 }) {
   const { rows } = await pool.query(
@@ -786,29 +882,22 @@ export async function getLead(id) {
 export async function listLeads(businessId, { status = null, limit = 100 } = {}) {
   if (status) {
     const { rows } = await pool.query(
-      `SELECT * FROM leads
-       WHERE business_id = $1 AND status = $2
-       ORDER BY created_at DESC
-       LIMIT $3;`,
+      `SELECT * FROM leads WHERE business_id = $1 AND status = $2
+       ORDER BY created_at DESC LIMIT $3;`,
       [businessId, status, limit]
     );
     return rows;
   }
   const { rows } = await pool.query(
-    `SELECT * FROM leads
-     WHERE business_id = $1
-     ORDER BY created_at DESC
-     LIMIT $2;`,
+    `SELECT * FROM leads WHERE business_id = $1
+     ORDER BY created_at DESC LIMIT $2;`,
     [businessId, limit]
   );
   return rows;
 }
 
 export async function updateLead(id, patch) {
-  const allowed = [
-    'name', 'phone', 'email', 'intent', 'status',
-    'notes', 'delivered_at',
-  ];
+  const allowed = ['name', 'phone', 'email', 'intent', 'status', 'notes', 'delivered_at'];
   const sets = [];
   const values = [];
   let i = 1;
@@ -854,11 +943,10 @@ export async function findLeadsDeliveredBefore(cutoffDate) {
 }
 
 // ============================================================
-// MOD 5 — REVIEWS
+// REVIEWS
 // ============================================================
 export async function createReviewRequest({
-  businessId, leadId, googleReviewUrl,
-  platform = 'google', status = 'sent',
+  businessId, leadId, googleReviewUrl, platform = 'google', status = 'sent',
 }) {
   const { rows } = await pool.query(
     `INSERT INTO reviews
@@ -873,11 +961,9 @@ export async function createReviewRequest({
 export async function markReviewSubmitted(id, reviewText = null) {
   const { rows } = await pool.query(
     `UPDATE reviews
-     SET status = 'submitted',
-         submitted_at = NOW(),
+     SET status = 'submitted', submitted_at = NOW(),
          review_text = COALESCE($2, review_text)
-     WHERE id = $1
-     RETURNING *;`,
+     WHERE id = $1 RETURNING *;`,
     [id, reviewText]
   );
   return rows[0] || null;
@@ -900,15 +986,14 @@ export async function listReviews(businessId, limit = 100) {
      FROM reviews r
      JOIN leads l ON l.id = r.lead_id
      WHERE r.business_id = $1
-     ORDER BY r.requested_at DESC
-     LIMIT $2;`,
+     ORDER BY r.requested_at DESC LIMIT $2;`,
     [businessId, limit]
   );
   return rows;
 }
 
 // ============================================================
-// MOD 5 — ANALYTICS
+// ANALYTICS
 // ============================================================
 export async function getBusinessAnalytics(businessId) {
   const { rows } = await pool.query(
@@ -923,8 +1008,153 @@ export async function getBusinessAnalytics(businessId) {
        (SELECT COUNT(*)::int FROM leads WHERE business_id = $1) AS leads,
        (SELECT COUNT(*)::int FROM leads WHERE business_id = $1 AND status = 'delivered') AS leads_delivered,
        (SELECT COUNT(*)::int FROM reviews WHERE business_id = $1) AS reviews_requested,
-       (SELECT COUNT(*)::int FROM reviews WHERE business_id = $1 AND status = 'submitted') AS reviews_submitted;`,
+       (SELECT COUNT(*)::int FROM reviews WHERE business_id = $1 AND status = 'submitted') AS reviews_submitted,
+       (SELECT COUNT(*)::int FROM question_finds WHERE business_id = $1) AS questions_found,
+       (SELECT COUNT(*)::int FROM drafts WHERE business_id = $1 AND status = 'pending') AS drafts_pending,
+       (SELECT COUNT(*)::int FROM drafts WHERE business_id = $1 AND status = 'posted') AS drafts_posted;`,
     [businessId]
   );
   return rows[0];
+}
+
+// ============================================================
+// Q&A MODULE — QUESTION FINDS
+// ============================================================
+export async function saveQuestionFinds(businessId, keyword, country, results) {
+  if (!results || results.length === 0) return [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const inserted = [];
+    for (const r of results) {
+      const { rows } = await client.query(
+        `INSERT INTO question_finds
+           (business_id, keyword, country, source, title, question_url, snippet)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (business_id, question_url) DO NOTHING
+         RETURNING *;`,
+        [businessId, keyword, country, r.source, r.title, r.url, r.snippet || '']
+      );
+      if (rows[0]) inserted.push(rows[0]);
+    }
+    await client.query('COMMIT');
+    return inserted;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+export async function listQuestionFinds(businessId, { status = null, limit = 100 } = {}) {
+  if (status) {
+    const { rows } = await pool.query(
+      `SELECT * FROM question_finds
+       WHERE business_id = $1 AND status = $2
+       ORDER BY found_at DESC LIMIT $3;`,
+      [businessId, status, limit]
+    );
+    return rows;
+  }
+  const { rows } = await pool.query(
+    `SELECT * FROM question_finds WHERE business_id = $1
+     ORDER BY found_at DESC LIMIT $2;`,
+    [businessId, limit]
+  );
+  return rows;
+}
+
+export async function getQuestionFind(id) {
+  const { rows } = await pool.query(
+    'SELECT * FROM question_finds WHERE id = $1',
+    [id]
+  );
+  return rows[0] || null;
+}
+
+export async function updateQuestionFind(id, patch) {
+  const allowed = ['status'];
+  const sets = [];
+  const values = [];
+  let i = 1;
+  for (const [key, value] of Object.entries(patch)) {
+    if (!allowed.includes(key)) continue;
+    sets.push(`${key} = $${i}`);
+    values.push(value);
+    i++;
+  }
+  if (sets.length === 0) return getQuestionFind(id);
+  values.push(id);
+  const { rows } = await pool.query(
+    `UPDATE question_finds SET ${sets.join(', ')} WHERE id = $${i} RETURNING *;`,
+    values
+  );
+  return rows[0] || null;
+}
+
+// ============================================================
+// Q&A MODULE — DRAFTS
+// ============================================================
+export async function saveDraft({
+  businessId, questionId, draftText, blogUrl, platform = 'generic', wordCount = 0,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO drafts
+       (business_id, question_id, draft_text, blog_url, platform, word_count)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING *;`,
+    [businessId, questionId, draftText, blogUrl, platform, wordCount]
+  );
+  return rows[0];
+}
+
+export async function listDrafts(businessId, { status = null, limit = 100 } = {}) {
+  if (status) {
+    const { rows } = await pool.query(
+      `SELECT d.*, q.title AS question_title, q.question_url, q.source AS question_source
+       FROM drafts d
+       JOIN question_finds q ON q.id = d.question_id
+       WHERE d.business_id = $1 AND d.status = $2
+       ORDER BY d.created_at DESC LIMIT $3;`,
+      [businessId, status, limit]
+    );
+    return rows;
+  }
+  const { rows } = await pool.query(
+    `SELECT d.*, q.title AS question_title, q.question_url, q.source AS question_source
+     FROM drafts d
+     JOIN question_finds q ON q.id = d.question_id
+     WHERE d.business_id = $1
+     ORDER BY d.created_at DESC LIMIT $2;`,
+    [businessId, limit]
+  );
+  return rows;
+}
+
+export async function getDraft(id) {
+  const { rows } = await pool.query(
+    `SELECT d.*, q.title AS question_title, q.question_url
+     FROM drafts d
+     JOIN question_finds q ON q.id = d.question_id
+     WHERE d.id = $1`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+export async function updateDraftStatus(id, status) {
+  const allowed = ['pending', 'approved', 'posted', 'rejected'];
+  if (!allowed.includes(status)) {
+    throw new Error('Invalid draft status: ' + status);
+  }
+  const { rows } = await pool.query(
+    `UPDATE drafts
+     SET status = $2,
+         posted_at = CASE WHEN $2 = 'posted' THEN NOW() ELSE posted_at END
+     WHERE id = $1
+     RETURNING *;`,
+    [id, status]
+  );
+  return rows[0] || null;
 }
