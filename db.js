@@ -1,6 +1,6 @@
 // ============================================================
-// GrowthBot — PostgreSQL data layer
-// v3.2.1 — multi-business support, Q&A module, index-after-column fix
+// Auto Traffic Engine — PostgreSQL data layer
+// v3.3 — users table, auth, admin support
 // ============================================================
 import pg from 'pg';
 import dotenv from 'dotenv';
@@ -110,6 +110,42 @@ export async function initSchema() {
 }
 
 // ============================================================
+// SCHEMA — USERS
+// ============================================================
+export async function initUsersSchema() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL DEFAULT '',
+        role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user','admin')),
+        api_key TEXT UNIQUE NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_login_at TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_users_email ON users(LOWER(email));`
+    );
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_users_api_key ON users(api_key);`
+    );
+    await client.query('COMMIT');
+    console.log('✅ Users schema ready');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================================
 // SCHEMA — SOCIAL
 // ============================================================
 export async function initSocialSchema() {
@@ -160,7 +196,6 @@ export async function initLeadsSchema() {
   try {
     await client.query('BEGIN');
 
-    // ---- 1. Base table (no-op on v3.1 upgrades) ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS businesses (
         id                SERIAL PRIMARY KEY,
@@ -185,7 +220,7 @@ export async function initLeadsSchema() {
       );
     `);
 
-    // ---- 2. Drop old UNIQUE constraint if present (v3.1 → v3.2) ----
+    // Drop old UNIQUE constraint if it exists (v3.1 → v3.2)
     await client.query(`
       DO $$
       BEGIN
@@ -198,24 +233,17 @@ export async function initLeadsSchema() {
       END $$;
     `);
 
-    // ---- 3. Add v3.2 columns to old tables ----
-    await client.query(`
-      ALTER TABLE businesses ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'ng';
-    `);
-    await client.query(`
-      ALTER TABLE businesses ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT FALSE;
-    `);
-    await client.query(`
-      ALTER TABLE businesses ADD COLUMN IF NOT EXISTS display_order INT NOT NULL DEFAULT 0;
-    `);
+    // Add columns if missing (upgrade path)
+    await client.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'ng';`);
+    await client.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT FALSE;`);
+    await client.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS display_order INT NOT NULL DEFAULT 0;`);
 
-    // ---- 4. Index created AFTER columns exist ----
+    // Index AFTER columns exist
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_businesses_api_key
        ON businesses(api_key, display_order);`
     );
 
-    // ---- 5. Campaigns ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS campaigns (
         id            SERIAL PRIMARY KEY,
@@ -236,7 +264,6 @@ export async function initLeadsSchema() {
       `CREATE INDEX IF NOT EXISTS idx_campaigns_business ON campaigns(business_id, created_at DESC);`
     );
 
-    // ---- 6. Smart links ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS smart_links (
         id              SERIAL PRIMARY KEY,
@@ -254,7 +281,6 @@ export async function initLeadsSchema() {
       `CREATE INDEX IF NOT EXISTS idx_smart_links_campaign ON smart_links(campaign_id);`
     );
 
-    // ---- 7. Leads ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS leads (
         id              SERIAL PRIMARY KEY,
@@ -287,7 +313,6 @@ export async function initLeadsSchema() {
       `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);`
     );
 
-    // ---- 8. Reviews ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS reviews (
         id                SERIAL PRIMARY KEY,
@@ -310,7 +335,6 @@ export async function initLeadsSchema() {
        ON reviews(status) WHERE status IN ('sent', 'pending');`
     );
 
-    // ---- 9. Question finds (Q&A module) ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS question_finds (
         id            SERIAL PRIMARY KEY,
@@ -331,7 +355,6 @@ export async function initLeadsSchema() {
        ON question_finds(business_id, found_at DESC);`
     );
 
-    // ---- 10. Drafts (Q&A module) ----
     await client.query(`
       CREATE TABLE IF NOT EXISTS drafts (
         id              SERIAL PRIMARY KEY,
@@ -1158,3 +1181,100 @@ export async function updateDraftStatus(id, status) {
   );
   return rows[0] || null;
 }
+
+// ============================================================
+// USERS — AUTH + ADMIN
+// ============================================================
+export async function createUser({ email, passwordHash, name = '', apiKey, role = 'user' }) {
+  const { rows } = await pool.query(
+    `INSERT INTO users (email, password_hash, name, api_key, role)
+     VALUES (LOWER($1), $2, $3, $4, $5)
+     RETURNING id, email, name, role, api_key, created_at, last_login_at;`,
+    [email, passwordHash, name, apiKey, role]
+  );
+  return rows[0];
+}
+
+export async function findUserByEmail(email) {
+  const { rows } = await pool.query(
+    'SELECT * FROM users WHERE LOWER(email) = LOWER($1)',
+    [email]
+  );
+  return rows[0] || null;
+}
+
+export async function findUserById(id) {
+  const { rows } = await pool.query(
+    `SELECT id, email, name, role, api_key, created_at, last_login_at
+     FROM users WHERE id = $1`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+export async function updateUserLastLogin(id) {
+  await pool.query(
+    'UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1',
+    [id]
+  );
+}
+
+export async function findAdminUser() {
+  const { rows } = await pool.query(
+    "SELECT * FROM users WHERE role = 'admin' LIMIT 1"
+  );
+  return rows[0] || null;
+}
+
+export async function countUsers() {
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM users');
+  return rows[0]?.n || 0;
+}
+
+export async function listAllUsers(limit = 500) {
+  const { rows } = await pool.query(
+    `SELECT u.id, u.email, u.name, u.role, u.api_key, u.created_at, u.last_login_at,
+            b.plan, b.usage
+     FROM users u
+     LEFT JOIN blogs b ON b.api_key = u.api_key
+     ORDER BY u.created_at DESC LIMIT $1`,
+    [limit]
+  );
+  return rows;
+}
+
+export async function claimLegacyKey(apiKey, userId) {
+  // Detach any current user using this key, then attach to new user
+  await pool.query(
+    'UPDATE users SET api_key = NULL WHERE api_key = $1 AND id <> $2',
+    [apiKey, userId]
+  ).catch(() => {});
+  // Note: api_key column is UNIQUE NOT NULL, so this detach won't work
+  // as written unless we allow NULL. Use a suffix approach instead.
+  const suffix = `_old_${Date.now()}`;
+  await pool.query(
+    `UPDATE users SET api_key = api_key || $1, updated_at = NOW()
+     WHERE api_key = $2 AND id <> $3`,
+    [suffix, apiKey, userId]
+  ).catch(() => {});
+  const { rows } = await pool.query(
+    'UPDATE users SET api_key = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+    [apiKey, userId]
+  );
+  return rows[0] || null;
+}
+
+export async function updateUserRole(userId, role) {
+  const { rows } = await pool.query(
+    "UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, role",
+    [role, userId]
+  );
+  return rows[0] || null;
+}
+
+// ============================================================
+// EXPORT DEFAULT
+// ============================================================
+export default {
+  pool, initSchema, initSocialSchema, initLeadsSchema, initUsersSchema,
+};

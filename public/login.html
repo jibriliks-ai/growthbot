@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Sign In — Auto Traffic Engine</title>
+<meta name="theme-color" content="#0a0a0f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#0a0a0f;--surface:#13131a;--surface-2:#1a1a24;--border:rgba(255,255,255,.07);--text:#f4f4f5;--muted:#a1a1aa;--dim:#71717a;--accent:#8b5cf6;--accent-grad:linear-gradient(135deg,#8b5cf6,#6366f1);--accent-glow:rgba(139,92,246,.25);--success:#10b981;--error:#ef4444;--error-bg:rgba(239,68,68,.12)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;width:600px;height:600px;top:-300px;right:-200px;background:radial-gradient(circle,rgba(139,92,246,.2),transparent 70%);filter:blur(100px);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;width:500px;height:500px;bottom:-250px;left:-150px;background:radial-gradient(circle,rgba(59,130,246,.15),transparent 70%);filter:blur(100px);pointer-events:none;z-index:0}
+.card{position:relative;z-index:1;background:rgba(19,19,26,.7);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:20px;padding:40px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:28px;justify-content:center}
+.brand-mark{width:48px;height:48px;border-radius:13px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 6px 20px var(--accent-glow)}
+.brand-name{font-size:18px;font-weight:800;letter-spacing:-.02em}
+h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;text-align:center;background:linear-gradient(135deg,#f4f4f5 40%,#c4b5fd);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{font-size:14px;color:var(--muted);text-align:center;margin-bottom:28px;line-height:1.5}
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 6px}
+input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s;font-family:inherit}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+button{width:100%;padding:13px 20px;border-radius:12px;border:none;background:var(--accent-grad);color:#fff;font-weight:600;font-size:14px;cursor:pointer;margin-top:20px;transition:all .15s;min-height:46px;font-family:inherit}
+button:hover:not(:disabled){box-shadow:0 0 24px var(--accent-glow)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.btn-link{background:transparent;color:var(--accent);padding:0;margin:0;min-height:0;text-decoration:none;font-size:13px;font-weight:600}
+.footer{text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);font-size:13px;color:var(--muted)}
+.footer a{color:var(--accent);text-decoration:none;font-weight:600}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{padding:12px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;line-height:1.5;display:none}
+.alert.show{display:block}
+.alert.error{background:var(--error-bg);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
+.alert.success{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.2)}
+.alert.info{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.2)}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">
+    <div class="brand-mark">🚦</div>
+    <div class="brand-name">Auto Traffic Engine</div>
+  </div>
+
+  <h1>Welcome back</h1>
+  <p class="sub">Sign in to access your dashboard</p>
+
+  <div class="alert" id="alertBox"></div>
+
+  <form id="loginForm">
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password" />
+
+    <button type="submit" id="submitBtn">Sign In</button>
+  </form>
+
+  <div class="footer">
+    Don't have an account? <a href="/signup.html" id="signupLink">Create one</a>
+  </div>
+</div>
+
+<script>
+(function() {
+  const params = new URLSearchParams(location.search);
+  const redirect = params.get('redirect') || '/app.html';
+  const expired = params.get('expired') === '1';
+  const signupLink = document.getElementById('signupLink');
+
+  // Preserve redirect for signup
+  signupLink.href = '/signup.html?redirect=' + encodeURIComponent(redirect);
+
+  // If already logged in, go straight to app
+  const existingToken = localStorage.getItem('ate_token');
+  if (existingToken && !expired) {
+    // Verify it's actually valid
+    fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + existingToken } })
+      .then(r => {
+        if (r.ok) location.replace(redirect);
+        else localStorage.removeItem('ate_token');
+      })
+      .catch(() => {});
+  }
+
+  if (expired) showAlert('Your session expired. Please sign in again.', 'info');
+
+  function showAlert(message, type) {
+    const el = document.getElementById('alertBox');
+    el.className = 'alert show ' + type;
+    el.textContent = message;
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Signing in…';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store token
+      localStorage.setItem('ate_token', data.token);
+      localStorage.setItem('ate_user', JSON.stringify(data.user));
+
+      // Redirect
+      location.replace(redirect);
+    } catch (err) {
+      showAlert(err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  });
+})();
+</script>
+</body>
+</html>

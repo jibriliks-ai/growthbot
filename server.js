@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Main Express server
-// v3.2.1 — iframe-embedding enabled, all features wired
+// v3.3.0 — auth (signup/login/JWT), admin panel, all features
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -16,38 +16,51 @@ import OpenAI from 'openai';
 dotenv.config();
 
 // ============================================================
-// MODULES
+// AUTH HELPERS
 // ============================================================
 import {
-  // Schema init
-  initSchema, initSocialSchema, initLeadsSchema,
-  // Blogs & plans
+  hashPassword, verifyPassword, signToken, verifyToken,
+  generateApiKey, validateEmail, validatePassword,
+} from './auth.js';
+
+// ============================================================
+// DB
+// ============================================================
+import {
+  // Schema
+  initSchema, initSocialSchema, initLeadsSchema, initUsersSchema,
+  // Blogs
   getOrCreateBlog, getBlog, upgradeToPremium,
-  // Usage counters
+  // Usage
   tryIncrementAudit, tryIncrementVideo,
-  // Audit history
+  // Audit
   logAudit,
-  // Render jobs
+  // Render
   createRenderJob, updateRenderJob,
-  // Businesses (multi)
+  // Businesses
   createBusiness, getBusiness, getBusinessByApiKey, updateBusiness,
   listBusinesses, deleteBusiness, getBusinessLimitForPlan,
-  // Campaigns & smart links
+  // Campaigns
   createCampaign, getCampaign, listCampaigns, updateCampaign,
   createSmartLink, listSmartLinks,
   // Leads
   createLead, listLeads, updateLead, markLeadDelivered,
-  // Reviews & analytics
+  // Reviews + analytics
   listReviews, getBusinessAnalytics,
   // Social
   getSocialAccounts, upsertSocialAccount,
-  // Q&A module
+  // Q&A
   saveQuestionFinds, listQuestionFinds, getQuestionFind,
   saveDraft, listDrafts, updateDraftStatus,
+  // Users + admin
+  createUser, findUserByEmail, findUserById, updateUserLastLogin,
+  findAdminUser, countUsers, listAllUsers, claimLegacyKey, updateUserRole,
+  // Pool (needed for admin overview)
+  pool,
 } from './db.js';
 
 // ============================================================
-// MODULE IMPORTS
+// FEATURE MODULES
 // ============================================================
 import { fullAudit } from './seoEngine.js';
 import { submitWithJobLog, verifyKeyFile, verifySitemap } from './indexnow.js';
@@ -81,7 +94,7 @@ const PUBLIC_BASE_URL =
   process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const PREMIUM_PRICE_NGN = Number(process.env.PREMIUM_PRICE_NGN) || 5000;
 
-// AI client (OpenAI or DeepSeek — selected by AI_PROVIDER)
+// AI client
 const AI_PROVIDER = process.env.AI_PROVIDER || 'openai';
 let aiClient = null;
 if (AI_PROVIDER === 'deepseek' && process.env.DEEPSEEK_API_KEY) {
@@ -99,15 +112,12 @@ if (AI_PROVIDER === 'deepseek' && process.env.DEEPSEEK_API_KEY) {
 const app = express();
 app.set('trust proxy', 1);
 
-// ============================================================
-// MIDDLEWARE
-// ============================================================
 app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    frameguard: false, // ← allows embedding in Blogger iframe
+    frameguard: false,
   })
 );
 
@@ -115,6 +125,7 @@ app.use(
   cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-cron-secret'],
   })
 );
 
@@ -138,7 +149,7 @@ app.use(
   express.static(path.join(__dirname, 'public'), {
     maxAge: NODE_ENV === 'production' ? '1h' : 0,
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('widget.js')) {
+      if (filePath.endsWith('widget.js') || filePath.endsWith('embed.js')) {
         res.setHeader('Cache-Control', 'public, max-age=300');
         res.setHeader('Access-Control-Allow-Origin', '*');
       }
@@ -150,57 +161,87 @@ app.use(
 // RATE LIMITERS
 // ============================================================
 const generalLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: 60 * 60 * 1000, max: 100,
+  standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests, try again later' },
 });
 
 const checkPlanLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 30,
+  windowMs: 60 * 1000, max: 30,
   message: { error: 'Too many plan checks' },
 });
 
 const auditLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 20,
+  windowMs: 60 * 60 * 1000, max: 20,
   message: { error: 'Too many audits — slow down or upgrade' },
 });
 
 const videoLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
+  windowMs: 60 * 60 * 1000, max: 10,
   message: { error: 'Too many video requests' },
 });
 
 const webhookLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 1000,
+  windowMs: 60 * 1000, max: 1000,
   message: { error: 'Webhook rate limit exceeded' },
 });
 
 const questionLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 15,
+  windowMs: 60 * 60 * 1000, max: 15,
   message: { error: 'Too many question searches — try again later' },
 });
 
 const draftLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 40,
+  windowMs: 60 * 60 * 1000, max: 40,
   message: { error: 'Too many draft requests — try again later' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 20,
+  message: { error: 'Too many auth attempts — try again in 15 minutes' },
 });
 
 // ============================================================
 // MIDDLEWARE HELPERS
 // ============================================================
+function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  const payload = verifyToken(authHeader.slice(7));
+  if (!payload) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+  req.user = payload;
+  req.apiKey = payload.apiKey;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  });
+}
+
 function requireApiKey(req, res, next) {
-  const apiKey =
-    req.body?.key || req.query?.key || req.headers['x-api-key'];
+  // Prefer Bearer token if present
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const payload = verifyToken(authHeader.slice(7));
+    if (payload) {
+      req.user = payload;
+      req.apiKey = payload.apiKey;
+      return next();
+    }
+  }
+  // Fallback to raw key (for legacy widgets)
+  const apiKey = req.body?.key || req.query?.key || req.headers['x-api-key'];
   if (!apiKey || typeof apiKey !== 'string' || apiKey.length < 4) {
-    return res.status(400).json({ error: 'Missing or invalid api key' });
+    return res.status(401).json({ error: 'Authentication required' });
   }
   req.apiKey = apiKey;
   next();
@@ -209,40 +250,37 @@ function requireApiKey(req, res, next) {
 function requireCronSecret(req, res, next) {
   const provided = req.headers['x-cron-secret'];
   const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return res.status(500).json({ error: 'CRON_SECRET not configured' });
-  }
-  if (provided !== expected) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (!expected) return res.status(500).json({ error: 'CRON_SECRET not configured' });
+  if (provided !== expected) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
 
 function getClientIp(req) {
   return (
     req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''
-  )
-    .split(',')[0]
-    .trim();
+  ).split(',')[0].trim();
 }
 
 // ============================================================
-// HEALTH & META
+// HEALTH
 // ============================================================
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    version: '3.2.1',
+    version: '3.3.0',
     env: NODE_ENV,
     uptime: Math.round(process.uptime()),
     ai: AI_PROVIDER,
     demoMode: process.env.DEMO_MODE === 'true',
-    price: {
-      NGN: Number(process.env.PREMIUM_PRICE_NGN) || 5000,
-    },
+    price: { NGN: Number(process.env.PREMIUM_PRICE_NGN) || 5000 },
     flutterwaveConfigured: Boolean(
       process.env.FLUTTERWAVE_PUBLIC_KEY && process.env.FLUTTERWAVE_SECRET_KEY
     ),
+    auth: {
+      enabled: true,
+      jwtConfigured: Boolean(process.env.JWT_SECRET),
+      adminConfigured: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
+    },
     services: {
       openai: Boolean(process.env.OPENAI_API_KEY),
       deepseek: Boolean(process.env.DEEPSEEK_API_KEY),
@@ -252,12 +290,8 @@ app.get('/health', (req, res) => {
       flutterwave: Boolean(process.env.FLUTTERWAVE_SECRET_KEY),
       whatsapp: isWhatsAppConfigured(),
       indexnow: Boolean(process.env.INDEXNOW_KEY),
-      dataForSeo: Boolean(
-        process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD
-      ),
-      googleCse: Boolean(
-        process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_ID
-      ),
+      dataForSeo: Boolean(process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD),
+      googleCse: Boolean(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_ID),
     },
     time: new Date().toISOString(),
   });
@@ -266,12 +300,171 @@ app.get('/health', (req, res) => {
 app.get('/api/video-styles', (req, res) => {
   res.json({
     styles: Object.entries(STYLE_TEMPLATES).map(([key, tpl]) => ({
-      key,
-      label: tpl.label,
-      description: tpl.description,
+      key, label: tpl.label, description: tpl.description,
     })),
     durations: Object.keys(DURATION_PRESETS).map(Number),
   });
+});
+
+// ============================================================
+// AUTH ENDPOINTS
+// ============================================================
+app.post('/api/auth/signup', authLimiter, async (req, res) => {
+  try {
+    const { email, password, name = '' } = req.body || {};
+
+    if (!validateEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+    if (!validatePassword(password)) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const existing = await findUserByEmail(email);
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    const apiKey = generateApiKey(email);
+    const passwordHash = hashPassword(password);
+
+    await getOrCreateBlog(apiKey, 'unknown');
+    const user = await createUser({ email, passwordHash, name, apiKey, role: 'user' });
+
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      apiKey: user.api_key,
+    });
+
+    res.json({
+      token,
+      user: {
+        id: user.id, email: user.email, name: user.name,
+        role: user.role, apiKey: user.api_key,
+      },
+    });
+  } catch (e) {
+    console.error('Signup error:', e.message);
+    if (e.code === '23505') {
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/login', authLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    await updateUserLastLogin(user.id);
+
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      apiKey: user.api_key,
+    });
+
+    res.json({
+      token,
+      user: {
+        id: user.id, email: user.email, name: user.name,
+        role: user.role, apiKey: user.api_key,
+      },
+    });
+  } catch (e) {
+    console.error('Login error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/auth/me', requireAuth, async (req, res) => {
+  try {
+    const user = await findUserById(req.user.userId);
+    if (!user) return res.status(401).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.json({ ok: true });
+});
+
+// ============================================================
+// ADMIN ENDPOINTS
+// ============================================================
+app.get('/api/admin/overview', requireAdmin, async (req, res) => {
+  try {
+    const totalUsers = await countUsers();
+    const { rows } = await pool.query(`
+      SELECT
+        (SELECT COUNT(*)::int FROM blogs) AS total_blogs,
+        (SELECT COUNT(*)::int FROM blogs WHERE plan = 'premium') AS premium_blogs,
+        (SELECT COUNT(*)::int FROM businesses) AS total_businesses,
+        (SELECT COUNT(*)::int FROM leads) AS total_leads,
+        (SELECT COUNT(*)::int FROM question_finds) AS total_questions,
+        (SELECT COUNT(*)::int FROM drafts WHERE status = 'posted') AS drafts_posted;
+    `);
+    res.json({ total_users: totalUsers, ...rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const users = await listAllUsers();
+    res.json({ users, total: users.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/claim-legacy', requireAdmin, async (req, res) => {
+  try {
+    const { apiKey } = req.body || {};
+    if (!apiKey) return res.status(400).json({ error: 'apiKey is required' });
+
+    const blog = await getBlog(apiKey);
+    if (!blog) {
+      return res.status(404).json({ error: 'No blog exists with that key' });
+    }
+
+    const updated = await claimLegacyKey(apiKey, req.user.userId);
+    res.json({
+      ok: true,
+      apiKey,
+      message: `Your admin account is now linked to key "${apiKey}"`,
+      user: updated ? { id: updated.id, apiKey: updated.api_key } : null,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
+  try {
+    const { role } = req.body || {};
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be "user" or "admin"' });
+    }
+    const updated = await updateUserRole(Number(req.params.id), role);
+    res.json({ user: updated });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ============================================================
@@ -314,16 +507,9 @@ app.post('/api/audit', auditLimiter, requireApiKey, async (req, res) => {
   }
 
   try {
-    const result = await fullAudit({
-      url,
-      keyword,
-      openai: aiClient,
-      autoFix,
-    });
+    const result = await fullAudit({ url, keyword, openai: aiClient, autoFix });
     await logAudit({
-      apiKey: req.apiKey,
-      url,
-      keyword,
+      apiKey: req.apiKey, url, keyword,
       scoreBefore: result.before.score,
       scoreAfter: result.after?.score ?? null,
       issues: result.before.issues,
@@ -347,9 +533,7 @@ app.post('/api/backlink/indexnow', generalLimiter, requireApiKey, async (req, re
   }
   try {
     const result = await submitWithJobLog({
-      apiKey: req.apiKey,
-      urls,
-      siteUrl: siteUrl || url,
+      apiKey: req.apiKey, urls, siteUrl: siteUrl || url,
     });
     res.json(result);
   } catch (e) {
@@ -384,8 +568,7 @@ app.post('/api/backlink/listing', generalLimiter, requireApiKey, async (req, res
   }
   try {
     const result = await generateListingPackages({
-      profile: req.body.profile,
-      openai: aiClient,
+      profile: req.body.profile, openai: aiClient,
     });
     res.json(result);
   } catch (e) {
@@ -397,34 +580,17 @@ app.post('/api/backlink/listing', generalLimiter, requireApiKey, async (req, res
 // KEYWORDS
 // ============================================================
 app.post('/api/keywords', generalLimiter, requireApiKey, async (req, res) => {
-  const {
-    seeds = [],
-    manualKeywords = [],
-    url = null,
-    country = 'ng',
-    language = 'en',
-  } = req.body;
-
+  const { seeds = [], manualKeywords = [], url = null, country = 'ng', language = 'en' } = req.body;
   if (seeds.length === 0 && manualKeywords.length === 0) {
     return res.status(400).json({ error: 'Provide seeds or manualKeywords' });
   }
-
   try {
     const dataForSeo =
       process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD
-        ? {
-            login: process.env.DATAFORSEO_LOGIN,
-            password: process.env.DATAFORSEO_PASSWORD,
-          }
+        ? { login: process.env.DATAFORSEO_LOGIN, password: process.env.DATAFORSEO_PASSWORD }
         : null;
-
     const result = await analyzeKeywords({
-      seeds,
-      manualKeywords,
-      url,
-      country,
-      language,
-      dataForSeo,
+      seeds, manualKeywords, url, country, language, dataForSeo,
     });
     res.json(result);
   } catch (e) {
@@ -436,12 +602,7 @@ app.post('/api/keywords', generalLimiter, requireApiKey, async (req, res) => {
 // VIDEO
 // ============================================================
 app.post('/api/create-video', videoLimiter, requireApiKey, async (req, res) => {
-  const {
-    topic,
-    businessName = '',
-    durationSeconds = 15,
-    style = 'documentary',
-  } = req.body;
+  const { topic, businessName = '', durationSeconds = 15, style = 'documentary' } = req.body;
   if (!topic) return res.status(400).json({ error: 'topic is required' });
 
   const blog = await getOrCreateBlog(req.apiKey);
@@ -494,10 +655,7 @@ app.post('/api/social/connect', generalLimiter, requireApiKey, async (req, res) 
   }
   try {
     const account = await upsertSocialAccount({
-      apiKey: req.apiKey,
-      platform,
-      accountId,
-      accountName,
+      apiKey: req.apiKey, platform, accountId, accountName,
       accessTokenEnc: encryptToken(accessToken),
       expiresAt: expiresAt ? new Date(expiresAt) : null,
     });
@@ -521,16 +679,14 @@ app.post('/api/social/post-now', generalLimiter, requireApiKey, async (req, res)
     return res.status(400).json({ error: 'platform and message required' });
   }
   try {
-    res.json(
-      await postForAccount({ apiKey: req.apiKey, platform, message, link })
-    );
+    res.json(await postForAccount({ apiKey: req.apiKey, platform, message, link }));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
 // ============================================================
-// BUSINESSES — MULTI (up to 3 for premium, 1 for free)
+// BUSINESSES
 // ============================================================
 app.post('/api/businesses', generalLimiter, requireApiKey, async (req, res) => {
   try {
@@ -539,10 +695,7 @@ app.post('/api/businesses', generalLimiter, requireApiKey, async (req, res) => {
   } catch (e) {
     if (e.code === 'BUSINESS_LIMIT') {
       return res.status(403).json({
-        error: 'BUSINESS_LIMIT',
-        message: e.message,
-        limit: e.limit,
-        count: e.count,
+        error: 'BUSINESS_LIMIT', message: e.message, limit: e.limit, count: e.count,
       });
     }
     res.status(500).json({ error: e.message });
@@ -598,12 +751,8 @@ app.delete('/api/businesses/:id', generalLimiter, requireApiKey, async (req, res
 // ============================================================
 app.post('/api/campaigns', generalLimiter, requireApiKey, async (req, res) => {
   const {
-    businessId,
-    name,
-    text = '',
-    images = [],
-    durationSeconds = 15,
-    style = 'documentary',
+    businessId, name, text = '', images = [],
+    durationSeconds = 15, style = 'documentary',
     platforms = ['fb', 'ig', 'jiji', 'linkedin', 'gmb', 'direct'],
   } = req.body;
   if (!businessId || !name) {
@@ -611,19 +760,11 @@ app.post('/api/campaigns', generalLimiter, requireApiKey, async (req, res) => {
   }
   try {
     const campaign = await createCampaign({
-      businessId: Number(businessId),
-      name,
-      text,
-      images,
-      durationSeconds,
-      style,
+      businessId: Number(businessId), name, text, images, durationSeconds, style,
     });
     const business = await getBusiness(Number(businessId));
     const { links, errors } = await createSmartLinkForCampaign({
-      campaign,
-      business,
-      platforms,
-      createSmartLinkFn: createSmartLink,
+      campaign, business, platforms, createSmartLinkFn: createSmartLink,
     });
     res.json({
       campaign,
@@ -679,27 +820,15 @@ app.get('/api/campaigns/:id/links', generalLimiter, async (req, res) => {
 // ============================================================
 app.post('/api/leads', generalLimiter, requireApiKey, async (req, res) => {
   const {
-    businessId,
-    campaignId = null,
-    sourcePlatform = 'direct',
-    name = '',
-    phone = '',
-    email = '',
-    intent = 'unknown',
-    notes = '',
+    businessId, campaignId = null, sourcePlatform = 'direct',
+    name = '', phone = '', email = '', intent = 'unknown', notes = '',
   } = req.body;
   if (!businessId) return res.status(400).json({ error: 'businessId required' });
   try {
     const lead = await createLead({
       businessId: Number(businessId),
       campaignId: campaignId ? Number(campaignId) : null,
-      sourcePlatform,
-      name,
-      phone,
-      email,
-      intent,
-      notes,
-      status: 'new',
+      sourcePlatform, name, phone, email, intent, notes, status: 'new',
     });
     res.json({ lead });
   } catch (e) {
@@ -756,7 +885,7 @@ app.get('/api/businesses/:id/analytics', generalLimiter, async (req, res) => {
 });
 
 // ============================================================
-// Q&A MODULE — Question Finder + AI Drafter
+// Q&A MODULE
 // ============================================================
 app.get('/api/questions/sources', (req, res) => {
   res.json({ countries: listSupportedCountries() });
@@ -777,17 +906,12 @@ app.post('/api/questions/find', questionLimiter, requireApiKey, async (req, res)
   }
 
   try {
-    const found = await findQuestions({
-      keyword,
-      country,
-      limitPerSource: 10,
-    });
+    const found = await findQuestions({ keyword, country, limitPerSource: 10 });
     const saved = await saveQuestionFinds(
       Number(businessId), keyword, country, found.results
     );
     res.json({
-      keyword,
-      country,
+      keyword, country,
       totalFound: found.totalFound,
       newlySaved: saved.length,
       sourceStatus: found.sourceStatus,
@@ -850,11 +974,7 @@ app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, re
       wordCount: result.wordCount,
     });
 
-    res.json({
-      draft: saved,
-      platform: result.platform,
-      wordCount: result.wordCount,
-    });
+    res.json({ draft: saved, platform: result.platform, wordCount: result.wordCount });
   } catch (e) {
     console.error('Draft error:', e.message);
     res.status(500).json({ error: e.message });
@@ -885,7 +1005,7 @@ app.put('/api/drafts/:id/status', generalLimiter, requireApiKey, async (req, res
 });
 
 // ============================================================
-// SMART LINK REDIRECT — /l/:slug
+// SMART LINK REDIRECT
 // ============================================================
 app.get('/l/:slug', async (req, res) => {
   try {
@@ -955,9 +1075,7 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
     }
 
     if (Number(verified.amount) < PREMIUM_PRICE_NGN) {
-      console.warn(
-        `❌ Amount mismatch: got ${verified.amount}, expected ${PREMIUM_PRICE_NGN}`
-      );
+      console.warn(`❌ Amount mismatch: got ${verified.amount}, expected ${PREMIUM_PRICE_NGN}`);
       return;
     }
     if (verified.currency !== 'NGN') {
@@ -970,9 +1088,7 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
       console.warn('❌ Could not upgrade blog:', apiKey);
       return;
     }
-    console.log(
-      `✅ Premium upgrade: ${apiKey} — ${verified.amount} ${verified.currency}`
-    );
+    console.log(`✅ Premium upgrade: ${apiKey} — ${verified.amount} ${verified.currency}`);
   } catch (e) {
     console.error('❌ Flutterwave webhook error:', e.message);
   }
@@ -1028,7 +1144,7 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
 });
 
 // ============================================================
-// PAYMENT INIT
+// PAYMENT
 // ============================================================
 app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) => {
   const txRef = `ATE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1049,8 +1165,7 @@ app.post('/api/payment/demo-upgrade', generalLimiter, requireApiKey, async (req,
   }
   try {
     const blog = await upgradeToPremium(
-      req.apiKey,
-      req.body.email || 'demo@example.com'
+      req.apiKey, req.body.email || 'demo@example.com'
     );
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
     res.json({ ok: true, plan: blog.plan });
@@ -1062,7 +1177,10 @@ app.post('/api/payment/demo-upgrade', generalLimiter, requireApiKey, async (req,
 // ============================================================
 // ROOT REDIRECT + 404 + ERROR
 // ============================================================
-app.get('/', (req, res) => res.redirect('/app.html'));
+app.get('/', (req, res) => {
+  // Redirect to login if no token in URL (browser-level), else app
+  res.redirect('/app.html');
+});
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found', path: req.path });
@@ -1086,18 +1204,49 @@ async function boot() {
       await initSchema();
       await initSocialSchema();
       await initLeadsSchema();
+      await initUsersSchema();
     } else {
       console.warn('⚠️  DATABASE_URL not set — DB operations will fail');
+    }
+
+    // Auto-create admin from env (first boot only)
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (adminEmail && adminPassword) {
+      try {
+        const existingAdmin = await findAdminUser();
+        if (!existingAdmin) {
+          const apiKey = generateApiKey(adminEmail);
+          await getOrCreateBlog(apiKey, 'unknown');
+          await createUser({
+            email: adminEmail,
+            passwordHash: hashPassword(adminPassword),
+            name: 'Admin',
+            apiKey,
+            role: 'admin',
+          });
+          console.log(`✅ Admin created: ${adminEmail}`);
+          console.log(`   API key: ${apiKey}`);
+          console.log(`   (Use this key to claim legacy data via /admin.html)`);
+        } else {
+          console.log(`ℹ️  Admin already exists: ${existingAdmin.email}`);
+        }
+      } catch (e) {
+        console.warn('Admin auto-create failed:', e.message);
+      }
+    } else {
+      console.warn('⚠️  ADMIN_EMAIL / ADMIN_PASSWORD not set — no admin will be created');
     }
 
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.2.1 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.3.0 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
-      console.log(`   iframe embedding: enabled (frameguard off)`);
+      console.log(`   iframe embedding: enabled`);
+      console.log(`   Auth: enabled (JWT, 30-day sessions)`);
     });
   } catch (e) {
     console.error('❌ Boot failed:', e.message);
