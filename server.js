@@ -1,6 +1,6 @@
 // ============================================================
-// GrowthBot — Main Express server
-// v3.2 — SEO, keywords, backlinks, video, social, leads, Q&A module, multi-business
+// Auto Traffic Engine — Main Express server
+// v3.2.1 — iframe-embedding enabled, all features wired
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -107,6 +107,7 @@ app.use(
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    frameguard: false, // ← allows embedding in Blogger iframe
   })
 );
 
@@ -231,7 +232,7 @@ function getClientIp(req) {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    version: '3.2.0',
+    version: '3.2.1',
     env: NODE_ENV,
     uptime: Math.round(process.uptime()),
     ai: AI_PROVIDER,
@@ -767,7 +768,6 @@ app.post('/api/questions/find', questionLimiter, requireApiKey, async (req, res)
     return res.status(400).json({ error: 'businessId and keyword required' });
   }
 
-  // Premium-only feature
   const blog = await getBlog(req.apiKey);
   if (!blog || blog.plan !== 'premium') {
     return res.status(403).json({
@@ -1031,7 +1031,7 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
 // PAYMENT INIT
 // ============================================================
 app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) => {
-  const txRef = `GB_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const txRef = `ATE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   res.json({
     tx_ref: txRef,
     amount: PREMIUM_PRICE_NGN,
@@ -1062,7 +1062,7 @@ app.post('/api/payment/demo-upgrade', generalLimiter, requireApiKey, async (req,
 // ============================================================
 // ROOT REDIRECT + 404 + ERROR
 // ============================================================
-app.get('/', (req, res) => res.redirect('/dashboard.html'));
+app.get('/', (req, res) => res.redirect('/app.html'));
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found', path: req.path });
@@ -1093,10 +1093,11 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 GrowthBot v3.2 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.2.1 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
+      console.log(`   iframe embedding: enabled (frameguard off)`);
     });
   } catch (e) {
     console.error('❌ Boot failed:', e.message);
