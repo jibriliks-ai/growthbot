@@ -3,832 +3,144 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Unlock Premium — GrowthBot</title>
-  <meta name="robots" content="noindex, nofollow" />
+  <title>Upgrade to Premium — Auto Traffic Engine</title>
   <script src="https://checkout.flutterwave.com/v3.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --bg: #09090b;
-      --surface: #18181b;
-      --surface-2: #27272a;
-      --border: #27272a;
-      --border-strong: #3f3f46;
-      --text: #e4e4e7;
-      --muted: #a1a1aa;
-      --dim: #71717a;
-      --accent: #7c3aed;
-      --accent-2: #4f46e5;
-      --accent-light: #a78bfa;
-      --success: #4ade80;
-      --error: #f87171;
-      --warning: #facc15;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      line-height: 1.6;
-    }
-    .layout {
-      display: grid;
-      grid-template-columns: 440px 1fr;
-      gap: 32px;
-      max-width: 960px;
-      width: 100%;
-      align-items: start;
-    }
-    @media (max-width: 880px) {
-      .layout { grid-template-columns: 1fr; max-width: 440px; }
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 32px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-      font-size: 16px;
-      margin-bottom: 20px;
-    }
-    .brand-mark {
-      width: 36px; height: 36px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 4px 14px rgba(124,58,237,0.3);
-    }
-
-    h1 {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
-      background: linear-gradient(135deg, #f4f4f5, var(--accent-light));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .subtitle {
-      color: var(--muted);
-      font-size: 14px;
-      margin-bottom: 24px;
-    }
-
-    .price-box {
-      background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(79,70,229,0.06));
-      border: 1px solid rgba(124,58,237,0.3);
-      border-radius: 14px;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .price {
-      font-size: 40px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      line-height: 1;
-    }
-    .price-period {
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: 6px;
-    }
-
-    .features {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-    .features li {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-size: 14px;
-      color: #d4d4d8;
-    }
-    .features li::before {
-      content: '✓';
-      color: var(--success);
-      font-weight: 700;
-      flex-shrink: 0;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(74,222,128,0.15);
-      border-radius: 50%;
-      font-size: 11px;
-      margin-top: 1px;
-    }
-
-    label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      margin: 14px 0 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    input {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border-strong);
-      background: var(--bg);
-      color: var(--text);
-      font-family: inherit;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.15s ease;
-    }
-    input:focus { border-color: var(--accent); }
-    input::placeholder { color: var(--dim); }
-
-    .hint {
-      font-size: 11px;
-      color: var(--dim);
-      margin-top: 4px;
-      line-height: 1.4;
-    }
-    .hint code {
-      background: var(--surface-2);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
-      color: var(--accent-light);
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px 20px;
-      border-radius: 12px;
-      border: none;
-      font-family: inherit;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      margin-top: 16px;
-      transition: all 0.15s ease;
-    }
-    .btn.primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(124,58,237,0.3);
-    }
-    .btn.primary:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 28px rgba(124,58,237,0.4);
-    }
-    .btn.primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .btn.secondary {
-      background: var(--surface-2);
-      color: var(--text);
-    }
-    .btn.secondary:hover:not(:disabled) { background: var(--border-strong); }
-    .btn.hidden { display: none; }
-
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
-      vertical-align: middle;
-      margin-right: 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .status {
-      display: none;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-size: 13px;
-      margin-top: 14px;
-      line-height: 1.5;
-    }
-    .status.info {
-      background: rgba(124,58,237,0.12);
-      color: var(--accent-light);
-      border: 1px solid rgba(124,58,237,0.3);
-    }
-    .status.success {
-      background: rgba(74,222,128,0.1);
-      color: var(--success);
-      border: 1px solid rgba(74,222,128,0.3);
-    }
-    .status.error {
-      background: rgba(248,113,113,0.1);
-      color: var(--error);
-      border: 1px solid rgba(248,113,113,0.3);
-    }
-    .status.warning {
-      background: rgba(250,204,21,0.1);
-      color: var(--warning);
-      border: 1px solid rgba(250,204,21,0.3);
-    }
-    .status code {
-      background: rgba(0,0,0,0.3);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
-    }
-
-    .footer {
-      font-size: 11px;
-      color: var(--dim);
-      text-align: center;
-      margin-top: 20px;
-      line-height: 1.6;
-    }
-    .footer a { color: var(--muted); text-decoration: none; }
-    .footer a:hover { color: var(--text); text-decoration: underline; }
-
-    /* Side panel */
-    .side {
-      padding: 8px;
-    }
-    .side h2 {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 20px;
-      color: var(--text);
-    }
-    .benefit {
-      display: flex;
-      gap: 14px;
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .benefit:last-child { border-bottom: none; }
-    .benefit-icon {
-      flex-shrink: 0;
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border-strong);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-    }
-    .benefit strong {
-      display: block;
-      font-size: 14px;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-    .benefit p {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    /* Success screen */
-    .success-screen { text-align: center; padding: 20px 0; }
-    .success-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-      animation: pop 0.4s ease-out;
-    }
-    @keyframes pop {
-      0% { transform: scale(0); }
-      70% { transform: scale(1.15); }
-      100% { transform: scale(1); }
-    }
-    .success-screen h1 {
-      background: linear-gradient(135deg, var(--success), #22c55e);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .next-steps {
-      list-style: none;
-      text-align: left;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin: 20px 0;
-    }
-    .next-steps li {
-      padding: 6px 0;
-      font-size: 13px;
-      color: #d4d4d8;
-    }
+    /* (Your existing styles from pay.html – keep the dark theme) */
+    :root { --bg: #09090b; --surface: #18181b; --border: #27272a; --text: #e4e4e7; --muted: #a1a1aa; --accent: #7c3aed; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px; max-width: 420px; width: 90%; text-align: center; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    .price { font-size: 40px; font-weight: 800; margin: 16px 0; }
+    .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--accent); color: white; font-weight: 700; font-size: 16px; cursor: pointer; margin-top: 16px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: white; box-sizing: border-box; }
+    .status { margin-top: 16px; font-size: 14px; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <!-- Left: Form card -->
-    <div class="card" id="card">
-      <div class="brand">
-        <span class="brand-mark">✨</span>
-        GrowthBot
-      </div>
+  <div class="card" id="mainCard">
+    <div style="font-size:40px">🚦</div>
+    <h1>Unlock Premium</h1>
+    <p style="color: var(--muted); font-size: 14px;">Get unlimited audits, AI videos, and Q&A across 55+ countries.</p>
+    
+    <div class="price">$29 <span style="font-size:16px; color:var(--muted); font-weight:400;">/month</span></div>
+    
+    <ul style="text-align:left; font-size:13px; line-height:1.8; color:var(--muted); padding-left:20px; margin:20px 0;">
+      <li>Unlimited SEO Audits</li>
+      <li>AI Video Ads (10–25s)</li>
+      <li>Keyword Research & Clustering</li>
+      <li>Q&A Finder + AI Drafts</li>
+      <li>Backlink Tools (IndexNow + Listings)</li>
+      <li>Social Auto-Posting</li>
+    </ul>
 
-      <h1>Unlock Premium</h1>
-      <p class="subtitle">Everything you need to grow your business online.</p>
-
-      <div class="price-box">
-        <div class="price" id="price">₦5,000</div>
-        <div class="price-period">per month · cancel anytime</div>
-      </div>
-
-      <ul class="features">
-        <li>Unlimited SEO audits + auto-fix</li>
-        <li>AI video ads (10–25s, real voiceover)</li>
-        <li>IndexNow submission to 5+ search engines</li>
-        <li>Directory listing packages (Jiji, GBP, VConnect)</li>
-        <li>Keyword research + clustering</li>
-        <li>Facebook + LinkedIn auto-posting (2×/day)</li>
-        <li>Smart links + lead tracking</li>
-        <li>Automated review requests via WhatsApp</li>
-        <li>No "Powered by GrowthBot" watermark</li>
-      </ul>
-
-      <label for="email">Email (for receipt)</label>
-      <input id="email" type="email" placeholder="you@example.com" autocomplete="email" />
-
-      <label for="apiKey">API key</label>
-      <input id="apiKey" type="text" placeholder="your_blog_key_123" autocomplete="off" />
-      <p class="hint">
-        Found in your Blogger widget code: <code>data-key="..."</code>
-      </p>
-
-      <button class="btn primary" id="payBtn" type="button">Pay with Flutterwave</button>
-      <button class="btn secondary hidden" id="demoBtn" type="button">Test upgrade (dev only)</button>
-
-      <div class="status" id="status"></div>
-
-      <p class="footer">
-        Payment processed securely by Flutterwave.
-        By upgrading you agree to our <a href="/terms.html" target="_blank" rel="noopener">Terms</a>.
-      </p>
-    </div>
-
-    <!-- Right: Why Premium -->
-    <div class="side">
-      <h2>Why Premium?</h2>
-
-      <div class="benefit">
-        <div class="benefit-icon">🎬</div>
-        <div>
-          <strong>AI Video Ads</strong>
-          <p>Professional advert clips (10–25s) with real AI voiceover, ready for Instagram, TikTok, and WhatsApp.</p>
-        </div>
-      </div>
-
-      <div class="benefit">
-        <div class="benefit-icon">🔗</div>
-        <div>
-          <strong>Smart Links</strong>
-          <p>Track every click. See which platform brought each customer. Auto-capture leads in real time.</p>
-        </div>
-      </div>
-
-      <div class="benefit">
-        <div class="benefit-icon">📱</div>
-        <div>
-          <strong>2× Daily Social Posts</strong>
-          <p>Your Facebook Page and LinkedIn Company Page run on autopilot — fresh content every morning and evening.</p>
-        </div>
-      </div>
-
-      <div class="benefit">
-        <div class="benefit-icon">⭐</div>
-        <div>
-          <strong>Review Engine</strong>
-          <p>24 hours after each sale, WhatsApp automatically asks happy customers for a Google review.</p>
-        </div>
-      </div>
-
-      <div class="benefit">
-        <div class="benefit-icon">🔍</div>
-        <div>
-          <strong>Search Visibility</strong>
-          <p>IndexNow push + optimized listings so Bing, Yandex, and directories find you faster.</p>
-        </div>
-      </div>
-    </div>
+    <input id="email" type="email" placeholder="Your email (for receipt)" required />
+    <button class="btn" id="payBtn">Pay $29 with Flutterwave</button>
+    <div class="status" id="status"></div>
   </div>
 
   <script>
-    // ============================================================
-    // CONFIG & STATE
-    // ============================================================
-    const params = new URLSearchParams(location.search);
-    const BASE_URL = location.origin;
-    const STATUS_PARAM = params.get('status');
-    const REF_PARAM = params.get('ref');
+    (function() {
+      const API_KEY = new URLSearchParams(location.search).get('key') || localStorage.getItem('ate_token');
+      const EMAIL_INPUT = document.getElementById('email');
+      const PAY_BTN = document.getElementById('payBtn');
+      const STATUS = document.getElementById('status');
 
-    const state = {
-      demoMode: false,
-      priceNGN: 5000,
-      flutterwaveConfigured: false,
-      polling: false,
-      pollAttempts: 0,
-      maxPollAttempts: 30, // 30 × 2s = 60s
-      pollTimer: null,
-      busy: false,
-    };
-
-    // ============================================================
-    // HELPERS
-    // ============================================================
-    function $(id) { return document.getElementById(id); }
-
-    function setBusy(busy, label) {
-      state.busy = busy;
-      const payBtn = $('payBtn');
-      const demoBtn = $('demoBtn');
-      if (payBtn) {
-        payBtn.disabled = busy || !state.flutterwaveConfigured;
-        payBtn.innerHTML = busy
-          ? '<span class="spinner"></span>' + (label || 'Processing…')
-          : `Pay ₦${state.priceNGN.toLocaleString()} with Flutterwave`;
-      }
-      if (demoBtn) {
-        demoBtn.disabled = busy;
-      }
-    }
-
-    function showStatus(type, html) {
-      const el = $('status');
-      if (!el) return;
-      el.className = 'status ' + type;
-      el.innerHTML = html;
-      el.style.display = 'block';
-    }
-
-    function hideStatus() {
-      const el = $('status');
-      if (el) el.style.display = 'none';
-    }
-
-    function setPriceDisplay() {
-      const priceEl = $('price');
-      if (priceEl) {
-        priceEl.textContent = '₦' + state.priceNGN.toLocaleString();
-      }
-    }
-
-    // ============================================================
-    // INIT
-    // ============================================================
-    async function init() {
-      // Prefill API key from URL
-      const keyFromUrl = params.get('key') || '';
-      if (keyFromUrl) $('apiKey').value = keyFromUrl;
-
-      // Prefill email from localStorage (remember last)
-      try {
-        const lastEmail = localStorage.getItem('gb_last_email');
-        if (lastEmail) $('email').value = lastEmail;
-      } catch {}
-
-      // Fetch server config
-      try {
-        const res = await fetch(BASE_URL + '/health', { cache: 'no-store' });
-        if (res.ok) {
-          const health = await res.json();
-          state.demoMode = health.demoMode === true;
-          state.priceNGN =
-            (health.price && Number(health.price.NGN)) || 5000;
-          state.flutterwaveConfigured = health.flutterwaveConfigured === true;
-        }
-      } catch (e) {
-        console.warn('Could not reach /health:', e.message);
-      }
-
-      setPriceDisplay();
-
-      // Show/hide demo button
-      if (state.demoMode) {
-        $('demoBtn').classList.remove('hidden');
-      }
-
-      // Block payment if Flutterwave isn't configured
-      if (!state.flutterwaveConfigured) {
-        setBusy(true);
-        showStatus(
-          'warning',
-          'Payment is not configured on this server yet. ' +
-            'If you are the site owner, add <code>FLUTTERWAVE_PUBLIC_KEY</code> and ' +
-            '<code>FLUTTERWAVE_SECRET_KEY</code> to your environment variables.'
-        );
-      } else {
-        setBusy(false);
-      }
-
-      // Handle status from URL
-      if (STATUS_PARAM === 'success') {
-        showStatus('info', 'Checking payment status…');
-        setTimeout(pollForPremium, 800);
-      } else if (STATUS_PARAM === 'cancelled') {
-        showStatus(
-          'warning',
-          'Payment was cancelled. You can try again whenever you are ready.'
-        );
-      }
-    }
-
-    // ============================================================
-    // PAYMENT FLOW
-    // ============================================================
-    function validateInputs() {
-      const email = $('email').value.trim();
-      const apiKey = $('apiKey').value.trim();
-
-      if (!email) { showStatus('error', 'Please enter your email.'); return null; }
-      if (!email.includes('@') || !email.includes('.')) {
-        showStatus('error', 'That email address does not look valid.');
-        return null;
-      }
-      if (!apiKey) {
-        showStatus('error', 'Please enter your API key.');
-        return null;
-      }
-      if (apiKey.length < 4) {
-        showStatus('error', 'API key looks too short. Copy the full key.');
-        return null;
-      }
-      return { email, apiKey };
-    }
-
-    async function pay() {
-      if (state.busy) return;
-      hideStatus();
-
-      const inputs = validateInputs();
-      if (!inputs) return;
-
-      const { email, apiKey } = inputs;
-
-      // Remember email for next time
-      try { localStorage.setItem('gb_last_email', email); } catch {}
-
-      setBusy(true, 'Preparing checkout…');
-      showStatus('info', 'Preparing secure checkout…');
-
-      try {
-        // 1. Init payment on server
-        const initRes = await fetch(BASE_URL + '/api/payment/init', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: apiKey, email }),
-        });
-
-        if (!initRes.ok) {
-          const err = await initRes.json().catch(() => ({}));
-          throw new Error(err.error || 'Payment setup failed on the server');
-        }
-
-        const init = await initRes.json();
-        if (!init.public_key) {
-          throw new Error(
-            'Flutterwave public key is not configured on the server'
-          );
-        }
-
-        // 2. Open Flutterwave checkout
-        showStatus('info', 'Opening secure checkout…');
-
-        // FlutterwaveCheckout is synchronous — it opens a modal
-        // and returns immediately. The callback fires later.
-        window.FlutterwaveCheckout({
-          public_key: init.public_key,
-          tx_ref: init.tx_ref,
-          amount: init.amount,
-          currency: init.currency || 'NGN',
-          payment_options: 'card,banktransfer,ussd,mobilemoney',
-          customer: {
-            email: init.email,
-            name: email.split('@')[0],
-          },
-          customizations: {
-            title: 'GrowthBot Premium',
-            description: 'Monthly subscription — SEO, videos, backlinks, leads',
-          },
-          meta: init.metadata,
-          callback: function (response) {
-            console.log('[GrowthBot] Flutterwave callback:', response);
-            setBusy(true, 'Verifying payment…');
-            showStatus(
-              'info',
-              '✅ Payment received! Verifying with the server (this takes 5–15 seconds)…'
-            );
-            pollForPremium();
-          },
-          onclose: function () {
-            console.log('[GrowthBot] Flutterwave modal closed');
-            showStatus(
-              'warning',
-              'Checkout closed before completing payment. You can try again.'
-            );
-            setBusy(false);
-          },
-        });
-      } catch (e) {
-        console.error('[GrowthBot] Payment error:', e);
-        showStatus('error', 'Payment failed: ' + e.message);
-        setBusy(false);
-      }
-    }
-
-    // ============================================================
-    // VERIFICATION POLLING
-    // ============================================================
-    async function pollForPremium() {
-      if (state.polling) return;
-      state.polling = true;
-      state.pollAttempts = 0;
-
-      const apiKey = $('apiKey').value.trim();
-      if (!apiKey) {
-        showStatus(
-          'error',
-          'Cannot verify: missing API key. Please enter the API key from your widget code.'
-        );
-        state.polling = false;
+      if (!API_KEY) {
+        STATUS.innerHTML = '<span style="color:#ef4444">Missing API key. Please log in first.</span>';
+        PAY_BTN.disabled = true;
         return;
       }
 
-      const tick = async () => {
-        state.pollAttempts++;
+      // Prefill email from localStorage (if available)
+      const user = JSON.parse(localStorage.getItem('ate_user') || '{}');
+      if (user.email) EMAIL_INPUT.value = user.email;
+
+      PAY_BTN.addEventListener('click', async function() {
+        const email = EMAIL_INPUT.value.trim();
+        if (!email) {
+          STATUS.innerHTML = '<span style="color:#ef4444">Please enter your email.</span>';
+          return;
+        }
+
+        PAY_BTN.disabled = true;
+        PAY_BTN.textContent = 'Preparing checkout...';
+        STATUS.innerHTML = '';
 
         try {
-          const res = await fetch(
-            BASE_URL + '/api/check-plan?key=' + encodeURIComponent(apiKey),
-            { cache: 'no-store' }
-          );
-          const data = await res.json();
+          // 1. Init payment on server to get tx_ref and public_key
+          const initRes = await fetch('/api/payment/init', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + API_KEY },
+            body: JSON.stringify({ email: email, key: API_KEY }) // Send key in body for legacy support
+          });
 
-          if (data.plan === 'premium') {
-            clearTimeout(state.pollTimer);
-            state.polling = false;
-            showSuccess();
-            return;
+          if (!initRes.ok) {
+            const err = await initRes.json();
+            throw new Error(err.error || 'Failed to init payment');
           }
 
-          if (state.pollAttempts >= state.maxPollAttempts) {
-            showStatus(
-              'warning',
-              'Payment was received but verification is taking longer than expected. ' +
-                'The server webhook usually fires within 10 seconds. ' +
-                'Refresh this page in 1 minute. If still not upgraded, contact support with reference ' +
-                (REF_PARAM ? '<code>' + REF_PARAM + '</code>' : 'your transaction ID') +
-                '.'
-            );
-            setBusy(false);
-            state.polling = false;
-            return;
-          }
+          const initData = await initRes.json();
 
-          showStatus(
-            'info',
-            `Verifying payment… (attempt ${state.pollAttempts}/${state.maxPollAttempts}) — this usually takes under 15 seconds.`
-          );
-          state.pollTimer = setTimeout(tick, 2000);
-        } catch (e) {
-          console.warn('[GrowthBot] Poll error:', e.message);
-          if (state.pollAttempts >= state.maxPollAttempts) {
-            showStatus(
-              'error',
-              'Could not verify payment due to a network error: ' + e.message
-            );
-            setBusy(false);
-            state.polling = false;
-            return;
-          }
-          state.pollTimer = setTimeout(tick, 3000);
-        }
-      };
-
-      tick();
-    }
-
-    // ============================================================
-    // SUCCESS SCREEN
-    // ============================================================
-    function showSuccess() {
-      const card = $('card');
-      const referrer = document.referrer || '';
-      const backUrl = referrer && referrer !== location.href ? referrer : '/';
-
-      card.innerHTML = `
-        <div class="success-screen">
-          <div class="success-icon">✅</div>
-          <h1>You're Premium!</h1>
-          <p class="subtitle">
-            Your GrowthBot subscription is now active. All premium features are unlocked on your blog.
-          </p>
-
-          <ul class="next-steps">
-            <li>🎬 Create your first video from the widget</li>
-            <li>🔗 Generate smart links for your next campaign</li>
-            <li>📱 Connect your Facebook or LinkedIn page</li>
-            <li>⭐ Add your Google review URL in Settings</li>
-          </ul>
-
-          <a class="btn primary" href="${backUrl}" style="display:block;text-decoration:none;text-align:center">
-            ← Back to your blog
-          </a>
-
-          <p class="footer">
-            You can safely close this tab. Premium is active immediately.
-          </p>
-        </div>
-      `;
-    }
-
-    // ============================================================
-    // DEMO UPGRADE (only when DEMO_MODE=true)
-    // ============================================================
-    async function demoUpgrade() {
-      if (state.busy) return;
-      hideStatus();
-
-      const email = $('email').value.trim() || 'demo@example.com';
-      const apiKey = $('apiKey').value.trim();
-
-      if (!apiKey) {
-        showStatus('error', 'Enter your API key first.');
-        return;
-      }
-
-      setBusy(true, 'Running demo upgrade…');
-      showStatus('info', 'Applying demo upgrade (no payment)…');
-
-      try {
-        const res = await fetch(BASE_URL + '/api/payment/demo-upgrade', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: apiKey, email }),
-        });
-
-        if (res.status === 403) {
-          throw new Error(
-            'Demo mode is disabled on this server. Set DEMO_MODE=true in .env to enable it.'
-          );
-        }
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || 'Demo upgrade failed');
-        }
-
-        showSuccess();
-      } catch (e) {
-        showStatus('error', e.message);
-        setBusy(false);
-      }
-    }
-
-    // ============================================================
-    // WIRE UP
-    // ============================================================
-    document.addEventListener('DOMContentLoaded', () => {
-      $('payBtn').addEventListener('click', pay);
-      $('demoBtn').addEventListener('click', demoUpgrade);
-
-      // Enter key submits
-      ['email', 'apiKey'].forEach((id) => {
-        $(id).addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            if (state.demoMode && e.shiftKey) {
-              demoUpgrade();
-            } else {
-              pay();
+          // 2. Open Flutterwave Checkout
+          FlutterwaveCheckout({
+            public_key: initData.public_key,
+            tx_ref: initData.tx_ref,
+            amount: initData.amount,       // 29
+            currency: initData.currency,   // USD
+            payment_options: 'card,banktransfer,ussd',
+            customer: { email: email, name: email.split('@')[0] },
+            customizations: {
+              title: 'Auto Traffic Engine Premium',
+              description: 'Monthly Subscription — $29',
+            },
+            callback: function(response) {
+              // Payment successful, now verify on server
+              STATUS.innerHTML = 'Verifying payment...';
+              pollForPremium(API_KEY);
+            },
+            onclose: function() {
+              PAY_BTN.disabled = false;
+              PAY_BTN.textContent = 'Pay $29 with Flutterwave';
+              STATUS.innerHTML = '<span style="color:#f59e0b">Checkout closed. You can try again.</span>';
             }
-          }
-        });
+          });
+        } catch (err) {
+          STATUS.innerHTML = `<span style="color:#ef4444">Error: ${err.message}</span>`;
+          PAY_BTN.disabled = false;
+          PAY_BTN.textContent = 'Pay $29 with Flutterwave';
+        }
       });
 
-      init();
-    });
+      async function pollForPremium(key) {
+        let attempts = 0;
+        const maxAttempts = 30; // 30 * 2s = 60s
+        const interval = setInterval(async () => {
+          attempts++;
+          try {
+            const res = await fetch('/api/check-plan?key=' + encodeURIComponent(key));
+            const data = await res.json();
+            if (data.plan === 'premium') {
+              clearInterval(interval);
+              document.getElementById('mainCard').innerHTML = `
+                <div style="font-size:48px; margin-bottom:16px;">✅</div>
+                <h2>You're Premium!</h2>
+                <p style="color:var(--muted); font-size:14px;">Your account has been upgraded successfully.</p>
+                <a href="/app.html" class="btn" style="display:block; text-decoration:none; margin-top:20px;">Go to Dashboard</a>
+              `;
+            } else if (attempts >= maxAttempts) {
+              clearInterval(interval);
+              STATUS.innerHTML = '<span style="color:#f59e0b">Verification taking longer than expected. Please check your dashboard in a minute.</span>';
+            }
+          } catch (e) {
+            console.warn('Polling error:', e);
+          }
+        }, 2000);
+      }
+    })();
   </script>
 </body>
 </html>

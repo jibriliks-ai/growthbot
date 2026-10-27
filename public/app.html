@@ -203,7 +203,7 @@ a:hover{color:var(--accent)}
 }
 .mobile-brand-mark{
   width:34px;height:34px;
-  border-radius:50%; /* Make the logo round since the image is round */
+  border-radius:50%;
   background:var(--surface-2);
   display:flex;align-items:center;justify-content:center;
   font-size:17px;
@@ -938,35 +938,25 @@ const pwaBanner = document.getElementById('pwaBanner');
 const pwaInstallBtn = document.getElementById('pwaInstallBtn');
 
 window.addEventListener('beforeinstallprompt', (e) => {
-  // Prevent the mini-infobar from appearing on mobile
   e.preventDefault();
-  // Stash the event so it can be triggered later.
   deferredPrompt = e;
-  // Update UI notify the user they can install the PWA
   if (pwaBanner) pwaBanner.classList.add('show');
 });
 
 if (pwaInstallBtn) {
   pwaInstallBtn.addEventListener('click', async () => {
     if (!deferredPrompt) return;
-    // Show the install prompt
     deferredPrompt.prompt();
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`User response to the install prompt: ${outcome}`);
-    // We've used the prompt, and can't use it again, throw it away
     deferredPrompt = null;
-    // Hide the banner
     if (pwaBanner) pwaBanner.classList.remove('show');
   });
 }
 
 window.addEventListener('appinstalled', () => {
-  // Hide the app-provided install promotion
   if (pwaBanner) pwaBanner.classList.remove('show');
-  // Clear the deferredPrompt so it can be garbage collected
   deferredPrompt = null;
-  console.log('PWA was installed');
 });
 
 // ============================================================
@@ -1434,7 +1424,7 @@ function renderHome(){
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">${isFree?'Free':'Premium'}</div>
             <div style="font-size:14px;font-weight:600;margin-top:2px;">${isFree?'Upgrade for full features':'All features unlocked'}</div>
           </div>
-          ${isFree?`<a class="btn small" href="${BACKEND}/pay.html" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade ₦${(state.limits.price||5000).toLocaleString()}</a>`:''}
+          ${isFree?`<a class="btn small" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade to Premium</a>`:''}
         </div>
       </div>
     `}
@@ -1507,7 +1497,7 @@ function renderSEO(){
       loadPlan().then(()=>{ renderNav(); updateHeader(); });
     } catch(e){
       if (e.status===403 && e.data?.error==='FREE_LIMIT'){
-        r.innerHTML = `<div class="status warning">Daily limit reached. <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+        r.innerHTML = `<div class="status warning">Daily limit reached. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
       } else {
         r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
       }
@@ -1579,7 +1569,7 @@ function renderVideo(){
       if ($('copyCap')) $('copyCap').addEventListener('click', ()=>copy(d.script.caption, 'Caption copied'));
     } catch(e){
       if (e.status===403){
-        r.innerHTML = `<div class="status warning">Premium required. <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+        r.innerHTML = `<div class="status warning">Premium required. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
       } else {
         r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
       }
@@ -1777,7 +1767,7 @@ function renderQA(){
       });
       loadAnalytics();
     } catch(e){
-      if (e.status===403) r.innerHTML = `<div class="status warning">Premium feature. <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+      if (e.status===403) r.innerHTML = `<div class="status warning">Premium feature. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
       else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
     } finally {
       btn.disabled = false;
@@ -2302,7 +2292,7 @@ async function renderBusinesses(){
       </div>
     ` : `
       <div class="status warning" style="margin-top:16px;">
-        ${isFree ? `You've reached the free limit (1 business). <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade to Premium for 3 businesses →</a>` : `You've reached the premium limit (3 businesses).`}
+        ${isFree ? `You've reached the free limit (1 business). <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade to Premium for 3 businesses →</a>` : `You've reached the premium limit (3 businesses).`}
       </div>
     `}
   `;
@@ -2418,7 +2408,7 @@ function renderSettings(){
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">${isFree?'Free':'⭐ Premium'}</div>
           <div style="font-size:16px;font-weight:700;margin-top:2px;">${isFree?'Limited features':'Everything unlocked'}</div>
         </div>
-        ${isFree?`<a class="btn small" href="${BACKEND}/pay.html" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade</a>`:''}
+        ${isFree?`<a class="btn small" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade</a>`:''}
       </div>
     </div>
 
@@ -2500,8 +2490,8 @@ function renderUpgrade(tab){
       <div class="empty-icon">🔒</div>
       <div class="empty-title">${labels[tab] || 'This feature'} is Premium</div>
       <div class="empty-desc">Unlock unlimited audits, AI videos, 55+ country Q&A, backlinks, and social posting.</div>
-      <a class="btn" href="${BACKEND}/pay.html" target="_blank" rel="noopener" style="display:inline-flex;text-decoration:none;max-width:320px;margin:0 auto;">
-        Upgrade for ₦${(state.limits.price || 5000).toLocaleString()}/month
+      <a class="btn" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener" style="display:inline-flex;text-decoration:none;max-width:320px;margin:0 auto;">
+        Upgrade for $29/month
       </a>
       <button class="btn secondary" id="backHome" style="max-width:320px;margin:8px auto 0;">← Back to home</button>
     </div>
