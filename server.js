@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Main Express server
-// v3.3.2 — Admin bypasses limits, Admin monitoring APIs, $29 USD
+// v3.3.3 — Complete: auth, admin bypass, monitoring, $29 USD payment
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -70,7 +70,7 @@ const PORT = Number(process.env.PORT) || 10000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const PUBLIC_BASE_URL =
   process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
-const PREMIUM_PRICE_USD = 29; // Flat $29/month
+const PREMIUM_PRICE_USD = 29;
 
 const AI_PROVIDER = process.env.AI_PROVIDER || 'openai';
 let aiClient = null;
@@ -148,7 +148,7 @@ const draftLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 40, message: { e
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many auth attempts' } });
 
 // ============================================================
-// MIDDLEWARE
+// MIDDLEWARE HELPERS
 // ============================================================
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -208,7 +208,7 @@ function getClientIp(req) {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    version: '3.3.2',
+    version: '3.3.3',
     env: NODE_ENV,
     uptime: Math.round(process.uptime()),
     ai: AI_PROVIDER,
@@ -322,7 +322,7 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 app.post('/api/auth/logout', (req, res) => res.json({ ok: true }));
 
 // ============================================================
-// ADMIN
+// ADMIN — Overview, Users, Monitoring
 // ============================================================
 app.get('/api/admin/overview', requireAdmin, async (req, res) => {
   try {
@@ -431,7 +431,7 @@ app.put('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
 // ============================================================
 app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => {
   try {
-    // 🚨 ADMIN BYPASS: Admins get infinite everything
+    // Admin bypass — infinite access
     if (req.user && req.user.role === 'admin') {
       return res.json({
         plan: 'premium',
@@ -465,16 +465,15 @@ app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => 
 });
 
 // ============================================================
-// AUDIT
+// SEO AUDIT
 // ============================================================
 app.post('/api/audit', auditLimiter, requireApiKey, async (req, res) => {
   const { url, keyword = '', autoFix = true } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
 
   const isAdmin = req.user && req.user.role === 'admin';
-  const freeLimit = Number(process.env.FREE_AUDITS_PER_DAY) || 3;
-  
   if (!isAdmin) {
+    const freeLimit = Number(process.env.FREE_AUDITS_PER_DAY) || 3;
     const updated = await tryIncrementAudit(req.apiKey, freeLimit);
     if (!updated) {
       return res.status(403).json({ error: 'FREE_LIMIT', message: 'Daily free audit limit reached' });
@@ -571,7 +570,7 @@ app.post('/api/create-video', videoLimiter, requireApiKey, async (req, res) => {
 
   const isAdmin = req.user && req.user.role === 'admin';
   const blog = await getOrCreateBlog(req.apiKey);
-  
+
   if (blog.plan !== 'premium' && !isAdmin) {
     return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
   }
@@ -855,7 +854,7 @@ app.post('/api/questions/find', questionLimiter, requireApiKey, async (req, res)
 
   const isAdmin = req.user && req.user.role === 'admin';
   const blog = await getBlog(req.apiKey);
-  
+
   if ((!blog || blog.plan !== 'premium') && !isAdmin) {
     return res.status(403).json({ error: 'PREMIUM_REQUIRED', message: 'Question Finder is a Premium feature' });
   }
@@ -896,7 +895,7 @@ app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, re
 
   const isAdmin = req.user && req.user.role === 'admin';
   const blog = await getBlog(req.apiKey);
-  
+
   if ((!blog || blog.plan !== 'premium') && !isAdmin) {
     return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
   }
@@ -976,6 +975,65 @@ app.get('/l/:slug', async (req, res) => {
 });
 
 // ============================================================
+// PAYMENT — Config-aware, with fallback
+// ============================================================
+app.get('/api/payment/status', (req, res) => {
+  const configured = Boolean(
+    process.env.FLUTTERWAVE_PUBLIC_KEY && process.env.FLUTTERWAVE_SECRET_KEY
+  );
+  res.json({
+    configured,
+    demoMode: process.env.DEMO_MODE === 'true',
+    price: PREMIUM_PRICE_USD,
+    currency: 'USD',
+    flutterwavePublicKeyPresent: Boolean(process.env.FLUTTERWAVE_PUBLIC_KEY),
+    flutterwaveSecretKeyPresent: Boolean(process.env.FLUTTERWAVE_SECRET_KEY),
+    message: configured
+      ? 'Payment gateway is ready'
+      : 'Payment gateway is not configured yet. The site owner needs to add Flutterwave keys on Render.',
+  });
+});
+
+app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) => {
+  // Guard: Check Flutterwave configuration before returning data
+  if (!process.env.FLUTTERWAVE_PUBLIC_KEY || !process.env.FLUTTERWAVE_SECRET_KEY) {
+    return res.status(503).json({
+      error: 'PAYMENT_NOT_CONFIGURED',
+      message: 'Payment gateway is not configured. Please contact support or try the demo upgrade.',
+      demoMode: process.env.DEMO_MODE === 'true',
+      details: {
+        missingPublicKey: !process.env.FLUTTERWAVE_PUBLIC_KEY,
+        missingSecretKey: !process.env.FLUTTERWAVE_SECRET_KEY,
+      },
+    });
+  }
+
+  const txRef = `ATE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  res.json({
+    tx_ref: txRef,
+    amount: PREMIUM_PRICE_USD,
+    currency: 'USD',
+    public_key: process.env.FLUTTERWAVE_PUBLIC_KEY,
+    email: req.body.email || '',
+    metadata: { api_key: req.apiKey },
+    callback_url: `${PUBLIC_BASE_URL}/pay.html?status=success`,
+  });
+});
+
+app.post('/api/payment/demo-upgrade', generalLimiter, requireApiKey, async (req, res) => {
+  if (process.env.DEMO_MODE !== 'true') {
+    return res.status(403).json({ error: 'Demo mode is disabled' });
+  }
+  try {
+    const blog = await upgradeToPremium(req.apiKey, req.body.email || 'demo@example.com');
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    res.json({ ok: true, plan: blog.plan });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ============================================================
 // WEBHOOK: FLUTTERWAVE
 // ============================================================
 app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
@@ -1010,8 +1068,14 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
     );
     const verified = verifyRes.data?.data;
     if (!verified || verified.status !== 'successful') return;
-    if (Number(verified.amount) < PREMIUM_PRICE_USD) return;
-    if (verified.currency !== 'USD') return;
+    if (Number(verified.amount) < PREMIUM_PRICE_USD) {
+      console.warn(`❌ Amount mismatch: got ${verified.amount}`);
+      return;
+    }
+    if (verified.currency !== 'USD') {
+      console.warn(`❌ Currency mismatch: ${verified.currency}`);
+      return;
+    }
 
     const blog = await upgradeToPremium(apiKey, verified.customer?.email || email);
     if (blog) console.log(`✅ Premium upgrade: ${apiKey}`);
@@ -1057,33 +1121,6 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
   const dryRun = req.query.dryRun === 'true' || req.body?.dryRun === true;
   try {
     res.json(await runReviewCron({ hoursAgo: 24, dryRun }));
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ============================================================
-// PAYMENT
-// ============================================================
-app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) => {
-  const txRef = `ATE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  res.json({
-    tx_ref: txRef,
-    amount: PREMIUM_PRICE_USD,
-    currency: 'USD',
-    public_key: process.env.FLUTTERWAVE_PUBLIC_KEY,
-    email: req.body.email || '',
-    metadata: { api_key: req.apiKey },
-    callback_url: `${PUBLIC_BASE_URL}/pay.html?status=success`,
-  });
-});
-
-app.post('/api/payment/demo-upgrade', generalLimiter, requireApiKey, async (req, res) => {
-  if (process.env.DEMO_MODE !== 'true') return res.status(403).json({ error: 'Demo mode is disabled' });
-  try {
-    const blog = await upgradeToPremium(req.apiKey, req.body.email || 'demo@example.com');
-    if (!blog) return res.status(404).json({ error: 'Blog not found' });
-    res.json({ ok: true, plan: blog.plan });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -1176,11 +1213,12 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.3.2 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.3.3 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
       console.log(`   Auth: enabled (JWT)`);
+      console.log(`   Payment: ${process.env.FLUTTERWAVE_PUBLIC_KEY ? '✅ configured' : '⚠️  not configured'}`);
     });
   } catch (e) {
     console.error('❌ Boot failed:', e.message);
