@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Auto Traffic Engine</title>
 <meta name="theme-color" content="#0a0a0f" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -86,13 +88,21 @@ a:hover{color:var(--accent)}
 .sidebar-logo{
   width:38px;height:38px;
   border-radius:10px;
-  background:var(--accent-grad);
+  background:var(--surface-2);
   display:flex;align-items:center;justify-content:center;
   font-size:20px;
   flex-shrink:0;
   box-shadow:0 4px 16px var(--accent-glow);
+  overflow: hidden;
 }
-.sidebar-title{font-size:14px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.sidebar-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.sidebar-title{
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:-.02em;
+  line-height:1.2;
+  white-space:nowrap;
+}
 .sidebar-subtitle{font-size:10px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
 .sidebar-nav{padding:16px 12px;flex:1}
 .nav-group{margin-bottom:20px}
@@ -193,17 +203,19 @@ a:hover{color:var(--accent)}
 }
 .mobile-brand-mark{
   width:34px;height:34px;
-  border-radius:9px;
-  background:var(--accent-grad);
+  border-radius:50%; /* Make the logo round since the image is round */
+  background:var(--surface-2);
   display:flex;align-items:center;justify-content:center;
   font-size:17px;
   flex-shrink:0;
   box-shadow:0 3px 12px var(--accent-glow);
+  overflow: hidden;
 }
+.mobile-brand-mark img { width: 100%; height: 100%; object-fit: cover; }
 .mobile-brand-text{min-width:0;flex:1}
 .mobile-brand-title{
   font-size:14px;font-weight:800;letter-spacing:-.02em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .mobile-brand-sub{font-size:10px;color:var(--text-2);margin-top:1px;font-weight:500}
 .plan-pill{
@@ -224,6 +236,14 @@ a:hover{color:var(--accent)}
   color:#fff;
   border-color:transparent;
   box-shadow:0 0 12px var(--accent-glow);
+}
+
+/* CSS trick to change text to ATE on very small screens */
+@media (max-width: 400px) {
+  .mobile-brand-title { font-size: 0; }
+  .mobile-brand-title::after { content: "ATE"; font-size: 16px; }
+  .sidebar-title { font-size: 0; }
+  .sidebar-title::after { content: "Auto Traffic Engine"; font-size: 12px; }
 }
 
 .content{
@@ -779,6 +799,28 @@ a:hover{color:var(--accent)}
 .idle-btns{display:flex;gap:8px;flex-direction:column}
 .idle-btns .btn{margin-top:0}
 
+/* PWA INSTALL BANNER */
+#pwaBanner {
+  display: none;
+  background: var(--accent-grad);
+  color: white;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  margin-bottom: 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 12px var(--accent-glow);
+  animation: slideDown 0.4s ease;
+}
+#pwaBanner.show { display: flex; }
+#pwaBanner .text { font-size: 13px; font-weight: 600; }
+#pwaBanner button {
+  background: white; color: var(--accent);
+  padding: 6px 12px; border-radius: 6px;
+  font-weight: 700; font-size: 12px;
+}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
 /* RESPONSIVE */
 @media (min-width:1024px){
   .sidebar{display:flex}
@@ -804,9 +846,9 @@ a:hover{color:var(--accent)}
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo">🚦</div>
+      <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
       <div>
-        <div class="sidebar-title">Auto Traffic<br>Engine</div>
+        <div class="sidebar-title">Auto Traffic Engine</div>
         <div class="sidebar-subtitle">v3.3.1</div>
       </div>
     </div>
@@ -818,7 +860,7 @@ a:hover{color:var(--accent)}
     <header class="mobile-header" id="mobileHeader">
       <button class="hamburger" id="hamburgerBtn" aria-label="Menu">☰</button>
       <div class="mobile-brand">
-        <div class="mobile-brand-mark">🚦</div>
+        <div class="mobile-brand-mark"><img src="/logo.png" alt="Logo"></div>
         <div class="mobile-brand-text">
           <div class="mobile-brand-title" id="mobileBrandTitle">Auto Traffic Engine</div>
           <div class="mobile-brand-sub" id="mobileBrandSub">Business growth tools</div>
@@ -839,15 +881,21 @@ a:hover{color:var(--accent)}
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <aside class="drawer" id="drawer">
   <div class="drawer-header">
-    <div class="sidebar-logo">🚦</div>
+    <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
     <div>
-      <div class="sidebar-title">Auto Traffic<br>Engine</div>
+      <div class="sidebar-title">Auto Traffic Engine</div>
       <div class="sidebar-subtitle">v3.3.1</div>
     </div>
     <button class="drawer-close" id="drawerClose">×</button>
   </div>
   <nav class="drawer-nav" id="drawerNav"></nav>
 </aside>
+
+<!-- PWA Install Banner -->
+<div id="pwaBanner">
+  <div class="text">📱 Install Auto Traffic Engine on your home screen</div>
+  <button id="pwaInstallBtn">Install</button>
+</div>
 
 <!-- Idle warning modal -->
 <div class="idle-overlay" id="idleOverlay">
@@ -871,7 +919,7 @@ a:hover{color:var(--accent)}
 'use strict';
 
 // ============================================================
-// AUTH GATE — must run before anything else
+// AUTH GATE
 // ============================================================
 const TOKEN_KEY = 'ate_token';
 const AUTH_TOKEN = localStorage.getItem(TOKEN_KEY);
@@ -883,12 +931,51 @@ if (!AUTH_TOKEN) {
 }
 
 // ============================================================
+// PWA INSTALL LOGIC
+// ============================================================
+let deferredPrompt;
+const pwaBanner = document.getElementById('pwaBanner');
+const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent the mini-infobar from appearing on mobile
+  e.preventDefault();
+  // Stash the event so it can be triggered later.
+  deferredPrompt = e;
+  // Update UI notify the user they can install the PWA
+  if (pwaBanner) pwaBanner.classList.add('show');
+});
+
+if (pwaInstallBtn) {
+  pwaInstallBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    // We've used the prompt, and can't use it again, throw it away
+    deferredPrompt = null;
+    // Hide the banner
+    if (pwaBanner) pwaBanner.classList.remove('show');
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  // Hide the app-provided install promotion
+  if (pwaBanner) pwaBanner.classList.remove('show');
+  // Clear the deferredPrompt so it can be garbage collected
+  deferredPrompt = null;
+  console.log('PWA was installed');
+});
+
+// ============================================================
 // IDLE TIMEOUT SYSTEM — 25 minutes
 // ============================================================
-const IDLE_TIMEOUT_MS = 25 * 60 * 1000;      // 25 min
-const IDLE_WARN_MS = 60 * 1000;               // 1 min warning
+const IDLE_TIMEOUT_MS = 25 * 60 * 1000;
+const IDLE_WARN_MS = 60 * 1000;
 const ACTIVITY_KEY = 'ate_last_activity';
-const CHECK_INTERVAL_MS = 5 * 1000;           // check every 5s
+const CHECK_INTERVAL_MS = 5 * 1000;
 
 let idleCheckInterval = null;
 let warnShown = false;
@@ -896,30 +983,19 @@ let countdownInterval = null;
 let remainingSec = 60;
 
 function touchActivity() {
-  try {
-    localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
-  } catch {}
+  try { localStorage.setItem(ACTIVITY_KEY, String(Date.now())); } catch {}
   if (warnShown) hideWarn();
 }
 
 function getLastActivity() {
-  try {
-    const v = parseInt(localStorage.getItem(ACTIVITY_KEY) || '0', 10);
-    return v || Date.now();
-  } catch {
-    return Date.now();
-  }
+  try { return parseInt(localStorage.getItem(ACTIVITY_KEY) || '0', 10) || Date.now(); } catch { return Date.now(); }
 }
 
 function forceLogout(reason) {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem('ate_user');
-  try {
-    sessionStorage.setItem('ate_logout_reason', reason || 'idle');
-  } catch {}
-  location.replace(
-    '/login.html?expired=1&redirect=' + encodeURIComponent(location.pathname + location.search)
-  );
+  try { sessionStorage.setItem('ate_logout_reason', reason || 'idle'); } catch {}
+  location.replace('/login.html?expired=1&redirect=' + encodeURIComponent(location.pathname + location.search));
 }
 
 function showWarn() {
@@ -934,10 +1010,7 @@ function showWarn() {
   clearInterval(countdownInterval);
   countdownInterval = setInterval(() => {
     remainingSec -= 1;
-    if (remainingSec <= 0) {
-      clearInterval(countdownInterval);
-      return;
-    }
+    if (remainingSec <= 0) { clearInterval(countdownInterval); return; }
     updateCountdown();
   }, 1000);
 }
@@ -958,51 +1031,31 @@ function checkIdle() {
   if (!localStorage.getItem(TOKEN_KEY)) return;
   const idleMs = Date.now() - getLastActivity();
 
-  if (idleMs >= IDLE_TIMEOUT_MS) {
-    forceLogout('idle');
-    return;
-  }
+  if (idleMs >= IDLE_TIMEOUT_MS) { forceLogout('idle'); return; }
 
   if (idleMs >= IDLE_TIMEOUT_MS - IDLE_WARN_MS) {
     if (!warnShown) showWarn();
     const secLeft = Math.ceil((IDLE_TIMEOUT_MS - idleMs) / 1000);
-    if (secLeft < remainingSec) {
-      remainingSec = secLeft;
-      updateCountdown();
-    }
+    if (secLeft < remainingSec) { remainingSec = secLeft; updateCountdown(); }
   }
 }
 
 function startIdleWatcher() {
   const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click', 'focus'];
-  events.forEach((ev) => {
-    document.addEventListener(ev, touchActivity, { passive: true });
-  });
-
-  // Initialize if not set
-  if (!localStorage.getItem(ACTIVITY_KEY)) {
-    touchActivity();
-  }
-
+  events.forEach((ev) => document.addEventListener(ev, touchActivity, { passive: true }));
+  if (!localStorage.getItem(ACTIVITY_KEY)) touchActivity();
   idleCheckInterval = setInterval(checkIdle, CHECK_INTERVAL_MS);
 }
 
-// Multi-tab sync — if another tab logs out, mirror it
 window.addEventListener('storage', (e) => {
-  if (e.key === TOKEN_KEY && !e.newValue) {
-    location.replace('/login.html?redirect=' + encodeURIComponent(location.pathname + location.search));
-  }
-  if (e.key === ACTIVITY_KEY) {
-    // Another tab was active — no action needed; our check uses shared value
-    if (warnShown) hideWarn();
-  }
+  if (e.key === TOKEN_KEY && !e.newValue) location.replace('/login.html?redirect=' + encodeURIComponent(location.pathname + location.search));
+  if (e.key === ACTIVITY_KEY && warnShown) hideWarn();
 });
 
 // ============================================================
-// CONFIG
+// CONFIG & STATE
 // ============================================================
 const BACKEND = location.origin;
-
 const state = {
   user: null,
   apiKey: '',
@@ -1025,9 +1078,7 @@ const content = $('content');
 // NAV STRUCTURE
 // ============================================================
 const NAV_GROUPS = [
-  { label: 'Main', items: [
-    { key: 'home', icon: '🏠', label: 'Home' }
-  ]},
+  { label: 'Main', items: [ { key: 'home', icon: '🏠', label: 'Home' } ]},
   { label: 'Content', items: [
     { key: 'seo', icon: '🔍', label: 'SEO Audit' },
     { key: 'video', icon: '🎬', label: 'Video Ads', premium: true },
@@ -2389,6 +2440,13 @@ function renderSettings(){
       <button id="copyApiKey" class="btn secondary">Copy API key</button>
     </div>
 
+    <div class="section-title">App Settings</div>
+    <div class="card">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Install Auto Traffic Engine on your phone's home screen to use it like a native app.</p>
+      <button class="btn secondary hidden" id="installAppBtnSettings">📱 Install App</button>
+      <div id="installNotSupported" style="font-size:11px;color:var(--text-3);margin-top:8px;">If the button is missing, your browser doesn't support PWA installation or the app is already installed.</div>
+    </div>
+
     <div class="section-title">Businesses</div>
     <div class="card">
       <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Manage all your businesses, campaigns, and their landing pages.</p>
@@ -2408,6 +2466,22 @@ function renderSettings(){
     localStorage.removeItem('ate_user');
     location.replace('/login.html');
   });
+
+  // Wire Settings install button
+  const settingsBtn = $('installAppBtnSettings');
+  if (deferredPrompt) {
+    settingsBtn.classList.remove('hidden');
+    settingsBtn.addEventListener('click', async () => {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        toast('Installing app...');
+      }
+      deferredPrompt = null;
+      settingsBtn.classList.add('hidden');
+      if (pwaBanner) pwaBanner.classList.remove('show');
+    });
+  }
 }
 
 // ============================================================
