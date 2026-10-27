@@ -58,10 +58,9 @@ a:hover{color:var(--accent)}
 ::-webkit-scrollbar-thumb{background:var(--border-h);border-radius:4px}
 ::-webkit-scrollbar-track{background:transparent}
 
-/* ===== APP SHELL ===== */
 .app{display:flex;min-height:100vh}
 
-/* ===== SIDEBAR (desktop) ===== */
+/* SIDEBAR */
 .sidebar{
   width:260px;
   background:var(--surface);
@@ -151,7 +150,7 @@ a:hover{color:var(--accent)}
 .sidebar-plan-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:0.85}
 .sidebar-plan-name{font-size:13px;font-weight:700;margin-top:2px}
 
-/* ===== MAIN AREA ===== */
+/* MAIN */
 .main-wrap{
   flex:1;
   display:flex;
@@ -160,7 +159,7 @@ a:hover{color:var(--accent)}
   min-width:0;
 }
 
-/* ===== HEADER (mobile) ===== */
+/* MOBILE HEADER */
 .mobile-header{
   background:rgba(19,19,26,0.85);
   backdrop-filter:blur(20px) saturate(180%);
@@ -205,7 +204,6 @@ a:hover{color:var(--accent)}
 .mobile-brand-title{
   font-size:14px;font-weight:800;letter-spacing:-.02em;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  display:flex;align-items:center;gap:6px;
 }
 .mobile-brand-sub{font-size:10px;color:var(--text-2);margin-top:1px;font-weight:500}
 .plan-pill{
@@ -228,7 +226,6 @@ a:hover{color:var(--accent)}
   box-shadow:0 0 12px var(--accent-glow);
 }
 
-/* ===== CONTENT ===== */
 .content{
   flex:1;
   max-width:900px;
@@ -238,7 +235,7 @@ a:hover{color:var(--accent)}
   min-width:0;
 }
 
-/* ===== BOTTOM NAV (mobile) ===== */
+/* BOTTOM NAV */
 .bottom-nav{
   position:fixed;
   bottom:0;left:0;right:0;
@@ -281,9 +278,8 @@ a:hover{color:var(--accent)}
   border-radius:0 0 2px 2px;
   box-shadow:0 0 8px var(--accent-glow);
 }
-.bnav-item .bn-lock{position:absolute;top:4px;right:calc(50% - 18px);font-size:8px;opacity:0.8}
 
-/* ===== DRAWER (mobile menu) ===== */
+/* DRAWER */
 .drawer-overlay{
   position:fixed;
   inset:0;
@@ -331,7 +327,7 @@ a:hover{color:var(--accent)}
 }
 .drawer-nav{padding:16px 12px;flex:1}
 
-/* ===== CARDS ===== */
+/* CARDS + TYPOGRAPHY */
 .card{
   background:rgba(19,19,26,0.5);
   backdrop-filter:blur(20px) saturate(140%);
@@ -344,8 +340,6 @@ a:hover{color:var(--accent)}
 }
 .card:hover{border-color:var(--border-h)}
 .card-tight{padding:14px}
-
-/* ===== TYPOGRAPHY ===== */
 .h1{
   font-size:24px;
   font-weight:800;
@@ -357,7 +351,6 @@ a:hover{color:var(--accent)}
   background-clip:text;
   -webkit-text-fill-color:transparent;
 }
-.h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
 .subtitle{font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.5}
 .section-title{
   font-size:11px;
@@ -369,7 +362,7 @@ a:hover{color:var(--accent)}
 }
 .section-title:first-child{margin-top:0}
 
-/* ===== FORM ===== */
+/* FORM */
 .label{
   display:block;
   font-size:11px;
@@ -409,7 +402,7 @@ a:hover{color:var(--accent)}
 }
 .select option,.select optgroup{background:var(--surface);color:var(--text)}
 
-/* ===== BUTTONS ===== */
+/* BUTTONS */
 .btn{
   width:100%;
   padding:12px 16px;
@@ -425,8 +418,6 @@ a:hover{color:var(--accent)}
   align-items:center;
   justify-content:center;
   gap:8px;
-  position:relative;
-  overflow:hidden;
 }
 .btn:hover:not(:disabled){box-shadow:0 0 24px var(--accent-glow)}
 .btn:active:not(:disabled){transform:scale(.98)}
@@ -438,22 +429,20 @@ a:hover{color:var(--accent)}
 .btn.small{width:auto;padding:8px 14px;font-size:12px;min-height:34px;margin-top:8px;border-radius:var(--r-sm)}
 .btn.danger{background:rgba(239,68,68,0.9);color:#fff}
 
-/* ===== STATUS ===== */
+/* STATUS */
 .status{
   padding:12px 14px;
   border-radius:var(--r-sm);
   font-size:13px;
   margin-top:12px;
   line-height:1.5;
-  animation:slide-in .2s ease;
 }
-@keyframes slide-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .status.info{background:var(--info-bg);color:#93c5fd;border:1px solid rgba(59,130,246,.2)}
 .status.success{background:var(--success-bg);color:#6ee7b7;border:1px solid rgba(16,185,129,.2)}
 .status.error{background:var(--error-bg);color:#fca5a5;border:1px solid rgba(239,68,68,.2)}
 .status.warning{background:var(--warning-bg);color:#fcd34d;border:1px solid rgba(245,158,11,.2)}
 
-/* ===== STATS ===== */
+/* STATS */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .stat{
   background:rgba(19,19,26,0.5);
@@ -476,7 +465,7 @@ a:hover{color:var(--accent)}
 }
 .stat-label{font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
 
-/* ===== QUICK ACTIONS ===== */
+/* QUICK ACTIONS */
 .quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .quick{
   background:rgba(19,19,26,0.5);
@@ -493,7 +482,7 @@ a:hover{color:var(--accent)}
 .quick-label{font-size:12px;font-weight:600}
 .quick-sub{font-size:10px;color:var(--text-3);margin-top:2px}
 
-/* ===== SCORE ===== */
+/* SCORE */
 .score-row{
   display:flex;
   align-items:center;
@@ -525,7 +514,7 @@ a:hover{color:var(--accent)}
 .score-label{font-size:11px;color:var(--text-3);margin-top:4px;text-transform:uppercase;letter-spacing:.1em;font-weight:700}
 .score-arrow{color:var(--accent-l);font-size:24px;opacity:.7}
 
-/* ===== LIST ===== */
+/* LIST */
 .list{list-style:none;display:flex;flex-direction:column;gap:6px}
 .list-item{
   padding:10px 12px;
@@ -540,7 +529,7 @@ a:hover{color:var(--accent)}
 .list-item.warning{border-left-color:var(--warning);color:#fcd34d}
 .list-item.success{border-left-color:var(--success);color:#6ee7b7}
 
-/* ===== TABLES ===== */
+/* TABLES */
 .data-table{width:100%;border-collapse:collapse;font-size:12px}
 .data-table th{
   text-align:left;
@@ -561,7 +550,7 @@ a:hover{color:var(--accent)}
 .data-table tr:last-child td{border-bottom:none}
 .data-table tr:hover td{background:rgba(139,92,246,0.04)}
 
-/* ===== BADGES ===== */
+/* BADGES */
 .badge{
   display:inline-block;
   padding:2px 8px;
@@ -577,7 +566,7 @@ a:hover{color:var(--accent)}
 .badge.failed,.badge.rejected{background:var(--error-bg);color:#fca5a5}
 .badge.source{background:var(--surface-2);color:var(--text-2);text-transform:none}
 
-/* ===== SKELETON ===== */
+/* SKELETON */
 .skeleton{
   background:linear-gradient(90deg,var(--surface-2) 0%,var(--surface-3) 50%,var(--surface-2) 100%);
   background-size:200% 100%;
@@ -588,13 +577,13 @@ a:hover{color:var(--accent)}
 .skeleton-line{height:14px;margin-bottom:8px}
 .skeleton-card{padding:16px;margin-bottom:12px;border:1px solid var(--border);border-radius:var(--r-md)}
 
-/* ===== EMPTY ===== */
+/* EMPTY */
 .empty{text-align:center;padding:40px 20px}
 .empty-icon{font-size:52px;margin-bottom:16px;opacity:.6;display:inline-block}
 .empty-title{font-size:16px;font-weight:700;margin-bottom:8px}
 .empty-desc{font-size:13px;color:var(--text-2);line-height:1.6;max-width:340px;margin:0 auto 16px}
 
-/* ===== SUBTABS ===== */
+/* SUBTABS */
 .subtabs{
   display:flex;
   gap:4px;
@@ -616,7 +605,7 @@ a:hover{color:var(--accent)}
 .subtab:hover:not(.active){color:var(--text);background:var(--surface-2)}
 .subtab.active{background:var(--accent-grad);color:#fff;box-shadow:0 2px 8px var(--accent-glow)}
 
-/* ===== QUESTION CARDS ===== */
+/* Q CARDS */
 .q-card{
   background:rgba(19,19,26,0.5);
   backdrop-filter:blur(12px);
@@ -667,7 +656,7 @@ a:hover{color:var(--accent)}
   word-break:break-word;
 }
 
-/* ===== MENU ===== */
+/* MENU */
 .menu-list{
   background:rgba(19,19,26,0.5);
   backdrop-filter:blur(12px);
@@ -695,7 +684,7 @@ a:hover{color:var(--accent)}
 .menu-arrow{color:var(--text-3);font-size:16px;transition:transform .15s}
 .menu-item:hover .menu-arrow{transform:translateX(2px)}
 
-/* ===== SWITCHER ===== */
+/* SWITCHER */
 .biz-switcher{
   background:var(--surface-2);
   border:1px solid var(--border);
@@ -710,7 +699,7 @@ a:hover{color:var(--accent)}
 .biz-switcher:hover{border-color:var(--border-h)}
 .biz-switcher:focus{outline:none;border-color:var(--accent)}
 
-/* ===== TOASTS ===== */
+/* TOASTS */
 .toasts{
   position:fixed;
   bottom:calc(80px + var(--safe-bot));
@@ -738,7 +727,7 @@ a:hover{color:var(--accent)}
 .toast.info{background:rgba(59,130,246,.95);color:#fff}
 @keyframes toast-in{from{opacity:0;transform:translate(-50%,12px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 
-/* ===== SPINNER ===== */
+/* SPINNER */
 .spin{
   display:inline-block;
   width:14px;height:14px;
@@ -751,15 +740,46 @@ a:hover{color:var(--accent)}
 }
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ===== SETUP ===== */
-.setup{max-width:420px;margin:80px auto;text-align:center;padding:0 20px}
-.setup-icon{font-size:60px;margin-bottom:20px;display:inline-block}
-.setup h1{font-size:22px;margin-bottom:8px;font-weight:800;letter-spacing:-.02em}
-.setup p{font-size:14px;color:var(--text-2);line-height:1.6;margin-bottom:20px}
-.setup .input{max-width:320px;margin:0 auto;text-align:center}
-.setup .btn{max-width:320px;margin:12px auto 0}
+/* IDLE MODAL */
+.idle-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  backdrop-filter:blur(8px);
+  z-index:1000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.idle-overlay.show{display:flex}
+.idle-modal{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:32px 24px;
+  max-width:400px;
+  width:100%;
+  text-align:center;
+  box-shadow:var(--shadow-lg);
+}
+.idle-icon{font-size:48px;margin-bottom:16px;display:inline-block}
+.idle-title{font-size:18px;font-weight:800;margin-bottom:8px;letter-spacing:-.02em}
+.idle-desc{font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:16px}
+.idle-countdown{
+  font-size:36px;
+  font-weight:800;
+  background:linear-gradient(135deg,var(--warning),#ef4444);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin:16px 0;
+  letter-spacing:-.02em;
+}
+.idle-btns{display:flex;gap:8px;flex-direction:column}
+.idle-btns .btn{margin-top:0}
 
-/* ===== RESPONSIVE ===== */
+/* RESPONSIVE */
 @media (min-width:1024px){
   .sidebar{display:flex}
   .main-wrap{margin-left:260px}
@@ -767,10 +787,9 @@ a:hover{color:var(--accent)}
   .bottom-nav{display:none}
   .content{padding:32px 32px 40px}
   .h1{font-size:28px}
-  .quick-grid{grid-template-columns:repeat(3,1fr)}
 }
 @media (max-width:480px){
-  .stats{grid-template-columns:repeat(3,1fr);gap:8px}
+  .stats{gap:8px}
   .stat{padding:12px 8px}
   .stat-num{font-size:20px}
   .quick-icon{font-size:24px}
@@ -783,22 +802,19 @@ a:hover{color:var(--accent)}
 <body>
 
 <div class="app">
-  <!-- ═══ SIDEBAR (desktop) ═══ -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">🚦</div>
       <div>
         <div class="sidebar-title">Auto Traffic<br>Engine</div>
-        <div class="sidebar-subtitle">v3.2</div>
+        <div class="sidebar-subtitle">v3.3.1</div>
       </div>
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
     <div class="sidebar-footer" id="sidebarFooter"></div>
   </aside>
 
-  <!-- ═══ MAIN ═══ -->
   <div class="main-wrap">
-    <!-- Mobile header -->
     <header class="mobile-header" id="mobileHeader">
       <button class="hamburger" id="hamburgerBtn" aria-label="Menu">☰</button>
       <div class="mobile-brand">
@@ -812,45 +828,184 @@ a:hover{color:var(--accent)}
       <span class="plan-pill" id="planPill">…</span>
     </header>
 
-    <!-- Content -->
     <main class="content" id="content">
       <div style="text-align:center;padding:60px 20px;color:var(--text-3);">Loading…</div>
     </main>
 
-    <!-- Bottom nav -->
     <nav class="bottom-nav" id="bottomNav"></nav>
   </div>
 </div>
 
-<!-- ═══ DRAWER (mobile menu) ═══ -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <aside class="drawer" id="drawer">
   <div class="drawer-header">
     <div class="sidebar-logo">🚦</div>
     <div>
       <div class="sidebar-title">Auto Traffic<br>Engine</div>
-      <div class="sidebar-subtitle">v3.2</div>
+      <div class="sidebar-subtitle">v3.3.1</div>
     </div>
     <button class="drawer-close" id="drawerClose">×</button>
   </div>
   <nav class="drawer-nav" id="drawerNav"></nav>
 </aside>
 
-<!-- Toasts -->
+<!-- Idle warning modal -->
+<div class="idle-overlay" id="idleOverlay">
+  <div class="idle-modal">
+    <div class="idle-icon">⏱️</div>
+    <div class="idle-title">Session Expiring</div>
+    <div class="idle-desc">You've been inactive. You'll be logged out automatically.</div>
+    <div class="idle-countdown" id="idleCountdown">60</div>
+    <div class="idle-desc" style="margin-bottom:20px;">seconds remaining</div>
+    <div class="idle-btns">
+      <button class="btn" id="idleStayBtn">Stay signed in</button>
+      <button class="btn secondary" id="idleLogoutBtn">Log out now</button>
+    </div>
+  </div>
+</div>
+
 <div class="toasts" id="toasts"></div>
 
 <script>
 (function(){
 'use strict';
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
+// AUTH GATE — must run before anything else
+// ============================================================
+const TOKEN_KEY = 'ate_token';
+const AUTH_TOKEN = localStorage.getItem(TOKEN_KEY);
+const CURRENT_PATH = location.pathname + location.search;
+
+if (!AUTH_TOKEN) {
+  location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH));
+  return;
+}
+
+// ============================================================
+// IDLE TIMEOUT SYSTEM — 25 minutes
+// ============================================================
+const IDLE_TIMEOUT_MS = 25 * 60 * 1000;      // 25 min
+const IDLE_WARN_MS = 60 * 1000;               // 1 min warning
+const ACTIVITY_KEY = 'ate_last_activity';
+const CHECK_INTERVAL_MS = 5 * 1000;           // check every 5s
+
+let idleCheckInterval = null;
+let warnShown = false;
+let countdownInterval = null;
+let remainingSec = 60;
+
+function touchActivity() {
+  try {
+    localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+  } catch {}
+  if (warnShown) hideWarn();
+}
+
+function getLastActivity() {
+  try {
+    const v = parseInt(localStorage.getItem(ACTIVITY_KEY) || '0', 10);
+    return v || Date.now();
+  } catch {
+    return Date.now();
+  }
+}
+
+function forceLogout(reason) {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('ate_user');
+  try {
+    sessionStorage.setItem('ate_logout_reason', reason || 'idle');
+  } catch {}
+  location.replace(
+    '/login.html?expired=1&redirect=' + encodeURIComponent(location.pathname + location.search)
+  );
+}
+
+function showWarn() {
+  if (warnShown) return;
+  warnShown = true;
+  const overlay = document.getElementById('idleOverlay');
+  if (!overlay) return;
+  overlay.classList.add('show');
+  remainingSec = 60;
+  updateCountdown();
+
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => {
+    remainingSec -= 1;
+    if (remainingSec <= 0) {
+      clearInterval(countdownInterval);
+      return;
+    }
+    updateCountdown();
+  }, 1000);
+}
+
+function hideWarn() {
+  warnShown = false;
+  const overlay = document.getElementById('idleOverlay');
+  if (overlay) overlay.classList.remove('show');
+  clearInterval(countdownInterval);
+}
+
+function updateCountdown() {
+  const el = document.getElementById('idleCountdown');
+  if (el) el.textContent = String(remainingSec);
+}
+
+function checkIdle() {
+  if (!localStorage.getItem(TOKEN_KEY)) return;
+  const idleMs = Date.now() - getLastActivity();
+
+  if (idleMs >= IDLE_TIMEOUT_MS) {
+    forceLogout('idle');
+    return;
+  }
+
+  if (idleMs >= IDLE_TIMEOUT_MS - IDLE_WARN_MS) {
+    if (!warnShown) showWarn();
+    const secLeft = Math.ceil((IDLE_TIMEOUT_MS - idleMs) / 1000);
+    if (secLeft < remainingSec) {
+      remainingSec = secLeft;
+      updateCountdown();
+    }
+  }
+}
+
+function startIdleWatcher() {
+  const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click', 'focus'];
+  events.forEach((ev) => {
+    document.addEventListener(ev, touchActivity, { passive: true });
+  });
+
+  // Initialize if not set
+  if (!localStorage.getItem(ACTIVITY_KEY)) {
+    touchActivity();
+  }
+
+  idleCheckInterval = setInterval(checkIdle, CHECK_INTERVAL_MS);
+}
+
+// Multi-tab sync — if another tab logs out, mirror it
+window.addEventListener('storage', (e) => {
+  if (e.key === TOKEN_KEY && !e.newValue) {
+    location.replace('/login.html?redirect=' + encodeURIComponent(location.pathname + location.search));
+  }
+  if (e.key === ACTIVITY_KEY) {
+    // Another tab was active — no action needed; our check uses shared value
+    if (warnShown) hideWarn();
+  }
+});
+
+// ============================================================
 // CONFIG
-// ═══════════════════════════════════════════════════════════
-const params = new URLSearchParams(location.search);
+// ============================================================
 const BACKEND = location.origin;
 
 const state = {
-  apiKey: params.get('key') || localStorage.getItem('ate_apikey') || localStorage.getItem('gb_apikey') || '',
+  user: null,
+  apiKey: '',
   plan: 'free',
   usage: {},
   limits: { freeAudits: 3, premiumVideos: 30, backlinks: 10, businesses: 1, price: 5000 },
@@ -863,19 +1018,12 @@ const state = {
   pollTimer: null,
 };
 
-if (state.apiKey) {
-  try {
-    localStorage.setItem('ate_apikey', state.apiKey);
-    localStorage.setItem('gb_apikey', state.apiKey); // backwards compat
-  } catch {}
-}
-
-const $ = id => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 const content = $('content');
 
-// ═══════════════════════════════════════════════════════════
-// NAVIGATION STRUCTURE
-// ═══════════════════════════════════════════════════════════
+// ============================================================
+// NAV STRUCTURE
+// ============================================================
 const NAV_GROUPS = [
   { label: 'Main', items: [
     { key: 'home', icon: '🏠', label: 'Home' }
@@ -910,9 +1058,9 @@ const BOTTOM_NAV = [
   { key: 'menu', icon: '☰', label: 'Menu', action: 'drawer' }
 ];
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // UTILS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function esc(s){
   return String(s==null?'':s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -955,7 +1103,19 @@ async function api(path, opts){
     options.body = JSON.stringify(options.body);
     options.headers = Object.assign({'Content-Type': 'application/json'}, options.headers || {});
   }
+  options.headers = Object.assign({
+    'Authorization': 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || '')
+  }, options.headers || {});
+
   const res = await fetch(BACKEND + path, options);
+
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('ate_user');
+    location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH) + '&expired=1');
+    throw new Error('Session expired');
+  }
+
   const data = await res.json().catch(()=>({}));
   if (!res.ok){
     const err = new Error(data.error || data.message || 'HTTP ' + res.status);
@@ -966,41 +1126,9 @@ async function api(path, opts){
   return data;
 }
 
-// ═══════════════════════════════════════════════════════════
-// SETUP SCREEN
-// ═══════════════════════════════════════════════════════════
-function renderSetup(){
-  $('sidebarNav').innerHTML = '';
-  $('bottomNav').innerHTML = '';
-  $('drawerNav').innerHTML = '';
-  $('planPill').textContent = '…';
-  content.innerHTML = `
-    <div class="setup">
-      <div class="setup-icon">🚦</div>
-      <h1>Welcome to Auto Traffic Engine</h1>
-      <p>Enter your API key from the widget code to access the dashboard.</p>
-      <input id="setupKey" class="input" placeholder="your_key_here" autocomplete="off" />
-      <button id="setupGo" class="btn">Continue →</button>
-    </div>
-  `;
-  $('setupGo').addEventListener('click', ()=>{
-    const k = $('setupKey').value.trim();
-    if (k.length < 4) { toast('Key too short', 'error'); return; }
-    state.apiKey = k;
-    try {
-      localStorage.setItem('ate_apikey', k);
-      localStorage.setItem('gb_apikey', k);
-    } catch {}
-    init();
-  });
-  $('setupKey').addEventListener('keypress', e=>{
-    if (e.key === 'Enter') $('setupGo').click();
-  });
-}
-
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // NAV RENDERERS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function buildNavHTML(activeKey){
   const isFree = state.plan === 'free';
   return NAV_GROUPS.map(group => `
@@ -1020,12 +1148,10 @@ function buildNavHTML(activeKey){
 function renderNav(){
   const isFree = state.plan === 'free';
 
-  // Sidebar + drawer (same content)
   const navHtml = buildNavHTML(state.tab);
   $('sidebarNav').innerHTML = navHtml;
   $('drawerNav').innerHTML = navHtml;
 
-  // Attach click handlers to both
   ['sidebarNav','drawerNav'].forEach(id => {
     $(id).querySelectorAll('[data-tab]').forEach(btn => {
       btn.addEventListener('click', ()=>{
@@ -1036,16 +1162,14 @@ function renderNav(){
     });
   });
 
-  // Sidebar footer / plan card
   $('sidebarFooter').innerHTML = `
     <div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}">
       <div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div>
       <div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div>
     </div>
-    <div style="font-size:10px;color:var(--text-3);margin-top:6px;">Auto Traffic Engine v3.2</div>
+    <div style="font-size:10px;color:var(--text-3);margin-top:6px;">Auto Traffic Engine v3.3.1</div>
   `;
 
-  // Bottom nav
   $('bottomNav').innerHTML = BOTTOM_NAV.map(item => {
     const isActive = item.action !== 'drawer' && state.tab === item.key;
     return `
@@ -1068,7 +1192,6 @@ function renderNav(){
 
 function navigateTo(target){
   if (target === state.tab) return;
-  // Find nav item
   let tabDef = null;
   NAV_GROUPS.forEach(g => g.items.forEach(i => { if (i.key === target) tabDef = i; }));
   if (tabDef && tabDef.premium && state.plan === 'free') {
@@ -1082,9 +1205,9 @@ function navigateTo(target){
   window.scrollTo(0, 0);
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // DRAWER
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function openDrawer(){
   $('drawer').classList.add('open');
   $('drawerOverlay').classList.add('open');
@@ -1096,9 +1219,9 @@ function closeDrawer(){
   document.body.style.overflow = '';
 }
 
-// ═══════════════════════════════════════════════════════════
-// HEADER / SWITCHER
-// ═══════════════════════════════════════════════════════════
+// ============================================================
+// HEADER
+// ============================================================
 function updateHeader(){
   $('mobileBrandTitle').textContent = state.business?.name || 'Auto Traffic Engine';
   $('mobileBrandSub').textContent = state.business?.category || 'Business growth tools';
@@ -1112,7 +1235,6 @@ function updateHeader(){
     pill.classList.remove('premium');
   }
 
-  // Business switcher
   const sw = $('bizSwitcher');
   if (state.businesses.length <= 1) {
     sw.classList.add('hidden');
@@ -1133,9 +1255,9 @@ function updateHeader(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // DATA LOADERS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function loadPlan(){
   try {
     const d = await api('/api/check-plan?key=' + encodeURIComponent(state.apiKey) + '&url=' + encodeURIComponent(location.href));
@@ -1147,7 +1269,7 @@ async function loadPlan(){
 
 async function loadBusinesses(){
   try {
-    const r = await api('/api/businesses/list?key=' + encodeURIComponent(state.apiKey));
+    const r = await api('/api/businesses/list');
     state.businesses = r.businesses || [];
     state.business = state.businesses[0] || null;
     state.limits.businesses = r.limit || state.limits.businesses;
@@ -1160,7 +1282,7 @@ async function loadBusinesses(){
 async function loadAnalytics(){
   if (!state.business) { state.analytics = null; return; }
   try {
-    const r = await api('/api/businesses/' + state.business.id + '/analytics?key=' + encodeURIComponent(state.apiKey));
+    const r = await api('/api/businesses/' + state.business.id + '/analytics');
     state.analytics = r.analytics;
   } catch { state.analytics = null; }
 }
@@ -1172,9 +1294,9 @@ async function loadCountries(){
   } catch { state.countries = []; }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // TAB ROUTER
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function renderTab(){
   content.scrollTop = 0;
   switch(state.tab){
@@ -1195,9 +1317,9 @@ function renderTab(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // HOME
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function renderHome(){
   const isFree = state.plan === 'free';
   const audits = state.usage.auditsToday || 0;
@@ -1206,9 +1328,10 @@ function renderHome(){
   const questions = state.analytics?.questions_found || 0;
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const name = state.user?.name || state.user?.email?.split('@')[0] || '';
 
   content.innerHTML = `
-    <div style="font-size:13px;color:var(--text-2);margin-bottom:4px;font-weight:500;">${greet} 👋</div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:4px;font-weight:500;">${greet}${name ? ', ' + esc(name) : ''} 👋</div>
     <h1 class="h1">${esc(state.business?.name || 'Welcome to Auto Traffic Engine')}</h1>
     <p class="subtitle">${state.business ? "Here's what's happening today." : 'Set up your business to unlock every tool.'}</p>
 
@@ -1260,7 +1383,7 @@ function renderHome(){
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">${isFree?'Free':'Premium'}</div>
             <div style="font-size:14px;font-weight:600;margin-top:2px;">${isFree?'Upgrade for full features':'All features unlocked'}</div>
           </div>
-          ${isFree?`<a class="btn small" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade ₦${(state.limits.price||5000).toLocaleString()}</a>`:''}
+          ${isFree?`<a class="btn small" href="${BACKEND}/pay.html" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade ₦${(state.limits.price||5000).toLocaleString()}</a>`:''}
         </div>
       </div>
     `}
@@ -1270,12 +1393,12 @@ function renderHome(){
     btn.addEventListener('click', ()=>navigateTo(btn.getAttribute('data-go')));
   });
   const od = $('openDash');
-  if (od) od.addEventListener('click', ()=>window.open(BACKEND + '/dashboard.html', '_blank'));
+  if (od) od.addEventListener('click', ()=>navigateTo('businesses'));
 }
 
-// ═══════════════════════════════════════════════════════════
-// SEO AUDIT
-// ═══════════════════════════════════════════════════════════
+// ============================================================
+// SEO
+// ============================================================
 function renderSEO(){
   content.innerHTML = `
     <h1 class="h1">SEO Audit</h1>
@@ -1299,7 +1422,7 @@ function renderSEO(){
     btn.innerHTML = '<span class="spin"></span>Auditing…';
     r.innerHTML = '<div class="status info">Fetching and analyzing page…</div>';
     try {
-      const d = await api('/api/audit', {method:'POST', body:{url, keyword: kw, key: state.apiKey, autoFix: true}});
+      const d = await api('/api/audit', {method:'POST', body:{url, keyword: kw, autoFix: true}});
       const b = d.before || {score:0, issues:[]};
       const a = d.after;
       const fixes = d.fixes || [];
@@ -1333,7 +1456,7 @@ function renderSEO(){
       loadPlan().then(()=>{ renderNav(); updateHeader(); });
     } catch(e){
       if (e.status===403 && e.data?.error==='FREE_LIMIT'){
-        r.innerHTML = `<div class="status warning">Daily limit reached. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+        r.innerHTML = `<div class="status warning">Daily limit reached. <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
       } else {
         r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
       }
@@ -1344,9 +1467,9 @@ function renderSEO(){
   });
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // VIDEO
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function renderVideo(){
   content.innerHTML = `
     <h1 class="h1">Video Ads</h1>
@@ -1387,7 +1510,7 @@ function renderVideo(){
     btn.innerHTML = '<span class="spin"></span>Generating…';
     r.innerHTML = '<div class="status info">Writing script + voiceover…</div>';
     try {
-      const d = await api('/api/create-video', {method:'POST', body:{key:state.apiKey, topic, businessName, durationSeconds, style}});
+      const d = await api('/api/create-video', {method:'POST', body:{topic, businessName, durationSeconds, style}});
       let html = '';
       if (d.script){
         html += `<div class="card card-tight" style="margin-top:12px;"><div class="section-title">Script</div><div style="font-size:13px;line-height:1.6;">${esc(d.script.fullScript||'')}</div></div>`;
@@ -1405,7 +1528,7 @@ function renderVideo(){
       if ($('copyCap')) $('copyCap').addEventListener('click', ()=>copy(d.script.caption, 'Caption copied'));
     } catch(e){
       if (e.status===403){
-        r.innerHTML = `<div class="status warning">Premium required. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+        r.innerHTML = `<div class="status warning">Premium required. <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
       } else {
         r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
       }
@@ -1440,19 +1563,19 @@ function startVideoPolling(pollUrl, container){
 
 function stopPolling(){ if (state.pollTimer){ clearTimeout(state.pollTimer); state.pollTimer=null; } }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // KEYWORDS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function renderKeywords(){
   content.innerHTML = `
     <h1 class="h1">Keyword Research</h1>
-    <p class="subtitle">Discover high-opportunity keywords. Powered by Google Autocomplete + real search data (when configured).</p>
+    <p class="subtitle">Discover high-opportunity keywords with Google Autocomplete + real search data.</p>
     <div class="card">
       <label class="label">Seed keywords</label>
       <input id="kwSeeds" class="input" placeholder="buy cows in nigeria, livestock farm" />
-      <div style="font-size:11px;color:var(--text-3);margin-top:4px;">Comma-separated. Leave blank to paste your own keywords below.</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:4px;">Comma-separated. Leave blank to paste your own below.</div>
       <label class="label">Or paste keywords (one per line)</label>
-      <textarea id="kwManual" class="textarea" placeholder="best cattle farm lagos&#10;how to buy cows&#10;healthy cow price"></textarea>
+      <textarea id="kwManual" class="textarea" placeholder="best cattle farm lagos&#10;how to buy cows"></textarea>
       <label class="label">Analyze against URL (optional)</label>
       <input id="kwUrl" class="input" type="url" placeholder="https://yourblog.com/post" />
       <button id="kwGo" class="btn">Analyze Keywords</button>
@@ -1473,12 +1596,12 @@ function renderKeywords(){
     btn.innerHTML = '<span class="spin"></span>Analyzing…';
     r.innerHTML = '<div class="status info">Fetching suggestions + scoring…</div>';
     try {
-      const d = await api('/api/keywords', {method:'POST', body:{key:state.apiKey, seeds, manualKeywords, url, country: state.business?.country || 'ng'}});
+      const d = await api('/api/keywords', {method:'POST', body:{seeds, manualKeywords, url, country: state.business?.country || 'ng'}});
       let html = `
         <div class="stats" style="margin-top:16px;">
           <div class="stat"><div class="stat-num">${d.totalKeywords}</div><div class="stat-label">Keywords</div></div>
           <div class="stat"><div class="stat-num">${d.clusters?.length || 0}</div><div class="stat-label">Clusters</div></div>
-          <div class="stat"><div class="stat-num">${d.summary?.highOpportunity || 0}</div><div class="stat-label">High Opportunity</div></div>
+          <div class="stat"><div class="stat-num">${d.summary?.highOpportunity || 0}</div><div class="stat-label">High Opp.</div></div>
         </div>
         <div class="status info" style="font-size:11px;">${esc(d.honestNote || '')}</div>
       `;
@@ -1520,12 +1643,13 @@ function renderKeywords(){
   });
 }
 
-// ═══════════════════════════════════════════════════════════
-// Q&A FINDER
-// ═══════════════════════════════════════════════════════════
+// ============================================================
+// Q&A
+// ============================================================
 function renderQA(){
   if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><div class="empty-desc">The Q&A finder needs a business profile.</div><button class="btn" onclick="window.open('${BACKEND}/dashboard.html','_blank')">Go to dashboard</button></div>`;
+    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><div class="empty-desc">The Q&A finder needs a business profile.</div><button class="btn" id="qaSetupBtn">Go to Businesses</button></div>`;
+    $('qaSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
     return;
   }
 
@@ -1547,7 +1671,7 @@ function renderQA(){
 
   content.innerHTML = `
     <h1 class="h1">Q&A Finder</h1>
-    <p class="subtitle">Discover real questions on Reddit, Quora, Nairaland and 40+ platforms across 55+ countries. AI drafts helpful answers with your blog link.</p>
+    <p class="subtitle">Discover real questions across 55+ countries. AI drafts helpful answers with your blog link.</p>
     <div class="card">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div><label class="label">Keyword</label><input id="qaKw" class="input" placeholder="e.g. buy cows in nigeria" /></div>
@@ -1571,7 +1695,7 @@ function renderQA(){
       <div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div>
     `;
     try {
-      const d = await api('/api/questions/find', {method:'POST', body:{key:state.apiKey, businessId: state.business.id, keyword, country}});
+      const d = await api('/api/questions/find', {method:'POST', body:{businessId: state.business.id, keyword, country}});
       if (!d.questions || d.questions.length === 0){
         r.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">No questions found</div><div class="empty-desc">Try a broader keyword or a different country.</div></div>`;
         return;
@@ -1602,7 +1726,7 @@ function renderQA(){
       });
       loadAnalytics();
     } catch(e){
-      if (e.status===403) r.innerHTML = `<div class="status warning">Premium feature. <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+      if (e.status===403) r.innerHTML = `<div class="status warning">Premium feature. <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
       else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
     } finally {
       btn.disabled = false;
@@ -1620,7 +1744,7 @@ async function generateDraft(qid, btn){
   btn.innerHTML = '<span class="spin"></span>Writing…';
   container.innerHTML = '<div class="status info">AI is drafting…</div>';
   try {
-    const d = await api('/api/questions/' + qid + '/draft', {method:'POST', body:{key:state.apiKey, blogUrl, blogTitle}});
+    const d = await api('/api/questions/' + qid + '/draft', {method:'POST', body:{blogUrl, blogTitle}});
     const dr = d.draft;
     container.innerHTML = `
       <div class="draft-preview">${esc(dr.draft_text)}</div>
@@ -1636,7 +1760,7 @@ async function generateDraft(qid, btn){
       b.disabled = true;
       b.innerHTML = '<span class="spin"></span>';
       try {
-        await api('/api/drafts/' + dr.id + '/status', {method:'PUT', body:{status:'posted'}, headers:{'x-api-key': state.apiKey}});
+        await api('/api/drafts/' + dr.id + '/status', {method:'PUT', body:{status:'posted'}});
         toast('Marked as posted');
         b.innerHTML = '✓ Posted';
       } catch(err){
@@ -1655,9 +1779,9 @@ async function generateDraft(qid, btn){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // BACKLINKS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function renderBacklinks(){
   content.innerHTML = `
     <h1 class="h1">Backlinks</h1>
@@ -1692,7 +1816,7 @@ function renderBacklinks(){
       btn.disabled = true;
       btn.innerHTML = '<span class="spin"></span>Submitting…';
       try {
-        const d = await api('/api/backlink/indexnow', {method:'POST', body:{key:state.apiKey, urls:[url], siteUrl:url}});
+        const d = await api('/api/backlink/indexnow', {method:'POST', body:{urls:[url], siteUrl:url}});
         const ok = d.ok !== false;
         $('inResult').innerHTML = `<div class="status ${ok?'success':'error'}">${esc(d.message || (ok?'Submitted':'Failed'))}</div>`;
       } catch(e){
@@ -1733,7 +1857,7 @@ function renderBacklinks(){
       btn.disabled = true;
       btn.innerHTML = '<span class="spin"></span>Generating…';
       try {
-        const d = await api('/api/backlink/listing', {method:'POST', body:{key:state.apiKey, profile}});
+        const d = await api('/api/backlink/listing', {method:'POST', body:{profile}});
         let html = '';
         if (d.napCheck && !d.napCheck.ok) html += '<div class="status warning">' + esc(d.napCheck.message) + '</div>';
         Object.entries(d.packages || {}).forEach(([k, pkg])=>{
@@ -1764,9 +1888,9 @@ function renderBacklinks(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // SOCIAL
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function renderSocial(){
   content.innerHTML = `
     <h1 class="h1">Social Accounts</h1>
@@ -1787,10 +1911,10 @@ async function renderSocial(){
   `;
 
   try {
-    const d = await api('/api/social/accounts?key=' + encodeURIComponent(state.apiKey));
+    const d = await api('/api/social/accounts');
     const accs = d.accounts || [];
     if (accs.length === 0){
-      $('socialList').innerHTML = `<div class="empty"><div class="empty-icon">🔗</div><div class="empty-title">No accounts connected</div><div class="empty-desc">Connect a Facebook Page or LinkedIn company through the dashboard. Requires app approval from Meta and LinkedIn.</div><button class="btn" onclick="window.open('${BACKEND}/dashboard.html','_blank')">Open dashboard</button></div>`;
+      $('socialList').innerHTML = `<div class="empty"><div class="empty-icon">🔗</div><div class="empty-title">No accounts connected</div><div class="empty-desc">Connect a Facebook Page or LinkedIn company through the admin settings.</div></div>`;
     } else {
       let html = '<div class="card"><table class="data-table"><thead><tr><th>Platform</th><th>Account</th><th>Status</th><th>Last posted</th></tr></thead><tbody>';
       accs.forEach(a=>{
@@ -1817,7 +1941,7 @@ async function renderSocial(){
     btn.disabled = true;
     btn.innerHTML = '<span class="spin"></span>Posting…';
     try {
-      const d = await api('/api/social/post-now', {method:'POST', body:{key:state.apiKey, platform, message}});
+      const d = await api('/api/social/post-now', {method:'POST', body:{platform, message}});
       r.innerHTML = d.ok ? `<div class="status success">✓ Posted${d.url?' — <a href="'+esc(d.url)+'" target="_blank" rel="noopener" style="color:inherit;">view</a>':''}</div>` : `<div class="status error">${esc(d.error||'Failed')}</div>`;
     } catch(e){
       r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
@@ -1828,12 +1952,13 @@ async function renderSocial(){
   });
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // CAMPAIGNS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function renderCampaigns(){
   if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><div class="empty-desc">Campaigns live under a business.</div><button class="btn" onclick="window.open('${BACKEND}/dashboard.html','_blank')">Open dashboard</button></div>`;
+    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="cSetupBtn">Go to Businesses</button></div>`;
+    $('cSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
     return;
   }
 
@@ -1860,7 +1985,7 @@ async function renderCampaigns(){
     btn.disabled = true;
     btn.innerHTML = '<span class="spin"></span>Creating…';
     try {
-      const d = await api('/api/campaigns', {method:'POST', body:{key:state.apiKey, businessId: state.business.id, name, text}});
+      const d = await api('/api/campaigns', {method:'POST', body:{businessId: state.business.id, name, text}});
       $('campCreateResult').innerHTML = `<div class="status success">✓ Created with ${d.links.length} smart links</div>`;
       $('campName').value = '';
       $('campText').value = '';
@@ -1880,7 +2005,7 @@ async function loadCampaignsList(){
   const el = $('campList');
   if (!el) return;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/campaigns?key=' + encodeURIComponent(state.apiKey));
+    const d = await api('/api/businesses/' + state.business.id + '/campaigns');
     const camps = d.campaigns || [];
     if (camps.length === 0){
       el.innerHTML = `<div class="empty"><div class="empty-icon">📣</div><div class="empty-title">No campaigns yet</div><div class="empty-desc">Create your first one above.</div></div>`;
@@ -1909,7 +2034,7 @@ async function loadCampaignsList(){
         row.style.display = 'table-row';
         inner.innerHTML = '<div class="skeleton skeleton-line"></div>';
         try {
-          const r = await api('/api/campaigns/' + cid + '?key=' + encodeURIComponent(state.apiKey));
+          const r = await api('/api/campaigns/' + cid);
           let links = '<div style="padding:8px 0;">';
           (r.links||[]).forEach(l=>{
             links += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;flex-wrap:wrap;">
@@ -1934,12 +2059,13 @@ async function loadCampaignsList(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // LEADS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function renderLeads(){
   if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div></div>`;
+    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="lSetupBtn">Go to Businesses</button></div>`;
+    $('lSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
     return;
   }
   content.innerHTML = `
@@ -1948,7 +2074,7 @@ async function renderLeads(){
     <div id="leadsTable"><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div></div>
   `;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/leads?key=' + encodeURIComponent(state.apiKey));
+    const d = await api('/api/businesses/' + state.business.id + '/leads');
     const leads = d.leads || [];
     if (leads.length === 0){
       $('leadsTable').innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No leads yet</div><div class="empty-desc">Share your smart links to start capturing clicks.</div></div>`;
@@ -1971,7 +2097,7 @@ async function renderLeads(){
         b.disabled = true;
         b.innerHTML = '<span class="spin"></span>';
         try {
-          await api('/api/leads/' + b.getAttribute('data-deliver') + '/delivered', {method:'POST', body:{key: state.apiKey}});
+          await api('/api/leads/' + b.getAttribute('data-deliver') + '/delivered', {method:'POST'});
           toast('Marked delivered — review request will go out in 24h');
           renderLeads();
         } catch(e){
@@ -1986,12 +2112,13 @@ async function renderLeads(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // REVIEWS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function renderReviews(){
   if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div></div>`;
+    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="rSetupBtn">Go to Businesses</button></div>`;
+    $('rSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
     return;
   }
   content.innerHTML = `
@@ -2000,7 +2127,7 @@ async function renderReviews(){
     <div id="revTable"><div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div></div>
   `;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/reviews?key=' + encodeURIComponent(state.apiKey));
+    const d = await api('/api/businesses/' + state.business.id + '/reviews');
     const revs = d.reviews || [];
     if (revs.length === 0){
       $('revTable').innerHTML = `<div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">No review requests yet</div><div class="empty-desc">Mark a lead as "delivered" in the Leads tab. After 24 hours, an automatic WhatsApp message will ask for a Google review.</div><button class="btn" data-go="leads">Go to Leads</button></div>`;
@@ -2025,12 +2152,13 @@ async function renderReviews(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // ANALYTICS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function renderAnalytics(){
   if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div></div>`;
+    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="aSetupBtn">Go to Businesses</button></div>`;
+    $('aSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
     return;
   }
   content.innerHTML = `
@@ -2039,7 +2167,7 @@ async function renderAnalytics(){
     <div id="anaContent"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>
   `;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/analytics?key=' + encodeURIComponent(state.apiKey));
+    const d = await api('/api/businesses/' + state.business.id + '/analytics');
     const a = d.analytics || {};
     $('anaContent').innerHTML = `
       <div class="stats">
@@ -2074,9 +2202,9 @@ async function renderAnalytics(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // BUSINESSES
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function renderBusinesses(){
   const isFree = state.plan === 'free';
   const limit = isFree ? 1 : 3;
@@ -2123,14 +2251,13 @@ async function renderBusinesses(){
       </div>
     ` : `
       <div class="status warning" style="margin-top:16px;">
-        ${isFree ? `You've reached the free limit (1 business). <a href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade to Premium for 3 businesses →</a>` : `You've reached the premium limit (3 businesses).`}
+        ${isFree ? `You've reached the free limit (1 business). <a href="${BACKEND}/pay.html" target="_blank" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade to Premium for 3 businesses →</a>` : `You've reached the premium limit (3 businesses).`}
       </div>
     `}
   `;
 
-  // Load list
   try {
-    const d = await api('/api/businesses/list?key=' + encodeURIComponent(state.apiKey));
+    const d = await api('/api/businesses/list');
     const bizs = d.businesses || [];
     if (bizs.length === 0){
       $('bizList').innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">No businesses yet</div><div class="empty-desc">Add your first business below.</div></div>`;
@@ -2155,7 +2282,7 @@ async function renderBusinesses(){
           b.disabled = true;
           b.innerHTML = '<span class="spin"></span>';
           try {
-            await api('/api/businesses/' + b.getAttribute('data-del-biz'), {method:'DELETE', headers:{'x-api-key': state.apiKey}});
+            await api('/api/businesses/' + b.getAttribute('data-del-biz'), {method:'DELETE'});
             toast('Business deleted');
             await loadBusinesses();
             updateHeader();
@@ -2181,7 +2308,6 @@ async function renderBusinesses(){
       btn.innerHTML = '<span class="spin"></span>Creating…';
       try {
         const d = await api('/api/businesses', {method:'POST', body:{
-          key: state.apiKey,
           name,
           category: $('bizCategory').value.trim(),
           phone: $('bizPhone').value.trim(),
@@ -2209,17 +2335,30 @@ async function renderBusinesses(){
   }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // SETTINGS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function renderSettings(){
   const isFree = state.plan === 'free';
   const audits = state.usage.auditsToday || 0;
   const videos = state.usage.videosMonth || 0;
+  const lastActivity = getLastActivity();
+  const idleMinAgo = Math.floor((Date.now() - lastActivity) / 60000);
+  const remaining = Math.max(0, 25 - idleMinAgo);
 
   content.innerHTML = `
     <h1 class="h1">Settings</h1>
     <p class="subtitle">Account, plan, and API access.</p>
+
+    <div class="section-title">Account</div>
+    <div class="card">
+      <div style="font-size:13px;line-height:2;color:var(--text-2);">
+        Email: <strong style="color:var(--text);">${esc(state.user?.email || '—')}</strong><br>
+        Role: <strong style="color:var(--text);">${esc(state.user?.role || 'user')}</strong><br>
+        Session: <strong style="color:var(--text);">${remaining} min before idle logout</strong>
+      </div>
+      <button class="btn danger" id="logoutBtn" style="margin-top:12px;">Log out</button>
+    </div>
 
     <div class="section-title">Your plan</div>
     <div class="card">
@@ -2227,9 +2366,8 @@ function renderSettings(){
         <div>
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">${isFree?'Free':'⭐ Premium'}</div>
           <div style="font-size:16px;font-weight:700;margin-top:2px;">${isFree?'Limited features':'Everything unlocked'}</div>
-          <div style="font-size:12px;color:var(--text-2);margin-top:4px;">${isFree?'Upgrade to unlock all features':'Thank you for subscribing'}</div>
         </div>
-        ${isFree?`<a class="btn small" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade</a>`:''}
+        ${isFree?`<a class="btn small" href="${BACKEND}/pay.html" target="_blank" rel="noopener" style="text-decoration:none;">Upgrade</a>`:''}
       </div>
     </div>
 
@@ -2249,34 +2387,32 @@ function renderSettings(){
         ${esc(state.apiKey)}
       </div>
       <button id="copyApiKey" class="btn secondary">Copy API key</button>
-      <button id="changeApiKey" class="btn ghost" style="margin-top:8px;">Change key</button>
     </div>
 
-    <div class="section-title">Dashboard</div>
+    <div class="section-title">Businesses</div>
     <div class="card">
-      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Advanced management: full business profiles, campaign editor, lead details, review tracking, and analytics.</p>
-      <button class="btn secondary" id="openDash2">Open full dashboard ↗</button>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Manage all your businesses, campaigns, and their landing pages.</p>
+      <button class="btn secondary" id="openBizTab">Manage businesses →</button>
     </div>
 
     <div style="text-align:center;font-size:11px;color:var(--text-3);padding:24px 0;line-height:1.6;">
-      Auto Traffic Engine v3.2<br>
-      <a href="${BACKEND}/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);">Terms</a> · <a href="https://github.com/jibriliks-ai/growthbot" target="_blank" rel="noopener" style="color:var(--text-3);">Source</a>
+      Auto Traffic Engine v3.3.1<br>
+      <a href="${BACKEND}/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);">Terms</a>
     </div>
   `;
 
   $('copyApiKey').addEventListener('click', ()=>copy(state.apiKey, 'API key copied'));
-  $('changeApiKey').addEventListener('click', ()=>{
-    if (!confirm('Change API key? You will need to log in again.')) return;
-    localStorage.removeItem('ate_apikey');
-    localStorage.removeItem('gb_apikey');
-    location.reload();
+  $('openBizTab').addEventListener('click', ()=>navigateTo('businesses'));
+  $('logoutBtn').addEventListener('click', ()=>{
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('ate_user');
+    location.replace('/login.html');
   });
-  $('openDash2').addEventListener('click', ()=>window.open(BACKEND + '/dashboard.html', '_blank'));
 }
 
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 // UPGRADE PROMPT
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 function renderUpgrade(tab){
   const labels = {
     video: 'Video generation',
@@ -2290,7 +2426,7 @@ function renderUpgrade(tab){
       <div class="empty-icon">🔒</div>
       <div class="empty-title">${labels[tab] || 'This feature'} is Premium</div>
       <div class="empty-desc">Unlock unlimited audits, AI videos, 55+ country Q&A, backlinks, and social posting.</div>
-      <a class="btn" href="${BACKEND}/pay.html?key=${encodeURIComponent(state.apiKey)}" target="_blank" rel="noopener" style="display:inline-flex;text-decoration:none;max-width:320px;margin:0 auto;">
+      <a class="btn" href="${BACKEND}/pay.html" target="_blank" rel="noopener" style="display:inline-flex;text-decoration:none;max-width:320px;margin:0 auto;">
         Upgrade for ₦${(state.limits.price || 5000).toLocaleString()}/month
       </a>
       <button class="btn secondary" id="backHome" style="max-width:320px;margin:8px auto 0;">← Back to home</button>
@@ -2299,9 +2435,9 @@ function renderUpgrade(tab){
   $('backHome').addEventListener('click', ()=>navigateTo('home'));
 }
 
-// ═══════════════════════════════════════════════════════════
-// WIRE DRAWER EVENTS
-// ═══════════════════════════════════════════════════════════
+// ============================================================
+// EVENT WIRING
+// ============================================================
 $('hamburgerBtn').addEventListener('click', openDrawer);
 $('drawerClose').addEventListener('click', closeDrawer);
 $('drawerOverlay').addEventListener('click', closeDrawer);
@@ -2309,11 +2445,43 @@ document.addEventListener('keydown', e=>{
   if (e.key === 'Escape') closeDrawer();
 });
 
-// ═══════════════════════════════════════════════════════════
+// Idle modal buttons
+$('idleStayBtn').addEventListener('click', ()=>{
+  touchActivity();
+  hideWarn();
+  toast('Session extended', 'success');
+});
+$('idleLogoutBtn').addEventListener('click', ()=>{
+  forceLogout('manual');
+});
+
+// ============================================================
 // INIT
-// ═══════════════════════════════════════════════════════════
+// ============================================================
 async function init(){
-  if (!state.apiKey) { renderSetup(); return; }
+  // Verify token + load user
+  try {
+    const r = await fetch(BACKEND + '/api/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN }
+    });
+    if (!r.ok) {
+      localStorage.removeItem(TOKEN_KEY);
+      location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH));
+      return;
+    }
+    const data = await r.json();
+    state.user = data.user;
+    state.apiKey = data.user.api_key;
+  } catch (e) {
+    localStorage.removeItem(TOKEN_KEY);
+    location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH));
+    return;
+  }
+
+  // Start idle watcher only after auth verified
+  startIdleWatcher();
+  touchActivity();
+
   updateHeader();
   await Promise.all([loadPlan(), loadBusinesses(), loadCountries()]);
   await loadAnalytics();
