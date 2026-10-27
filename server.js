@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Main Express server
-// v3.3.1 — admin sync on boot, internal navigation, auth
+// v3.3.2 — Admin bypasses limits, Admin monitoring APIs, $29 USD
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -70,7 +70,7 @@ const PORT = Number(process.env.PORT) || 10000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const PUBLIC_BASE_URL =
   process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
-const PREMIUM_PRICE_NGN = Number(process.env.PREMIUM_PRICE_NGN) || 5000;
+const PREMIUM_PRICE_USD = 29; // Flat $29/month
 
 const AI_PROVIDER = process.env.AI_PROVIDER || 'openai';
 let aiClient = null;
@@ -208,12 +208,12 @@ function getClientIp(req) {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    version: '3.3.1',
+    version: '3.3.2',
     env: NODE_ENV,
     uptime: Math.round(process.uptime()),
     ai: AI_PROVIDER,
     demoMode: process.env.DEMO_MODE === 'true',
-    price: { NGN: Number(process.env.PREMIUM_PRICE_NGN) || 5000 },
+    price: { USD: PREMIUM_PRICE_USD },
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_PUBLIC_KEY && process.env.FLUTTERWAVE_SECRET_KEY),
     auth: {
       enabled: true,
@@ -351,6 +351,48 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/all-businesses', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT b.*, u.email as owner_email 
+      FROM businesses b 
+      LEFT JOIN users u ON u.api_key = b.api_key 
+      ORDER BY b.created_at DESC
+    `);
+    res.json({ businesses: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin/all-leads', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT l.*, b.name as business_name 
+      FROM leads l 
+      JOIN businesses b ON b.id = l.business_id 
+      ORDER BY l.created_at DESC LIMIT 500
+    `);
+    res.json({ leads: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin/all-campaigns', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT c.*, b.name as business_name 
+      FROM campaigns c 
+      JOIN businesses b ON b.id = c.business_id 
+      ORDER BY c.created_at DESC
+    `);
+    res.json({ campaigns: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/admin/claim-legacy', requireAdmin, async (req, res) => {
   try {
     const { apiKey } = req.body || {};
@@ -385,10 +427,25 @@ app.put('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
 });
 
 // ============================================================
-// PLAN
+// PLAN (With Admin Bypass)
 // ============================================================
 app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => {
   try {
+    // 🚨 ADMIN BYPASS: Admins get infinite everything
+    if (req.user && req.user.role === 'admin') {
+      return res.json({
+        plan: 'premium',
+        usage: { auditsToday: 0, videosMonth: 0, backlinksToday: 0 },
+        limits: {
+          freeAudits: 999999,
+          premiumVideos: 999999,
+          backlinks: 999999,
+          businesses: 999999,
+          price: 0,
+        },
+      });
+    }
+
     const blog = await getOrCreateBlog(req.apiKey, req.query.url || 'unknown');
     res.json({
       plan: blog.plan,
@@ -398,10 +455,11 @@ app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => 
         premiumVideos: Number(process.env.PREMIUM_VIDEOS_PER_MONTH) || 30,
         backlinks: Number(process.env.PREMIUM_BACKLINKS_PER_DAY) || 10,
         businesses: blog.plan === 'premium' ? 3 : 1,
-        price: PREMIUM_PRICE_NGN,
+        price: PREMIUM_PRICE_USD,
       },
     });
   } catch (e) {
+    console.error('Plan check error:', e.message);
     res.status(500).json({ error: 'Failed to check plan' });
   }
 });
@@ -413,10 +471,14 @@ app.post('/api/audit', auditLimiter, requireApiKey, async (req, res) => {
   const { url, keyword = '', autoFix = true } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
 
+  const isAdmin = req.user && req.user.role === 'admin';
   const freeLimit = Number(process.env.FREE_AUDITS_PER_DAY) || 3;
-  const updated = await tryIncrementAudit(req.apiKey, freeLimit);
-  if (!updated) {
-    return res.status(403).json({ error: 'FREE_LIMIT', message: 'Daily free audit limit reached' });
+  
+  if (!isAdmin) {
+    const updated = await tryIncrementAudit(req.apiKey, freeLimit);
+    if (!updated) {
+      return res.status(403).json({ error: 'FREE_LIMIT', message: 'Daily free audit limit reached' });
+    }
   }
 
   try {
@@ -501,18 +563,24 @@ app.post('/api/keywords', generalLimiter, requireApiKey, async (req, res) => {
 });
 
 // ============================================================
-// VIDEO
+// VIDEO (With Admin Bypass)
 // ============================================================
 app.post('/api/create-video', videoLimiter, requireApiKey, async (req, res) => {
   const { topic, businessName = '', durationSeconds = 15, style = 'documentary' } = req.body;
   if (!topic) return res.status(400).json({ error: 'topic is required' });
 
+  const isAdmin = req.user && req.user.role === 'admin';
   const blog = await getOrCreateBlog(req.apiKey);
-  if (blog.plan !== 'premium') return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
+  
+  if (blog.plan !== 'premium' && !isAdmin) {
+    return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
+  }
 
-  const maxVideos = Number(process.env.PREMIUM_VIDEOS_PER_MONTH) || 30;
-  const updated = await tryIncrementVideo(req.apiKey, maxVideos);
-  if (!updated) return res.status(403).json({ error: 'MONTHLY_LIMIT_REACHED' });
+  if (!isAdmin) {
+    const maxVideos = Number(process.env.PREMIUM_VIDEOS_PER_MONTH) || 30;
+    const updated = await tryIncrementVideo(req.apiKey, maxVideos);
+    if (!updated) return res.status(403).json({ error: 'MONTHLY_LIMIT_REACHED' });
+  }
 
   try {
     const result = await createVideo({ topic, businessName, durationSeconds, style });
@@ -580,11 +648,12 @@ app.post('/api/social/post-now', generalLimiter, requireApiKey, async (req, res)
 });
 
 // ============================================================
-// BUSINESSES
+// BUSINESSES (With Admin Bypass)
 // ============================================================
 app.post('/api/businesses', generalLimiter, requireApiKey, async (req, res) => {
   try {
-    const business = await createBusiness({ apiKey: req.apiKey, ...req.body });
+    const isAdmin = req.user && req.user.role === 'admin';
+    const business = await createBusiness({ apiKey: req.apiKey, ...req.body, isAdmin });
     res.json({ business });
   } catch (e) {
     if (e.code === 'BUSINESS_LIMIT') {
@@ -597,7 +666,8 @@ app.post('/api/businesses', generalLimiter, requireApiKey, async (req, res) => {
 app.get('/api/businesses/list', generalLimiter, requireApiKey, async (req, res) => {
   try {
     const businesses = await listBusinesses(req.apiKey);
-    const limit = await getBusinessLimitForPlan(req.apiKey);
+    const isAdmin = req.user && req.user.role === 'admin';
+    const limit = isAdmin ? 999999 : await getBusinessLimitForPlan(req.apiKey);
     res.json({ businesses, limit, count: businesses.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -773,7 +843,7 @@ app.get('/api/businesses/:id/analytics', generalLimiter, async (req, res) => {
 });
 
 // ============================================================
-// Q&A
+// Q&A (With Admin Bypass)
 // ============================================================
 app.get('/api/questions/sources', (req, res) => {
   res.json({ countries: listSupportedCountries() });
@@ -783,8 +853,10 @@ app.post('/api/questions/find', questionLimiter, requireApiKey, async (req, res)
   const { businessId, keyword, country = 'ng' } = req.body;
   if (!businessId || !keyword) return res.status(400).json({ error: 'businessId and keyword required' });
 
+  const isAdmin = req.user && req.user.role === 'admin';
   const blog = await getBlog(req.apiKey);
-  if (!blog || blog.plan !== 'premium') {
+  
+  if ((!blog || blog.plan !== 'premium') && !isAdmin) {
     return res.status(403).json({ error: 'PREMIUM_REQUIRED', message: 'Question Finder is a Premium feature' });
   }
 
@@ -822,8 +894,12 @@ app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, re
   const { blogUrl, blogTitle } = req.body;
   if (!blogUrl) return res.status(400).json({ error: 'blogUrl required' });
 
+  const isAdmin = req.user && req.user.role === 'admin';
   const blog = await getBlog(req.apiKey);
-  if (!blog || blog.plan !== 'premium') return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
+  
+  if ((!blog || blog.plan !== 'premium') && !isAdmin) {
+    return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
+  }
 
   try {
     const question = await getQuestionFind(Number(req.params.id));
@@ -934,8 +1010,8 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
     );
     const verified = verifyRes.data?.data;
     if (!verified || verified.status !== 'successful') return;
-    if (Number(verified.amount) < PREMIUM_PRICE_NGN) return;
-    if (verified.currency !== 'NGN') return;
+    if (Number(verified.amount) < PREMIUM_PRICE_USD) return;
+    if (verified.currency !== 'USD') return;
 
     const blog = await upgradeToPremium(apiKey, verified.customer?.email || email);
     if (blog) console.log(`✅ Premium upgrade: ${apiKey}`);
@@ -993,8 +1069,8 @@ app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) =>
   const txRef = `ATE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   res.json({
     tx_ref: txRef,
-    amount: PREMIUM_PRICE_NGN,
-    currency: 'NGN',
+    amount: PREMIUM_PRICE_USD,
+    currency: 'USD',
     public_key: process.env.FLUTTERWAVE_PUBLIC_KEY,
     email: req.body.email || '',
     metadata: { api_key: req.apiKey },
@@ -1043,7 +1119,7 @@ async function boot() {
       console.warn('⚠️  DATABASE_URL not set');
     }
 
-    // ─── ADMIN SYNC (runs every boot) ───
+    // ─── ADMIN SYNC ───
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -1081,7 +1157,7 @@ async function boot() {
               console.log(`✅ Admin credentials synced: ${adminEmail}`);
             } catch (syncErr) {
               if (syncErr.code === '23505') {
-                console.warn(`⚠️  Cannot sync admin to ${adminEmail}: email already in use by another account`);
+                console.warn(`⚠️  Cannot sync admin to ${adminEmail}: email already in use`);
               } else {
                 throw syncErr;
               }
@@ -1100,7 +1176,7 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.3.1 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.3.2 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
