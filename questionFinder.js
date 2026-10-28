@@ -1,9 +1,12 @@
 // ============================================================
 // Auto Traffic Engine — Question Finder
-// v3.0 — 55+ countries with region grouping
+// v3.1 — 60 countries + Reddit proxy fallback + better logging
 // ============================================================
 import axios from 'axios';
 
+// ============================================================
+// COUNTRY → SOURCES MAP (60 countries)
+// ============================================================
 export const QA_SOURCES_BY_COUNTRY = {
   // ---- GLOBAL ----
   global: [
@@ -272,6 +275,9 @@ export const QA_SOURCES_BY_COUNTRY = {
   ],
 };
 
+// ============================================================
+// REGION MAP
+// ============================================================
 const REGION_MAP = {
   global: 'Global',
   us: 'North America', ca: 'North America', mx: 'North America',
@@ -325,44 +331,120 @@ export function listSupportedCountries() {
   }));
 }
 
+// ============================================================
+// REDDIT FETCHER — Multi-strategy (direct → allorigins → corsproxy)
+// ============================================================
 async function searchReddit(keyword, { limit = 25, sort = 'relevance' } = {}) {
+  const redditPath = `search.json?q=${encodeURIComponent(keyword)}&sort=${sort}&limit=${limit}&t=year`;
+  const directUrl = `https://www.reddit.com/${redditPath}`;
+
+  // Strategy 1: Direct (works from residential IPs, sometimes from Render)
   try {
-    const res = await axios.get('https://www.reddit.com/search.json', {
-      params: { q: keyword, sort, limit, t: 'year' },
-      headers: { 'User-Agent': 'AutoTrafficEngine/3.0 (research; support@ate.app)' },
-      timeout: 12_000,
+    const res = await axios.get(directUrl, {
+      headers: { 'User-Agent': 'AutoTrafficEngine/3.1 (research)' },
+      timeout: 10_000,
+      validateStatus: (s) => s === 200,
     });
-    const children = res.data?.data?.children || [];
-    return children
-      .filter((c) => c.data && c.data.title && c.data.permalink)
-      .map((c) => ({
-        source: 'reddit',
-        title: c.data.title,
-        url: 'https://www.reddit.com' + c.data.permalink,
-        snippet: (c.data.selftext || '').slice(0, 300),
-        subreddit: c.data.subreddit,
-        score: c.data.score,
-        numComments: c.data.num_comments,
-        postedAt: new Date(c.data.created_utc * 1000).toISOString(),
-      }));
+    if (res.data?.data?.children) {
+      console.log('[questionFinder] ✅ Reddit: direct success');
+      return parseRedditChildren(res.data.data.children);
+    }
   } catch (e) {
-    console.warn('[questionFinder] Reddit failed:', e.message);
-    return [];
+    console.log('[questionFinder] ⚠️ Reddit direct failed:', e.response?.status || e.message);
   }
+
+  // Strategy 2: allorigins.win proxy (residential exit nodes)
+  try {
+    const proxied = `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl)}`;
+    const res = await axios.get(proxied, { timeout: 20_000 });
+    let data = res.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch {}
+    }
+    if (data?.data?.children) {
+      console.log('[questionFinder] ✅ Reddit: allorigins proxy success');
+      return parseRedditChildren(data.data.children);
+    }
+  } catch (e) {
+    console.log('[questionFinder] ⚠️ Reddit allorigins failed:', e.message);
+  }
+
+  // Strategy 3: corsproxy.io (alternative residential proxy)
+  try {
+    const proxied = `https://corsproxy.io/?${encodeURIComponent(directUrl)}`;
+    const res = await axios.get(proxied, { timeout: 20_000 });
+    let data = res.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch {}
+    }
+    if (data?.data?.children) {
+      console.log('[questionFinder] ✅ Reddit: corsproxy success');
+      return parseRedditChildren(data.data.children);
+    }
+  } catch (e) {
+    console.log('[questionFinder] ⚠️ Reddit corsproxy failed:', e.message);
+  }
+
+  // Strategy 4: Old Reddit domain (sometimes not blocked)
+  try {
+    const oldRedditUrl = `https://old.reddit.com/${redditPath}`;
+    const res = await axios.get(oldRedditUrl, {
+      headers: { 'User-Agent': 'AutoTrafficEngine/3.1' },
+      timeout: 12_000,
+      validateStatus: (s) => s === 200,
+    });
+    if (res.data?.data?.children) {
+      console.log('[questionFinder] ✅ Reddit: old.reddit success');
+      return parseRedditChildren(res.data.data.children);
+    }
+  } catch (e) {
+    console.log('[questionFinder] ⚠️ Reddit old.reddit failed:', e.message);
+  }
+
+  console.warn('[questionFinder] ❌ All Reddit strategies failed for:', keyword);
+  return [];
 }
 
+function parseRedditChildren(children) {
+  return children
+    .filter((c) => c.data && c.data.title && c.data.permalink)
+    .map((c) => ({
+      source: 'reddit',
+      title: c.data.title,
+      url: 'https://www.reddit.com' + c.data.permalink,
+      snippet: (c.data.selftext || '').slice(0, 300),
+      subreddit: c.data.subreddit,
+      score: c.data.score,
+      numComments: c.data.num_comments,
+      postedAt: new Date(c.data.created_utc * 1000).toISOString(),
+    }));
+}
+
+// ============================================================
+// GOOGLE CUSTOM SEARCH
+// ============================================================
 async function searchGoogleCSE(keyword, siteDomain, { limit = 10 } = {}) {
   const apiKey = process.env.GOOGLE_CSE_API_KEY;
   const cx = process.env.GOOGLE_CSE_ID;
+
   if (!apiKey || !cx) {
-    return { error: 'GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID required', results: [] };
+    const err = 'GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID not configured on server';
+    console.warn('[questionFinder] ❌ ' + err);
+    return { error: err, results: [] };
   }
+
   try {
     const res = await axios.get('https://www.googleapis.com/customsearch/v1', {
-      params: { key: apiKey, cx, q: `${keyword} site:${siteDomain}`, num: Math.min(limit, 10) },
+      params: {
+        key: apiKey,
+        cx,
+        q: `${keyword} site:${siteDomain}`,
+        num: Math.min(limit, 10),
+      },
       timeout: 15_000,
     });
     const items = res.data?.items || [];
+    console.log(`[questionFinder] ✅ Google CSE ${siteDomain}: ${items.length} results`);
     return {
       results: items.map((i) => ({
         source: siteDomain,
@@ -372,11 +454,16 @@ async function searchGoogleCSE(keyword, siteDomain, { limit = 10 } = {}) {
       })),
     };
   } catch (e) {
-    console.warn(`[questionFinder] Google CSE failed for ${siteDomain}:`, e.message);
-    return { error: e.message, results: [] };
+    const status = e.response?.status;
+    const errMsg = e.response?.data?.error?.message || e.message;
+    console.warn(`[questionFinder] ❌ Google CSE ${siteDomain} failed [${status}]:`, errMsg);
+    return { error: `[${status}] ${errMsg}`, results: [] };
   }
 }
 
+// ============================================================
+// HELPERS
+// ============================================================
 function dedupeByUrl(items) {
   const seen = new Set();
   const out = [];
@@ -392,6 +479,9 @@ function dedupeByUrl(items) {
   return out;
 }
 
+// ============================================================
+// MAIN — findQuestions
+// ============================================================
 export async function findQuestions({
   keyword,
   country = 'ng',
@@ -401,9 +491,12 @@ export async function findQuestions({
   if (!keyword || keyword.trim().length < 3) {
     throw new Error('Keyword must be at least 3 characters');
   }
+
   const normalizedCountry = String(country).toLowerCase();
   const countrySources = QA_SOURCES_BY_COUNTRY[normalizedCountry] || QA_SOURCES_BY_COUNTRY.global;
   const activeSources = sources ? countrySources.filter((s) => sources.includes(s.id)) : countrySources;
+
+  console.log(`[questionFinder] 🔍 Searching "${keyword}" in ${normalizedCountry} (${activeSources.length} sources)`);
 
   const allResults = [];
   const sourceStatus = [];
@@ -434,6 +527,8 @@ export async function findQuestions({
     if (a.postedAt && b.postedAt) return new Date(b.postedAt) - new Date(a.postedAt);
     return 0;
   });
+
+  console.log(`[questionFinder] 📊 Total found: ${deduped.length}`);
 
   return {
     keyword,
