@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Main Express server
-// v3.3.3 — Complete: auth, admin bypass, monitoring, $29 USD payment
+// v3.4.0 — Dual Q&A endpoint, Admin bypass, $29 USD, Directory Generator
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -59,6 +59,10 @@ import {
 } from './leadEngine.js';
 import { findQuestions, listSupportedCountries } from './questionFinder.js';
 import { generateDraft } from './draftGenerator.js';
+import {
+  listDirectories, listSupportedCountries as listDirectoryCountries,
+  generateListingsForCountry
+} from './directoryGenerator.js';
 
 // ============================================================
 // CONFIG
@@ -143,7 +147,7 @@ const checkPlanLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { er
 const auditLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Too many audits' } });
 const videoLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { error: 'Too many video requests' } });
 const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 1000, message: { error: 'Webhook rate limit exceeded' } });
-const questionLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 15, message: { error: 'Too many question searches' } });
+const questionLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30, message: { error: 'Too many question searches' } });
 const draftLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 40, message: { error: 'Too many draft requests' } });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many auth attempts' } });
 
@@ -208,7 +212,7 @@ function getClientIp(req) {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    version: '3.3.3',
+    version: '3.4.0',
     env: NODE_ENV,
     uptime: Math.round(process.uptime()),
     ai: AI_PROVIDER,
@@ -231,6 +235,7 @@ app.get('/health', (req, res) => {
       indexnow: Boolean(process.env.INDEXNOW_KEY),
       dataForSeo: Boolean(process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD),
       googleCse: Boolean(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_ID),
+      braveSearch: Boolean(process.env.BRAVE_SEARCH_API_KEY),
     },
     time: new Date().toISOString(),
   });
@@ -842,15 +847,22 @@ app.get('/api/businesses/:id/analytics', generalLimiter, async (req, res) => {
 });
 
 // ============================================================
-// Q&A (With Admin Bypass)
+// Q&A (Dual Method — GET + POST, Admin Bypass)
 // ============================================================
 app.get('/api/questions/sources', (req, res) => {
   res.json({ countries: listSupportedCountries() });
 });
 
-app.post('/api/questions/find', questionLimiter, requireApiKey, async (req, res) => {
-  const { businessId, keyword, country = 'ng' } = req.body;
-  if (!businessId || !keyword) return res.status(400).json({ error: 'businessId and keyword required' });
+app.all('/api/questions/find', questionLimiter, requireApiKey, async (req, res) => {
+  // Pull parameters from query string (GET) or body (POST)
+  const params = req.method === 'GET' ? req.query : (req.body || {});
+  const businessId = params.businessId;
+  const keyword = params.keyword;
+  const country = params.country || 'ng';
+
+  if (!businessId || !keyword) {
+    return res.status(400).json({ error: 'businessId and keyword required' });
+  }
 
   const isAdmin = req.user && req.user.role === 'admin';
   const blog = await getBlog(req.apiKey);
@@ -955,27 +967,47 @@ app.put('/api/drafts/:id/status', generalLimiter, requireApiKey, async (req, res
 });
 
 // ============================================================
-// SMART LINK
+// DIRECTORY LISTING GENERATOR
 // ============================================================
-app.get('/l/:slug', async (req, res) => {
+app.get('/api/directories/countries', (req, res) => {
   try {
-    const result = await resolveSmartLink({
-      slug: req.params.slug,
-      ip: getClientIp(req),
-      userAgent: req.headers['user-agent'] || null,
-      referrer: req.headers['referer'] || null,
-    });
-    res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.redirect(302, result.redirectUrl);
+    res.json({ countries: listDirectoryCountries() });
   } catch (e) {
-    if (e.code === 'LINK_NOT_FOUND') return res.status(404).send('Link not found or expired');
-    console.error('Smart link error:', e.message);
-    res.status(500).send('Redirect failed');
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/directories/:country', (req, res) => {
+  try {
+    const result = listDirectories(req.params.country);
+    if (!result) return res.status(404).json({ error: 'Country not supported' });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/directories/generate', generalLimiter, requireApiKey, async (req, res) => {
+  const { profile, country = 'ng', limit = 30 } = req.body;
+  if (!profile?.name) {
+    return res.status(400).json({ error: 'profile.name is required' });
+  }
+  try {
+    const result = await generateListingsForCountry({
+      profile,
+      country,
+      limit,
+      useAI: Boolean(aiClient),
+    });
+    res.json(result);
+  } catch (e) {
+    console.error('Directory listing error:', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
 // ============================================================
-// PAYMENT — Config-aware, with fallback
+// PAYMENT (Config-aware)
 // ============================================================
 app.get('/api/payment/status', (req, res) => {
   const configured = Boolean(
@@ -1127,6 +1159,26 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
 });
 
 // ============================================================
+// SMART LINK
+// ============================================================
+app.get('/l/:slug', async (req, res) => {
+  try {
+    const result = await resolveSmartLink({
+      slug: req.params.slug,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || null,
+      referrer: req.headers['referer'] || null,
+    });
+    res.setHeader('Cache-Control', 'no-store, max-age=0');
+    res.redirect(302, result.redirectUrl);
+  } catch (e) {
+    if (e.code === 'LINK_NOT_FOUND') return res.status(404).send('Link not found or expired');
+    console.error('Smart link error:', e.message);
+    res.status(500).send('Redirect failed');
+  }
+});
+
+// ============================================================
 // ROOT + 404 + ERROR
 // ============================================================
 app.get('/', (req, res) => res.redirect('/app.html'));
@@ -1213,7 +1265,7 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.3.3 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.4.0 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
