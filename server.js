@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Main Express server
-// v3.4.0 — Dual Q&A endpoint, Admin bypass, $29 USD, Directory Generator
+// v3.4.1 — Q&A works, admin bypass, $29 USD (directory feature removed for stability)
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -59,10 +59,6 @@ import {
 } from './leadEngine.js';
 import { findQuestions, listSupportedCountries } from './questionFinder.js';
 import { generateDraft } from './draftGenerator.js';
-import {
-  listDirectories, listSupportedCountries as listDirectoryCountries,
-  generateListingsForCountry
-} from './directoryGenerator.js';
 
 // ============================================================
 // CONFIG
@@ -212,7 +208,7 @@ function getClientIp(req) {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    version: '3.4.0',
+    version: '3.4.1',
     env: NODE_ENV,
     uptime: Math.round(process.uptime()),
     ai: AI_PROVIDER,
@@ -234,8 +230,6 @@ app.get('/health', (req, res) => {
       whatsapp: isWhatsAppConfigured(),
       indexnow: Boolean(process.env.INDEXNOW_KEY),
       dataForSeo: Boolean(process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD),
-      googleCse: Boolean(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_ID),
-      braveSearch: Boolean(process.env.BRAVE_SEARCH_API_KEY),
     },
     time: new Date().toISOString(),
   });
@@ -327,7 +321,7 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 app.post('/api/auth/logout', (req, res) => res.json({ ok: true }));
 
 // ============================================================
-// ADMIN — Overview, Users, Monitoring
+// ADMIN
 // ============================================================
 app.get('/api/admin/overview', requireAdmin, async (req, res) => {
   try {
@@ -436,7 +430,6 @@ app.put('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
 // ============================================================
 app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => {
   try {
-    // Admin bypass — infinite access
     if (req.user && req.user.role === 'admin') {
       return res.json({
         plan: 'premium',
@@ -567,7 +560,7 @@ app.post('/api/keywords', generalLimiter, requireApiKey, async (req, res) => {
 });
 
 // ============================================================
-// VIDEO (With Admin Bypass)
+// VIDEO
 // ============================================================
 app.post('/api/create-video', videoLimiter, requireApiKey, async (req, res) => {
   const { topic, businessName = '', durationSeconds = 15, style = 'documentary' } = req.body;
@@ -652,7 +645,7 @@ app.post('/api/social/post-now', generalLimiter, requireApiKey, async (req, res)
 });
 
 // ============================================================
-// BUSINESSES (With Admin Bypass)
+// BUSINESSES
 // ============================================================
 app.post('/api/businesses', generalLimiter, requireApiKey, async (req, res) => {
   try {
@@ -847,14 +840,13 @@ app.get('/api/businesses/:id/analytics', generalLimiter, async (req, res) => {
 });
 
 // ============================================================
-// Q&A (Dual Method — GET + POST, Admin Bypass)
+// Q&A (Dual Method — GET + POST)
 // ============================================================
 app.get('/api/questions/sources', (req, res) => {
   res.json({ countries: listSupportedCountries() });
 });
 
 app.all('/api/questions/find', questionLimiter, requireApiKey, async (req, res) => {
-  // Pull parameters from query string (GET) or body (POST)
   const params = req.method === 'GET' ? req.query : (req.body || {});
   const businessId = params.businessId;
   const keyword = params.keyword;
@@ -967,47 +959,7 @@ app.put('/api/drafts/:id/status', generalLimiter, requireApiKey, async (req, res
 });
 
 // ============================================================
-// DIRECTORY LISTING GENERATOR
-// ============================================================
-app.get('/api/directories/countries', (req, res) => {
-  try {
-    res.json({ countries: listDirectoryCountries() });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.get('/api/directories/:country', (req, res) => {
-  try {
-    const result = listDirectories(req.params.country);
-    if (!result) return res.status(404).json({ error: 'Country not supported' });
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-app.post('/api/directories/generate', generalLimiter, requireApiKey, async (req, res) => {
-  const { profile, country = 'ng', limit = 30 } = req.body;
-  if (!profile?.name) {
-    return res.status(400).json({ error: 'profile.name is required' });
-  }
-  try {
-    const result = await generateListingsForCountry({
-      profile,
-      country,
-      limit,
-      useAI: Boolean(aiClient),
-    });
-    res.json(result);
-  } catch (e) {
-    console.error('Directory listing error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// ============================================================
-// PAYMENT (Config-aware)
+// PAYMENT
 // ============================================================
 app.get('/api/payment/status', (req, res) => {
   const configured = Boolean(
@@ -1027,7 +979,6 @@ app.get('/api/payment/status', (req, res) => {
 });
 
 app.post('/api/payment/init', generalLimiter, requireApiKey, async (req, res) => {
-  // Guard: Check Flutterwave configuration before returning data
   if (!process.env.FLUTTERWAVE_PUBLIC_KEY || !process.env.FLUTTERWAVE_SECRET_KEY) {
     return res.status(503).json({
       error: 'PAYMENT_NOT_CONFIGURED',
@@ -1208,7 +1159,7 @@ async function boot() {
       console.warn('⚠️  DATABASE_URL not set');
     }
 
-    // ─── ADMIN SYNC ───
+    // ADMIN SYNC
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -1265,7 +1216,7 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.4.0 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.4.1 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
