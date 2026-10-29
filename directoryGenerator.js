@@ -1,12 +1,131 @@
 // ============================================================
 // Auto Traffic Engine — Directory Listing Generator
-// v4.0 — 4 fields, verified compose URLs, translation, bookmarklet
+// v5.0 — Super Brain sales copy + NAP check + platform specs
 // ============================================================
 import OpenAI from 'openai';
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : process.env.DEEPSEEK_API_KEY
+  ? new OpenAI({ baseURL: 'https://api.deepseek.com', apiKey: process.env.DEEPSEEK_API_KEY })
   : null;
+
+const AI_MODEL = process.env.AI_LISTING_MODEL || 'gpt-4o-mini';
+
+// ============================================================
+// SPAM PHRASES — reject if these slip in
+// ============================================================
+const SPAM_PHRASES = [
+  'click here', 'click now', 'buy now', '100% sure', 'guaranteed',
+  'limited time', 'act fast', "don't miss", 'free money', 'make money fast',
+  'lowest price', 'best price ever', 'unbelievable', 'shocking',
+  'in today\'s fast-paced', "let's dive in", 'game-changer',
+];
+
+// ============================================================
+// PLATFORM SPECS — per-directory character limits + tone
+// Merged from listingGenerator.js
+// ============================================================
+export const PLATFORM_SPECS = {
+  // Classifieds — punchy, urgent, benefit-led
+  jiji:        { titleMax: 70, descMax: 1000, tone: 'classified' },
+  'olx':       { titleMax: 70, descMax: 1000, tone: 'classified' },
+  locanto:     { titleMax: 70, descMax: 900,  tone: 'classified' },
+  craigslist:  { titleMax: 70, descMax: 1000, tone: 'classified' },
+  gumtree:     { titleMax: 70, descMax: 1000, tone: 'classified' },
+  quoka:       { titleMax: 65, descMax: 1000, tone: 'classified' },
+  kleinanzeigen:{ titleMax: 65, descMax: 1000, tone: 'classified' },
+  leboncoin:   { titleMax: 50, descMax: 4000, tone: 'classified' },
+  milanuncios: { titleMax: 60, descMax: 1500, tone: 'classified' },
+  quikr:       { titleMax: 70, descMax: 1000, tone: 'classified' },
+  mercadolivre:{ titleMax: 60, descMax: 1000, tone: 'classified' },
+  mercadolibre:{ titleMax: 60, descMax: 1000, tone: 'classified' },
+  adverts:     { titleMax: 70, descMax: 800,  tone: 'classified' },
+  naijaads:    { titleMax: 70, descMax: 800,  tone: 'classified' },
+
+  // Local / maps — trust-building, NAP-heavy
+  'google business': { titleMax: 30, descMax: 750, tone: 'local' },
+  'bing places':     { titleMax: 60, descMax: 500, tone: 'local' },
+  yelp:              { titleMax: 60, descMax: 750, tone: 'local' },
+  foursquare:        { titleMax: 60, descMax: 500, tone: 'local' },
+  nextdoor:          { titleMax: 60, descMax: 750, tone: 'local' },
+
+  // Business directories — formal, authority-led
+  vconnect:    { titleMax: 80, descMax: 2000, tone: 'business' },
+  'yellow pages': { titleMax: 80, descMax: 1000, tone: 'business' },
+  yellowpages: { titleMax: 80, descMax: 1000, tone: 'business' },
+  businesslist:{ titleMax: 80, descMax: 1500, tone: 'business' },
+  finelib:     { titleMax: 80, descMax: 1000, tone: 'business' },
+  hotfrog:     { titleMax: 80, descMax: 1000, tone: 'business' },
+  cylex:       { titleMax: 80, descMax: 1000, tone: 'business' },
+  manta:       { titleMax: 60, descMax: 750,  tone: 'business' },
+  bbb:         { titleMax: 80, descMax: 1000, tone: 'business' },
+  superpages:  { titleMax: 80, descMax: 1000, tone: 'business' },
+  yell:        { titleMax: 80, descMax: 1000, tone: 'business' },
+  'thomson local': { titleMax: 80, descMax: 1000, tone: 'business' },
+  freeindex:   { titleMax: 80, descMax: 1000, tone: 'business' },
+  pagesjaunes: { titleMax: 80, descMax: 1000, tone: 'business' },
+  justdial:    { titleMax: 80, descMax: 500,  tone: 'business' },
+  sulekha:     { titleMax: 80, descMax: 1000, tone: 'business' },
+  custojusto:  { titleMax: 70, descMax: 1000, tone: 'business' },
+
+  // B2B — commercial, spec-heavy
+  indiamart:   { titleMax: 100, descMax: 2000, tone: 'b2b' },
+
+  // Fallback
+  default:     { titleMax: 70, descMax: 800, tone: 'generic' },
+};
+
+// Fuzzy matcher
+function getSpecForDirectory(dirName) {
+  const lower = String(dirName || '').toLowerCase();
+  for (const [key, spec] of Object.entries(PLATFORM_SPECS)) {
+    if (key === 'default') continue;
+    if (lower.includes(key)) return spec;
+  }
+  return PLATFORM_SPECS.default;
+}
+
+// ============================================================
+// TONE PLAYBOOKS — the sales strategy per directory type
+// ============================================================
+const TONE_PLAYBOOKS = {
+  classified: {
+    framework: 'AIDA (Attention → Interest → Desire → Action)',
+    voice: 'Direct, urgent, benefit-led. Buyer is comparing 10 other listings in 30 seconds. Every line must answer "what do I get and why you?". Use specifics — prices, quantities, timeframe, guarantee, location. Avoid adjectives like "amazing" or "quality" — replace with proof: "verified", "same-day delivery", "12-month warranty", "20 in stock".',
+    hook: 'Lead with the strongest specific benefit + location. Example: "Toyota Camry 2018 — Lagos, 42k mileage, papers complete" NOT "Amazing Toyota Camry for sale".',
+    cta: 'Clear action with urgency that is TRUE (not fake): "Call now for today\'s price", "Message on WhatsApp to reserve", "Stock limited — book today".',
+    avoid: 'Generic marketing words (quality, trusted, best, amazing), no emojis, no ALL CAPS.',
+  },
+  business: {
+    framework: 'Problem → Solution → Proof → Action',
+    voice: 'Professional, confident, credible. Reader is evaluating whether you are legitimate. Establish authority: years in business, number of clients served, certifications, service area. Use "we" — you are a business.',
+    hook: 'Open with what you do + who you serve + where. Example: "VConnect — full-service livestock farm supplying restaurants and households across Lagos and Ogun since 2014."',
+    cta: 'Trust-building CTA: "Visit our website", "Call to book a consultation", "Request a quote online".',
+    avoid: 'Hyperbole, urgency tricks, unverifiable claims.',
+  },
+  local: {
+    framework: 'Local Identity → Service → Trust → NAP → Action',
+    voice: 'Warm, community-focused. Reader is likely a neighbor. Emphasize locality: "family-owned", "serving [neighborhood] since [year]". NAP (Name, Address, Phone) must be present and consistent.',
+    hook: 'Lead with location + category + differentiator. Example: "Family-run auto repair shop in Ikeja — we service Japanese cars and fix what other shops missed."',
+    cta: 'Local CTA: "Drop by — walk-ins welcome", "Call to book a same-day appointment".',
+    avoid: 'Corporate language. This must sound like a person, not a template.',
+  },
+  b2b: {
+    framework: 'Capability → Specs → Volume → Contact',
+    voice: 'Commercial, spec-focused. Buyer is a procurement officer or reseller. They want numbers: MOQ, lead time, certifications, payment terms, shipping.',
+    hook: 'Lead with product category, certifications, and production capacity.',
+    cta: 'B2B CTA: "Request quote", "Contact sales for bulk pricing", "Send sample request".',
+    avoid: 'Consumer language, urgency, emotion.',
+  },
+  generic: {
+    framework: 'Hook → Benefit → Trust → CTA',
+    voice: 'Helpful, clear, no hype. Reader is skimming.',
+    hook: 'Specific value proposition in one sentence.',
+    cta: 'Clear next step.',
+    avoid: 'Clichés, hype, generic filler.',
+  },
+};
 
 // ============================================================
 // TRANSLATION (free, no API key)
@@ -145,60 +264,196 @@ export const DIRECTORIES_BY_COUNTRY = {
 };
 
 // ============================================================
-// AI — generates exactly 4 fields
+// NAP CONSISTENCY CHECK — ported from old listingGenerator.js
 // ============================================================
-async function aiListing(profile, directory, countryName) {
-  if (!openai) return null;
-
-  const prompt = `Write a classified listing for "${directory.name}" (${directory.category} category) in ${countryName}.
-
-Business: ${profile.name}
-Category: ${profile.category || 'Business'}
-City: ${profile.city || ''}, ${profile.state || ''}
-Phone: ${profile.phone || 'N/A'}
-Website: ${profile.website || 'N/A'}
-Description: ${profile.description || ''}
-
-Return JSON only:
-{
-  "postTitle": "60-char title with business name + location + benefit",
-  "postContent": "250-400 char description with phone, location, benefit",
-  "keywords": ["4-6 searchable keywords"],
-  "category": "single best category name"
+function clean(str) { return String(str ?? '').replace(/\s+/g, ' ').trim(); }
+function truncate(str, max) {
+  const s = clean(str);
+  if (s.length <= max) return s;
+  return s.slice(0, Math.max(0, max - 1)).trimEnd() + '…';
 }
+export function normalisePhone(raw) {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('234') && digits.length === 13) return `+${digits}`;
+  if (digits.startsWith('0') && digits.length === 11) return `+234${digits.slice(1)}`;
+  if (digits.length === 10) return `+234${digits}`;
+  return `+${digits}`;
+}
+export function normaliseAddress(raw) {
+  return clean(raw).toLowerCase()
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function normaliseName(raw) { return clean(raw).toLowerCase().replace(/\s+/g, ' '); }
 
-Rules:
-- For classifieds (Jiji, OLX, Craigslist): sales-focused, urgent tone
-- For business directories (Yelp, Yellow Pages, Google Business): professional, formal
-- No spam phrases ("CLICK NOW", "100% GUARANTEED")
-- Include the phone number in postContent`;
-
-  try {
-    const res = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.9,
-      response_format: { type: 'json_object' },
-    });
-    return JSON.parse(res.choices[0].message.content);
-  } catch (e) {
-    console.error('AI listing failed:', e.message);
-    return null;
+export function checkNaps(profile, listings) {
+  const canonical = {
+    name: normaliseName(profile.name),
+    address: normaliseAddress(profile.address),
+    phone: normalisePhone(profile.phone),
+  };
+  const mismatches = [];
+  for (const l of listings) {
+    const pName = normaliseName(l.name || profile.name);
+    const pAddr = normaliseAddress(l.address || profile.address);
+    const pPhone = normalisePhone(l.phone || profile.phone);
+    if (pName && pName !== canonical.name) mismatches.push({ directory: l.directory, field: 'name', expected: canonical.name, found: pName });
+    if (pAddr && pAddr !== canonical.address) mismatches.push({ directory: l.directory, field: 'address', expected: canonical.address, found: pAddr });
+    if (pPhone && pPhone !== canonical.phone) mismatches.push({ directory: l.directory, field: 'phone', expected: canonical.phone, found: pPhone });
   }
+  return { ok: mismatches.length === 0, canonical, mismatches };
 }
 
-function fallbackListing(profile, countryName) {
+// ============================================================
+// FORMULA FALLBACK — power-word driven, converts even without AI
+// ============================================================
+function fallbackListing(profile, countryName, spec) {
+  const name = clean(profile.name);
   const loc = [profile.city, profile.state].filter(Boolean).join(', ') || countryName;
+  const cat = clean(profile.category) || 'Business';
+  const phone = clean(profile.phone);
+  const wa = clean(profile.whatsapp) || phone;
+  const web = clean(profile.website);
+  const services = Array.isArray(profile.services) ? profile.services.filter(Boolean).slice(0, 4) : [];
+
+  // Classified variant — urgency, specificity
+  if (spec.tone === 'classified') {
+    const hook = `${name} — ${cat} in ${loc}`.slice(0, spec.titleMax);
+    const body = [
+      `${hook}.`,
+      services.length ? `Available now: ${services.join(', ')}.` : '',
+      phone ? `Call or WhatsApp ${wa || phone} to reserve — today's price quoted on call.` : '',
+      web ? `View full details: ${web}` : '',
+    ].filter(Boolean).join(' ');
+    return {
+      postTitle: truncate(hook, spec.titleMax),
+      postContent: truncate(body, spec.descMax),
+      keywords: [cat, profile.city, profile.state, loc].filter(Boolean),
+      category: cat,
+    };
+  }
+
+  // Business / local / generic variant — trust + authority
+  const hook = `${name} — ${cat}${loc ? ` in ${loc}` : ''}`.slice(0, spec.titleMax);
+  const body = [
+    `${name} is a ${cat.toLowerCase()} serving ${loc}.`,
+    services.length ? `We offer: ${services.join(', ')}.` : '',
+    profile.description ? clean(profile.description) : '',
+    phone ? `Call ${phone}${wa && wa !== phone ? ` or WhatsApp ${wa}` : ''} to speak with our team.` : '',
+    web ? `Learn more: ${web}` : '',
+  ].filter(Boolean).join(' ');
   return {
-    postTitle: `${profile.name} — ${profile.category || 'Business'} in ${loc}`.slice(0, 60),
-    postContent: `${profile.name} is a trusted ${(profile.category || 'business').toLowerCase()} in ${loc}. Call ${profile.phone || 'us'} for quality products and fast delivery. ${profile.website ? 'Visit ' + profile.website : ''}`.slice(0, 400),
-    keywords: [profile.category, profile.city, profile.state].filter(Boolean),
-    category: profile.category || 'Business',
+    postTitle: truncate(hook, spec.titleMax),
+    postContent: truncate(body, spec.descMax),
+    keywords: [cat, profile.city, profile.state, loc].filter(Boolean),
+    category: cat,
   };
 }
 
 // ============================================================
-// BOOKMARKLET — autofills compose page from clipboard prompt
+// AI PROMPT — super brain sales copy
+// ============================================================
+function buildListingPrompt(profile, directory, countryName, spec) {
+  const pb = TONE_PLAYBOOKS[spec.tone] || TONE_PLAYBOOKS.generic;
+  const services = Array.isArray(profile.services) ? profile.services.filter(Boolean) : [];
+  const facts = [
+    profile.name ? `Business name: ${clean(profile.name)}` : '',
+    profile.category ? `Category: ${clean(profile.category)}` : '',
+    profile.city || profile.state ? `Location: ${[profile.city, profile.state].filter(Boolean).join(', ')}, ${countryName}` : `Location: ${countryName}`,
+    profile.phone ? `Phone: ${clean(profile.phone)}` : '',
+    profile.whatsapp ? `WhatsApp: ${clean(profile.whatsapp)}` : '',
+    profile.website ? `Website: ${clean(profile.website)}` : '',
+    profile.address ? `Address: ${clean(profile.address)}` : '',
+    services.length ? `Services offered: ${services.join(', ')}` : '',
+    profile.description ? `Existing description: ${clean(profile.description)}` : '',
+    profile.yearsInBusiness ? `Years in business: ${profile.yearsInBusiness}` : '',
+    profile.priceRange ? `Price range: ${clean(profile.priceRange)}` : '',
+    profile.keywords?.length ? `Target keywords: ${profile.keywords.join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+
+  return `You are a senior direct-response copywriter who has generated over 10,000 high-converting classified and directory listings. You write copy that CONVERTS — specific, benefit-led, action-oriented. You never sound like a template.
+
+TARGET DIRECTORY: ${directory.name} (${directory.category} category)
+LOCATION: ${countryName}
+
+BUSINESS FACTS (use ONLY these — do not invent):
+${facts}
+
+WRITING FRAMEWORK: ${pb.framework}
+VOICE: ${pb.voice}
+HOOK STRATEGY: ${pb.hook}
+CTA STYLE: ${pb.cta}
+AVOID: ${pb.avoid}
+
+CHARACTER LIMITS (hard):
+- postTitle: max ${spec.titleMax} characters
+- postContent: max ${spec.descMax} characters
+
+CONVERSION RULES:
+1. postTitle must include: business name + specific category + location. NO generic adjectives ("amazing", "quality", "trusted").
+2. postContent must include at least ONE concrete number (price, quantity, years, delivery time, warranty, area covered). If the profile doesn't provide one, use a soft specific ("same-day delivery", "by appointment", "walk-ins welcome").
+3. postContent must include the phone number (or WhatsApp) as a direct CTA.
+4. Do NOT use: ${SPAM_PHRASES.join(', ')}.
+5. Do NOT use emojis, exclamation marks, or ALL CAPS.
+6. Do NOT invent services, awards, or claims not in the facts.
+7. Do NOT change the name, address, or phone.
+8. Keep every field WITHIN the character limit — count carefully.
+9. Return valid JSON only, no markdown, no code fences.
+
+Return JSON:
+{
+  "postTitle": "...",
+  "postContent": "...",
+  "keywords": ["4-6 searchable keywords"],
+  "category": "single best-fitting category name for this directory"
+}`;
+}
+
+async function callAI(prompt, temp = 0.8) {
+  const res = await openai.chat.completions.create({
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: 'You are a senior direct-response copywriter. You write tight, specific, converting copy. You follow character limits exactly. You return valid JSON only.' },
+      { role: 'user', content: prompt },
+    ],
+    temperature: temp,
+    response_format: { type: 'json_object' },
+  });
+  return JSON.parse(res.choices[0].message.content);
+}
+
+// ============================================================
+// QUALITY SCORER for listings
+// ============================================================
+function scoreListing({ postTitle, postContent }, spec, profile) {
+  let score = 100;
+  const issues = [];
+
+  if (!postTitle || postTitle.length < 15) { score -= 20; issues.push('title too short'); }
+  if (!postContent || postContent.length < 100) { score -= 20; issues.push('content too short'); }
+  if (postTitle.length > spec.titleMax) { score -= 20; issues.push('title over limit'); }
+  if (postContent.length > spec.descMax) { score -= 20; issues.push('content over limit'); }
+
+  const lower = (postTitle + ' ' + postContent).toLowerCase();
+  const spamHits = SPAM_PHRASES.filter((p) => lower.includes(p));
+  if (spamHits.length) { score -= 25 * spamHits.length; issues.push(`spam: ${spamHits.join(', ')}`); }
+
+  if (profile.phone && !postContent.includes(profile.phone.replace(/\D/g, '').slice(-7))) {
+    score -= 10; issues.push('phone not in content');
+  }
+
+  // Has a number?
+  if (!/\d/.test(postContent)) { score -= 10; issues.push('no concrete number'); }
+
+  if (/[\u{1F300}-\u{1FAFF}]/u.test(postTitle + postContent)) { score -= 15; issues.push('emojis'); }
+  if (/\b[A-Z]{5,}\b/.test(postTitle + postContent)) { score -= 10; issues.push('ALL CAPS'); }
+
+  return { total: score, issues };
+}
+
+// ============================================================
+// BOOKMARKLET — autofills compose page from clipboard
 // ============================================================
 export function buildBookmarklet() {
   return `javascript:(function(){var t=prompt('Paste your listing (Title/Content/Keywords/Category):');if(!t)return;var m={};t.split('\\n').forEach(function(l){var i=l.indexOf(':');if(i>0)m[l.slice(0,i).trim().toLowerCase()]=l.slice(i+1).trim();});var ttl=m['post title']||m['title']||'',cnt=m['post content']||m['content']||'',kw=m['keywords']||'',cat=m['category']||'';document.querySelectorAll('input,textarea,select').forEach(function(el){var k=((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.labels&&el.labels[0]?el.labels[0].innerText:'')).toLowerCase();if(/title|subject|headline/.test(k))el.value=ttl;else if(/desc|content|body|message|detail/.test(k)&&el.tagName==='TEXTAREA')el.value=cnt;else if(/keyword|tag/.test(k))el.value=kw;else if(/categ/.test(k))el.value=cat;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});alert('Filled! Review and click Submit.');})();`;
@@ -220,7 +475,7 @@ export function listSupportedCountries() {
 }
 
 // ============================================================
-// GENERATE — 4 fields + optional translation
+// GENERATE — super brain sales copy with variants
 // ============================================================
 export async function generateListingsForCountry({ profile, country = 'ng', limit = 30, language = null }) {
   const countryData = DIRECTORIES_BY_COUNTRY[String(country).toLowerCase()];
@@ -229,38 +484,87 @@ export async function generateListingsForCountry({ profile, country = 'ng', limi
   const targetLang = language || countryData.language || 'en';
   const dirs = countryData.directories.slice(0, limit);
   const listings = [];
+  const warnings = [];
 
   for (const dir of dirs) {
-    let data = null;
-    if (openai) data = await aiListing(profile, dir, countryData.name);
-    if (!data) data = fallbackListing(profile, countryData.name);
+    const spec = getSpecForDirectory(dir.name);
+    const prompt = buildListingPrompt(profile, dir, countryData.name, spec);
 
-    // Translate title + content if target language is not English
+    let best = null;
+    let second = null;
+
+    // Generate 2 variants for the AI, pick the best
+    if (openai) {
+      try {
+        const [v1, v2] = await Promise.all([
+          callAI(prompt, 0.75).catch(() => null),
+          callAI(prompt, 0.9).catch(() => null),
+        ]);
+        const candidates = [v1, v2].filter(Boolean).map((c) => ({
+          data: c,
+          score: scoreListing(c, spec, profile),
+        }));
+        candidates.sort((a, b) => b.score.total - a.score.total);
+        if (candidates[0] && candidates[0].score.total >= 60) {
+          best = candidates[0].data;
+          second = candidates[1]?.data || null;
+          if (candidates[0].score.issues.length) {
+            warnings.push(`${dir.name}: ${candidates[0].score.issues.join('; ')}`);
+          }
+        }
+      } catch (e) {
+        warnings.push(`${dir.name}: AI failed (${e.message}), using fallback`);
+      }
+    }
+
+    if (!best) best = fallbackListing(profile, countryData.name, spec);
+
+    // Enforce character limits
+    let postTitle = clean(best.postTitle) || fallbackListing(profile, countryData.name, spec).postTitle;
+    let postContent = clean(best.postContent) || fallbackListing(profile, countryData.name, spec).postContent;
+    if (postTitle.length > spec.titleMax) postTitle = truncate(postTitle, spec.titleMax);
+    if (postContent.length > spec.descMax) postContent = truncate(postContent, spec.descMax);
+
+    // Translate if needed
     if (targetLang !== 'en') {
-      data.postTitle = await translateText(data.postTitle, targetLang);
+      postTitle = await translateText(postTitle, targetLang);
       await new Promise((r) => setTimeout(r, 250));
-      data.postContent = await translateText(data.postContent, targetLang);
+      postContent = await translateText(postContent, targetLang);
     }
 
     const copyText =
-      `Post Title: ${data.postTitle}\n` +
-      `Post Content: ${data.postContent}\n` +
-      `Keywords: ${(data.keywords || []).join(', ')}\n` +
-      `Category: ${data.category}`;
+      `Post Title: ${postTitle}\n` +
+      `Post Content: ${postContent}\n` +
+      `Keywords: ${(best.keywords || []).join(', ')}\n` +
+      `Category: ${best.category || profile.category}`;
 
-    listings.push({
+    const listing = {
       directory: dir.name,
       composeUrl: dir.composeUrl,
       siteUrl: dir.url,
       type: dir.type,
       categoryHint: dir.category,
-      postTitle: data.postTitle,
-      postContent: data.postContent,
-      keywords: data.keywords || [],
-      category: data.category,
+      tone: spec.tone,
+      postTitle,
+      postContent,
+      keywords: best.keywords || [],
+      category: best.category || profile.category,
       copyText,
-    });
+      // Variant 2 for A/B testing
+      variant2: second ? {
+        postTitle: clean(second.postTitle).slice(0, spec.titleMax),
+        postContent: clean(second.postContent).slice(0, spec.descMax),
+      } : null,
+    };
+    listings.push(listing);
   }
+
+  const napCheck = checkNaps(profile, listings.map((l) => ({
+    directory: l.directory,
+    name: profile.name,
+    address: profile.address,
+    phone: profile.phone,
+  })));
 
   return {
     country,
@@ -270,18 +574,24 @@ export async function generateListingsForCountry({ profile, country = 'ng', limi
     total: listings.length,
     bookmarklet: buildBookmarklet(),
     listings,
+    warnings,
+    napCheck,
     instructions:
       targetLang !== 'en'
-        ? `Listings translated to ${targetLang}. For each row: click "Open + Copy" → new tab opens on compose page and content copies → click your bookmarklet → submit.`
-        : 'For each row: click "Open + Copy" → new tab opens and content copies → click bookmarklet → submit.',
+        ? `Listings translated to ${targetLang}. Click "Open + Copy" → new tab opens on compose page and content copies → click bookmarklet → submit.`
+        : 'Click "Open + Copy" → new tab opens and content copies → click bookmarklet → submit.',
   };
 }
 
 export default {
   DIRECTORIES_BY_COUNTRY,
+  PLATFORM_SPECS,
   listDirectories,
   listSupportedCountries,
   generateListingsForCountry,
   translateText,
   buildBookmarklet,
+  checkNaps,
+  normalisePhone,
+  normaliseAddress,
 };
