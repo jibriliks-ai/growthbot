@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — PostgreSQL data layer
-// v3.3 — users table, auth, admin support
+// v3.4 — users, auth, admin, Q&A, anti-spam
 // ============================================================
 import pg from 'pg';
 import dotenv from 'dotenv';
@@ -220,7 +220,6 @@ export async function initLeadsSchema() {
       );
     `);
 
-    // Drop old UNIQUE constraint if it exists (v3.1 → v3.2)
     await client.query(`
       DO $$
       BEGIN
@@ -233,12 +232,10 @@ export async function initLeadsSchema() {
       END $$;
     `);
 
-    // Add columns if missing (upgrade path)
     await client.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'ng';`);
     await client.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT FALSE;`);
     await client.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS display_order INT NOT NULL DEFAULT 0;`);
 
-    // Index AFTER columns exist
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_businesses_api_key
        ON businesses(api_key, display_order);`
@@ -1183,6 +1180,49 @@ export async function updateDraftStatus(id, status) {
 }
 
 // ============================================================
+// ANTI-SPAM — 5-post link lock
+// Counts BOTH posted Q&A drafts AND completed backlink submissions
+// ============================================================
+export async function getBusinessPostCount(businessId) {
+  // 1. Q&A drafts marked as posted
+  const draftsRes = await pool.query(
+    `SELECT COUNT(*)::int AS cnt FROM drafts
+     WHERE business_id = $1 AND status = 'posted'`,
+    [businessId]
+  );
+  const draftCount = draftsRes.rows[0]?.cnt || 0;
+
+  // 2. Completed backlink (IndexNow) submissions for this business's owner
+  const bizRes = await pool.query(
+    'SELECT api_key FROM businesses WHERE id = $1',
+    [businessId]
+  );
+  const apiKey = bizRes.rows[0]?.api_key;
+  let backlinkCount = 0;
+  if (apiKey) {
+    const backRes = await pool.query(
+      `SELECT COUNT(*)::int AS cnt FROM backlink_jobs
+       WHERE api_key = $1
+         AND status NOT IN ('pending', 'failed')`,
+      [apiKey]
+    );
+    backlinkCount = backRes.rows[0]?.cnt || 0;
+  }
+
+  return draftCount + backlinkCount;
+}
+
+export async function canPostLink(businessId, minPosts = 5) {
+  const count = await getBusinessPostCount(businessId);
+  return {
+    allowed: count >= minPosts,
+    postCount: count,
+    required: minPosts,
+    remaining: Math.max(0, minPosts - count),
+  };
+}
+
+// ============================================================
 // USERS — AUTH + ADMIN
 // ============================================================
 export async function createUser({ email, passwordHash, name = '', apiKey, role = 'user' }) {
@@ -1244,13 +1284,6 @@ export async function listAllUsers(limit = 500) {
 }
 
 export async function claimLegacyKey(apiKey, userId) {
-  // Detach any current user using this key, then attach to new user
-  await pool.query(
-    'UPDATE users SET api_key = NULL WHERE api_key = $1 AND id <> $2',
-    [apiKey, userId]
-  ).catch(() => {});
-  // Note: api_key column is UNIQUE NOT NULL, so this detach won't work
-  // as written unless we allow NULL. Use a suffix approach instead.
   const suffix = `_old_${Date.now()}`;
   await pool.query(
     `UPDATE users SET api_key = api_key || $1, updated_at = NOW()
@@ -1277,4 +1310,5 @@ export async function updateUserRole(userId, role) {
 // ============================================================
 export default {
   pool, initSchema, initSocialSchema, initLeadsSchema, initUsersSchema,
+  getBusinessPostCount, canPostLink,
 };
