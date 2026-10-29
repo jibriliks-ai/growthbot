@@ -153,6 +153,7 @@ a:hover{color:var(--accent)}
 .q-badge.quora{background:rgba(185,43,39,.15);color:#e74c3c}
 .q-badge.nairaland{background:var(--success-bg);color:#4ade80}
 .q-badge.lemmy{background:rgba(14,165,233,.15);color:#38bdf8}
+.q-badge.stackexchange{background:rgba(244,128,36,.15);color:#f48024}
 .q-badge.default{background:var(--accent-glow);color:var(--accent-l)}
 .q-title{font-size:13px;font-weight:600;line-height:1.4;flex:1}
 .q-snippet{font-size:12px;color:var(--text-2);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -215,6 +216,43 @@ a:hover{color:var(--accent)}
 .listing-field{margin-top:8px}
 .listing-field-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:3px}
 .listing-field-value{font-size:12.5px;color:var(--text-2);line-height:1.5;background:rgba(10,10,15,0.5);padding:8px 10px;border-radius:6px;border:1px solid var(--border)}
+
+/* ===== KNOWLEDGE BASE ===== */
+.kb-item{background:rgba(19,19,26,0.5);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:8px;overflow:hidden;transition:border-color .15s}
+.kb-item[open]{border-color:var(--border-h);background:rgba(19,19,26,0.7)}
+.kb-item summary{padding:14px 16px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text);list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.kb-item summary::-webkit-details-marker{display:none}
+.kb-item summary::after{content:'+';font-size:20px;font-weight:400;color:var(--text-3);transition:transform .2s;flex-shrink:0;margin-left:10px}
+.kb-item[open] summary::after{content:'−';color:var(--accent-l)}
+.kb-item summary:hover{background:var(--surface-2)}
+.kb-content{padding:0 16px 16px;border-top:1px solid var(--border);padding-top:14px;animation:kb-fade .25s ease}
+@keyframes kb-fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.kb-list{margin:0;padding-left:20px;color:var(--text-2);font-size:13px;line-height:1.8}
+.kb-list li{margin-bottom:6px}
+.kb-list li strong{color:var(--text);font-weight:600}
+.kb-list code{background:var(--surface-3);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent-l)}
+.kb-content .data-table{margin-top:8px}
+.kb-content .data-table th{background:rgba(139,92,246,.06)}
+
+/* ===== PAGE PICKER MODAL ===== */
+.picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.picker-overlay.show{display:flex}
+.picker-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.picker-header{padding:20px 24px 16px;border-bottom:1px solid var(--border)}
+.picker-title{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+.picker-desc{font-size:13px;color:var(--text-2);line-height:1.5}
+.picker-list{padding:12px}
+.picker-item{padding:14px;border-radius:var(--r-md);border:1px solid var(--border);margin-bottom:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px}
+.picker-item:hover{border-color:var(--accent);background:rgba(139,92,246,.06)}
+.picker-item.selected{border-color:var(--accent);background:rgba(139,92,246,.12)}
+.picker-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--border-h);flex-shrink:0;position:relative;transition:all .15s}
+.picker-item.selected .picker-radio{border-color:var(--accent);background:var(--accent)}
+.picker-item.selected .picker-radio::after{content:'';position:absolute;inset:4px;background:#fff;border-radius:50%}
+.picker-info{flex:1;min-width:0}
+.picker-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.3}
+.picker-category{font-size:11px;color:var(--text-3);margin-top:2px}
+.picker-actions{padding:12px 24px 20px;display:flex;gap:8px;border-top:1px solid var(--border)}
+
 @media(min-width:1024px){.sidebar{display:flex}.main-wrap{margin-left:260px}.mobile-header{display:none}.bottom-nav{display:none}.content{padding:32px 32px 40px}.h1{font-size:28px}}
 @media(max-width:480px){.stats{gap:8px}.stat{padding:12px 8px}.stat-num{font-size:20px}.quick-icon{font-size:24px}.quick-label{font-size:11px}.quick-sub{font-size:10px}}
 .hidden{display:none !important}
@@ -271,6 +309,21 @@ a:hover{color:var(--accent)}
   <nav class="drawer-nav" id="drawerNav"></nav>
   <div class="sidebar-footer" id="drawerFooter"></div>
 </aside>
+
+<!-- Facebook Page Picker Modal -->
+<div class="picker-overlay" id="pickerOverlay">
+  <div class="picker-modal">
+    <div class="picker-header">
+      <div class="picker-title">Choose a Facebook Page</div>
+      <div class="picker-desc">You manage multiple Pages. Select the one you want to connect to Auto Traffic Engine.</div>
+    </div>
+    <div class="picker-list" id="pickerList"></div>
+    <div class="picker-actions">
+      <button class="btn secondary" id="pickerCancel" style="margin-top:0;">Cancel</button>
+      <button class="btn" id="pickerConfirm" style="margin-top:0;">Connect Selected</button>
+    </div>
+  </div>
+</div>
 
 <div id="pwaBanner">
   <div class="text">📱 Install Auto Traffic Engine on your home screen</div>
@@ -343,7 +396,7 @@ window.addEventListener('storage', (e) => { if (e.key === TOKEN_KEY && !e.newVal
 
 // Config
 const BACKEND = location.origin;
-const state = { user: null, apiKey: '', plan: 'free', usage: {}, limits: { freeAudits: 3, premiumVideos: 30, backlinks: 10, businesses: 1, price: 29 }, business: null, businesses: [], analytics: null, countries: [], dirCountries: [], tab: 'home', subTab: 'indexnow', pollTimer: null, isAdmin: false };
+const state = { user: null, apiKey: '', plan: 'free', usage: {}, limits: { freeAudits: 3, premiumVideos: 30, backlinks: 10, businesses: 1, price: 29 }, business: null, businesses: [], analytics: null, countries: [], dirCountries: [], tab: 'home', subTab: 'indexnow', pollTimer: null, isAdmin: false, pickerSession: null, pickerSelected: null };
 const $ = (id) => document.getElementById(id);
 const content = $('content');
 
@@ -353,7 +406,7 @@ const NAV_GROUPS = [
   { label: 'Content', items: [ { key: 'seo', icon: '🔍', label: 'SEO Audit' }, { key: 'video', icon: '🎬', label: 'Video Ads', premium: true }, { key: 'keywords', icon: '🔑', label: 'Keywords', premium: true } ]},
   { label: 'Outreach', items: [ { key: 'qa', icon: '💬', label: 'Q&A Finder', premium: true }, { key: 'directories', icon: '📇', label: 'Directories', premium: true }, { key: 'backlinks', icon: '🔗', label: 'Backlinks', premium: true }, { key: 'social', icon: '📱', label: 'Social', premium: true } ]},
   { label: 'Business', items: [ { key: 'campaigns', icon: '📣', label: 'Campaigns' }, { key: 'leads', icon: '👥', label: 'Leads' }, { key: 'reviews', icon: '⭐', label: 'Reviews' }, { key: 'analytics', icon: '📊', label: 'Analytics' } ]},
-  { label: 'Account', items: [ { key: 'businesses', icon: '🏢', label: 'Businesses' }, { key: 'settings', icon: '⚙️', label: 'Settings' } ]}
+  { label: 'Account', items: [ { key: 'businesses', icon: '🏢', label: 'Businesses' }, { key: 'kb', icon: '📖', label: 'Knowledge Base' }, { key: 'settings', icon: '⚙️', label: 'Settings' } ]}
 ];
 const BOTTOM_NAV = [ { key: 'home', icon: '🏠', label: 'Home' }, { key: 'seo', icon: '🔍', label: 'SEO' }, { key: 'video', icon: '🎬', label: 'Video', premium: true }, { key: 'qa', icon: '💬', label: 'Q&A', premium: true }, { key: 'menu', icon: '☰', label: 'Menu', action: 'drawer' } ];
 
@@ -461,6 +514,7 @@ function renderTab(){
     case 'reviews': return renderReviews();
     case 'analytics': return renderAnalytics();
     case 'businesses': return renderBusinesses();
+    case 'kb': return renderKnowledgeBase();
     case 'settings': return renderSettings();
     default: return renderHome();
   }
@@ -633,8 +687,7 @@ function renderQA(){
       const meta = (d.sourceStatus || []).map(s => `${s.label}: ${s.count}`).join(' · ');
       let html = `<div class="section-title">${d.questions.length} questions · ${esc(meta)}</div>`;
       d.questions.forEach(q => {
-        // === ADDED 'lemmy' TO CLASS ARRAY ===
-        const cls = ['reddit','quora','nairaland','lemmy'].includes(q.source) ? q.source : 'default';
+        const cls = ['reddit','quora','nairaland','lemmy','stackexchange'].includes(q.source) ? q.source : 'default';
         const label = q.source.charAt(0).toUpperCase() + q.source.slice(1);
         html += `<div class="q-card"><div class="q-head"><span class="q-badge ${cls}">${esc(label)}</span><div class="q-title">${esc(q.title)}</div></div>${q.snippet ? `<div class="q-snippet">${esc(q.snippet)}</div>` : ''}<div class="q-actions"><a href="${esc(q.question_url)}" target="_blank" rel="noopener" class="btn ghost small" style="text-decoration:none;">Open ↗</a><button class="btn small" data-draft="${q.id}">✨ Draft</button></div><div id="draft-${q.id}"></div></div>`;
       });
@@ -654,18 +707,18 @@ async function generateDraft(qid, btn){
   try {
     const d = await api('/api/questions/' + qid + '/draft', {method:'POST', body:{blogUrl, blogTitle}});
     const dr = d.draft;
-    container.innerHTML = `<div class="draft-preview">${esc(dr.draft_text)}</div><div style="font-size:11px;color:var(--text-3);margin-top:6px;">${esc(dr.platform)} · ${dr.word_count} words · ${esc(dr.status)}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn small secondary" data-copy="${dr.id}">📋 Copy</button><button class="btn small" data-posted="${dr.id}">✓ Mark posted</button></div>`;
+    let quality = d.quality ? ` · Quality ${d.quality}/100` : '';
+    container.innerHTML = `<div class="draft-preview">${esc(dr.draft_text)}</div><div style="font-size:11px;color:var(--text-3);margin-top:6px;">${esc(dr.platform)} · ${dr.word_count} words · ${esc(dr.status)}${quality}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn small secondary" data-copy="${dr.id}">📋 Copy</button><button class="btn small" data-posted="${dr.id}">✓ Mark posted</button></div>`;
     container.querySelector('[data-copy]').addEventListener('click', ()=>copy(dr.draft_text, 'Copied'));
     container.querySelector('[data-posted]').addEventListener('click', async ev=>{ const b = ev.currentTarget; b.disabled = true; b.innerHTML = '<span class="spin"></span>'; try { await api('/api/drafts/' + dr.id + '/status', {method:'PUT', body:{status:'posted'}}); toast('Posted'); b.innerHTML = '✓ Posted'; } catch(err){ toast(err.message, 'error'); b.disabled = false; b.textContent = '✓ Mark posted'; } });
   } catch(e){
-    // === ADDED LINK_LOCKED HANDLING ===
     if (e.status === 403 && e.data?.error === 'LINK_LOCKED') {
       container.innerHTML = `<div class="status warning">
         🔒 <strong>Link locked.</strong> ${esc(e.data.message)}
         <br><span style="font-size:11px;">Post ${e.data.remaining} more time${e.data.remaining === 1 ? '' : 's'} to unlock links.</span>
       </div>`;
     } else if (e.status === 422) {
-      container.innerHTML = `<div class="status warning">Draft rejected.</div>`;
+      container.innerHTML = `<div class="status warning">Draft rejected: ${esc(e.data?.reason || 'quality check failed')}</div>`;
     } else {
       container.innerHTML = `<div class="status error">${esc(e.message)}</div>`;
     }
@@ -765,6 +818,10 @@ async function renderDirectories(){
     try {
       const d = await api('/api/directories/generate', { method:'POST', body:{ profile, country, limit: 30, language } });
       let html = `<div class="status success">✓ ${d.total} listings${d.translated ? ' · ' + d.language.toUpperCase() : ''}</div>`;
+      if (d.skipped > 0) {
+        html += `<div class="status warning" style="font-size:12px;">⚠️ ${d.skipped} director${d.skipped === 1 ? 'y' : 'ies'} skipped (URL unreachable). Details below.</div>`;
+        (d.skippedDetails || []).forEach(s => { html += `<div style="font-size:11px;color:var(--text-3);margin:4px 0;">• <strong>${esc(s.directory)}</strong>: ${esc(s.reason)}</div>`; });
+      }
       html += `<div class="status info" style="font-size:12px;">${esc(d.instructions || '')}</div>`;
 
       d.listings.forEach((l, idx) => {
@@ -937,6 +994,7 @@ function renderBacklinks(){
     try {
       const d = await api('/api/directories/generate', { method:'POST', body:{ profile, country, limit: 30, language } });
       let html = `<div class="status success">✓ ${d.total} listings generated${d.translated ? ' · ' + d.language.toUpperCase() : ''}</div>`;
+      if (d.skipped > 0) html += `<div class="status warning" style="font-size:12px;">⚠️ ${d.skipped} skipped (unreachable)</div>`;
       html += `<div class="status info" style="font-size:12px;">${esc(d.instructions || '')}</div>`;
 
       d.listings.forEach((l, idx) => {
@@ -993,16 +1051,16 @@ function renderBacklinks(){
   });
 }
 
-// ==== SOCIAL WITH FACEBOOK CONNECT ====
+// ===== SOCIAL =====
 async function renderSocial(){
   content.innerHTML = `
     <h1 class="h1">Social Accounts</h1>
-    <p class="subtitle">Connect Facebook Pages and LinkedIn.</p>
+    <p class="subtitle">Connect Facebook Pages and LinkedIn. Post with one click.</p>
 
     <div class="card" style="background:rgba(24,119,242,.08);border-color:rgba(24,119,242,.3);">
       <div class="section-title" style="color:#60a5fa;">📘 Facebook Page</div>
       <p style="font-size:12.5px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">
-        Connect a Facebook Page you administer. Your Page token is stored securely and does not expire.
+        Connect a Facebook Page you administer. Your Page token is stored securely with AES-256 encryption and does not expire.
       </p>
       <a href="/api/social/facebook/connect?key=${encodeURIComponent(state.apiKey)}"
          class="btn" style="text-decoration:none;background:linear-gradient(135deg,#1877F2,#0a58ca);display:inline-flex;">
@@ -1011,20 +1069,43 @@ async function renderSocial(){
     </div>
 
     <div id="socialList"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>
+
     <div class="section-title" style="margin-top:20px;">Post now</div>
     <div class="card">
-      <label class="label">Platform</label><select id="postPlatform" class="select"><option value="facebook">Facebook Page</option><option value="linkedin">LinkedIn Company</option></select>
-      <label class="label">Message</label><textarea id="postMsg" class="textarea"></textarea>
-      <button id="postGo" class="btn">Post now</button><div id="postResult"></div>
+      <label class="label">Platform</label>
+      <select id="postPlatform" class="select"><option value="facebook">Facebook Page</option><option value="linkedin">LinkedIn Company</option></select>
+      <label class="label">Message</label>
+      <textarea id="postMsg" class="textarea" placeholder="What do you want to share?"></textarea>
+      <button id="postGo" class="btn">Post now</button>
+      <div id="postResult"></div>
     </div>`;
-  try { const d = await api('/api/social/accounts'); const accs = d.accounts || []; if (accs.length === 0) $('socialList').innerHTML = `<div class="empty"><div class="empty-icon">🔗</div><div class="empty-title">No accounts connected</div></div>`; else { let html = '<div class="card"><table class="data-table"><thead><tr><th>Platform</th><th>Account</th><th>Status</th></tr></thead><tbody>'; accs.forEach(a=>{ html += `<tr><td><strong>${esc(a.platform)}</strong></td><td>${esc(a.account_name || a.account_id)}</td><td><span class="badge ${a.enabled?'success':'failed'}">${a.enabled?'connected':'disabled'}</span></td></tr>`; }); html += '</tbody></table></div>'; $('socialList').innerHTML = html; } }
-  catch(e){ $('socialList').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+
+  try {
+    const d = await api('/api/social/accounts');
+    const accs = d.accounts || [];
+    if (accs.length === 0) {
+      $('socialList').innerHTML = `<div class="empty"><div class="empty-icon">🔗</div><div class="empty-title">No accounts connected</div><div class="empty-desc">Click the connect button above to link your Facebook Page or LinkedIn Company.</div></div>`;
+    } else {
+      let html = '<div class="card"><table class="data-table"><thead><tr><th>Platform</th><th>Account</th><th>Status</th></tr></thead><tbody>';
+      accs.forEach(a => {
+        const statusBadge = a.enabled ? `<span class="badge success">connected</span>` : `<span class="badge failed">${esc(a.last_error || 'disabled')}</span>`;
+        html += `<tr><td><strong>${esc(a.platform)}</strong></td><td>${esc(a.account_name || a.account_id)}</td><td>${statusBadge}</td></tr>`;
+      });
+      html += '</tbody></table></div>';
+      $('socialList').innerHTML = html;
+    }
+  } catch(e) { $('socialList').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+
   $('postGo').addEventListener('click', async function(){
     const btn = this; const platform = $('postPlatform').value; const message = $('postMsg').value.trim(); const r = $('postResult');
     if (!message) { toast('Enter message', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>…';
-    try { const d = await api('/api/social/post-now', {method:'POST', body:{platform, message}}); r.innerHTML = d.ok ? `<div class="status success">✓ Posted${d.url?' — <a href="'+esc(d.url)+'" target="_blank" rel="noopener" style="color:inherit;">view</a>':''}</div>` : `<div class="status error">${esc(d.error||'Failed')}</div>`; }
-    catch(e){ r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Posting…';
+    try {
+      const d = await api('/api/social/post-now', {method:'POST', body:{platform, message}});
+      r.innerHTML = d.ok
+        ? `<div class="status success">✓ Posted${d.url?' — <a href="'+esc(d.url)+'" target="_blank" rel="noopener" style="color:inherit;">view</a>':''}</div>`
+        : `<div class="status error">${esc(d.error||'Failed')}${d.needsReconnect ? ' <a href="/api/social/facebook/connect?key=' + encodeURIComponent(state.apiKey) + '" style="color:inherit;text-decoration:underline;font-weight:700;">Reconnect →</a>' : ''}</div>`;
+    } catch(e){ r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
     finally { btn.disabled = false; btn.textContent = 'Post now'; }
   });
 }
@@ -1167,6 +1248,248 @@ async function renderBusinesses(){
   }
 }
 
+// ===== KNOWLEDGE BASE =====
+function renderKnowledgeBase(){
+  content.innerHTML = `
+    <h1 class="h1">Knowledge Base</h1>
+    <p class="subtitle">Everything you need to grow your business with Auto Traffic Engine.</p>
+
+    <div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(99,102,241,.08));border-color:rgba(139,92,246,.3);">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-l);margin-bottom:6px;">📌 Start here</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px;">New to Auto Traffic Engine?</div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">The fastest path to results is: 1) Add a business → 2) Run an SEO audit → 3) Find Q&A questions → 4) Generate directory listings → 5) Post to social media. Each step is explained below.</p>
+    </div>
+
+    <div class="section-title">🎯 Getting Started</div>
+    <details class="kb-item"><summary>How to add your first business</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Businesses</strong> in the sidebar.</li>
+        <li>Fill in your business name, category, phone, city, state, and website.</li>
+        <li>Click <strong>Add Business</strong>. Your first business becomes the default.</li>
+        <li>Free plan allows 1 business. Premium allows 3. Admins have unlimited.</li>
+      </ol>
+      <div class="status info" style="font-size:12px;">💡 Tip: The more details you fill in (phone, website, description), the better the AI-generated copy becomes.</div>
+    </div></details>
+
+    <details class="kb-item"><summary>Understanding your plan (Free vs Premium $29)</summary><div class="kb-content">
+      <table class="data-table"><thead><tr><th>Feature</th><th>Free</th><th>Premium</th></tr></thead><tbody>
+        <tr><td>SEO Audits</td><td>3/day</td><td>Unlimited</td></tr>
+        <tr><td>Businesses</td><td>1</td><td>3</td></tr>
+        <tr><td>Q&A Finder</td><td>🔒</td><td>✅</td></tr>
+        <tr><td>Directory Listings</td><td>🔒</td><td>✅</td></tr>
+        <tr><td>Backlinks & IndexNow</td><td>🔒</td><td>✅</td></tr>
+        <tr><td>Video Ads</td><td>🔒</td><td>✅ 30/month</td></tr>
+        <tr><td>Social Posting</td><td>🔒</td><td>✅</td></tr>
+      </tbody></table>
+    </div></details>
+
+    <div class="section-title">🔍 SEO Audit</div>
+    <details class="kb-item"><summary>How to run an SEO audit</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>SEO Audit</strong> in the sidebar.</li>
+        <li>Paste the URL of any page you want to check.</li>
+        <li>Optionally enter a target keyword.</li>
+        <li>Click <strong>Audit & Auto-fix</strong>.</li>
+        <li>You'll see a score out of 100, a list of issues, and specific fixes.</li>
+        <li>Click <strong>Copy report</strong> to save the analysis.</li>
+      </ol>
+      <div class="status warning" style="font-size:12px;">⚠️ Free plan allows 3 audits per day. Premium is unlimited.</div>
+    </div></details>
+
+    <div class="section-title">💬 Q&A Finder</div>
+    <details class="kb-item"><summary>How to find questions and draft answers</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Q&A Finder</strong> (Premium required).</li>
+        <li>Type a keyword related to your business.</li>
+        <li>Pick one of 60 countries.</li>
+        <li>Click <strong>Find Questions</strong>. Sources: Reddit, Quora, Lemmy, Stack Exchange, and regional forums like Nairaland.</li>
+        <li>Click <strong>✨ Draft</strong> on any question. The AI writes a helpful answer that ends with a link to your blog.</li>
+        <li>Copy the draft and paste as a reply on the original site, or mark it as posted.</li>
+      </ol>
+      <div class="status warning" style="font-size:12px;">🔒 Anti-spam: New businesses must post 5 times (drafts + backlinks) before links are included. This protects your brand from being flagged as spam.</div>
+    </div></details>
+
+    <div class="section-title">📇 Directory Listings</div>
+    <details class="kb-item"><summary>How to generate listings for classified sites</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Directories</strong>. Fill in business details (auto-filled from your profile).</li>
+        <li>Pick a country and optionally a translation language.</li>
+        <li>Click <strong>Generate Listings</strong>. Each card shows 4 fields: Post Title / Post Content / Keywords / Category.</li>
+        <li>Click <strong>🔗 Open + Copy</strong> — opens the compose page in a new tab AND copies the content to clipboard.</li>
+        <li>Paste on the compose page, OR click your bookmarklet to autofill.</li>
+      </ol>
+      <div class="status success" style="font-size:12px;">✓ All URLs are validated before being shown. Broken directories are automatically skipped with a warning.</div>
+    </div></details>
+
+    <details class="kb-item"><summary>How to set up the bookmarklet (autofill helper)</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>In the <strong>Directories</strong> tab, click <strong>📎 Show Bookmarklet</strong>.</li>
+        <li>Copy the JavaScript code shown.</li>
+        <li>In your browser, right-click your bookmarks bar → <strong>Add Page</strong> (or <strong>Add Bookmark</strong>).</li>
+        <li>Name: <code>ATE Fill</code>. URL: paste the code you copied.</li>
+        <li>Save the bookmark to your visible bookmarks bar.</li>
+        <li>On any compose page (after clicking Open + Copy), click your bookmark → fields fill automatically → click Submit.</li>
+      </ol>
+    </div></details>
+
+    <div class="section-title">🔗 Backlinks</div>
+    <details class="kb-item"><summary>How to submit pages to search engines</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Backlinks → IndexNow</strong>.</li>
+        <li>Paste your page URL.</li>
+        <li>Click <strong>Submit to All IndexNow Engines</strong>. Your URL is pushed to Bing, Yandex, Naver, Seznam, Yep, DuckDuckGo, Internet Archive, and Amazon.</li>
+      </ol>
+      <div class="status warning" style="font-size:12px;">⚠️ Google does NOT accept IndexNow. Submit your sitemap at <a href="https://search.google.com/search-console" target="_blank" style="color:#93c5fd;">Google Search Console</a> once.</div>
+    </div></details>
+
+    <div class="section-title">🎬 Video Ads</div>
+    <details class="kb-item"><summary>How to generate a video ad</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Video Ads</strong> (Premium only).</li>
+        <li>Enter a topic — e.g. "Fresh cows in Warri".</li>
+        <li>Pick a duration (10s, 15s, 20s, 25s).</li>
+        <li>Pick a style: Documentary, Infomercial, Tutorial, Testimonial, Product Showcase.</li>
+        <li>Click <strong>Generate Video</strong>. The AI writes the script, voiceover, and picks clips.</li>
+        <li>Wait 2–5 minutes, then click <strong>⬇ Download</strong>.</li>
+        <li>Post the video to Instagram Reels, TikTok, WhatsApp Status, or Facebook.</li>
+      </ol>
+    </div></details>
+
+    <div class="section-title">🔑 Keywords</div>
+    <details class="kb-item"><summary>How to research keywords</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Keywords</strong> (Premium only).</li>
+        <li>Enter seed keywords separated by commas, OR paste a list of keywords.</li>
+        <li>Optionally enter your URL to see which keywords you already rank for.</li>
+        <li>Click <strong>Analyze Keywords</strong>.</li>
+        <li>You'll get opportunity scores, search intent, and clusters.</li>
+        <li>Click <strong>Copy all</strong> to export.</li>
+      </ol>
+    </div></details>
+
+    <div class="section-title">📱 Social Media</div>
+    <details class="kb-item"><summary>How to connect a Facebook Page</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Social</strong>.</li>
+        <li>Click <strong>📘 Connect Facebook Page</strong>.</li>
+        <li>Log in to Facebook and click <strong>Continue</strong> when prompted.</li>
+        <li>⚠️ You must be an <strong>Admin of at least one Facebook Page</strong>.</li>
+        <li>If you manage multiple pages, a picker appears — choose the one you want.</li>
+        <li>Once connected, use the <strong>Post now</strong> form to publish.</li>
+      </ol>
+      <div class="status warning" style="font-size:12px;">⚠️ If you see "App not active", the app owner needs to add your Facebook account as a Tester in <a href="https://developers.facebook.com/apps" target="_blank" style="color:#93c5fd;">Meta Developer Console</a> → App Roles → Testers.</div>
+      <div class="status info" style="font-size:12px;">💡 Page tokens are long-lived (do not expire) unless the user changes password or removes the app. If posting fails, click Reconnect.</div>
+    </div></details>
+
+    <details class="kb-item"><summary>How to connect a LinkedIn Company Page</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Social</strong>.</li>
+        <li>Click <strong>Connect LinkedIn Company</strong>.</li>
+        <li>Log in and authorize the app.</li>
+        <li>You must be an <strong>Admin of a LinkedIn Company Page</strong>.</li>
+      </ol>
+    </div></details>
+
+    <div class="section-title">📣 Campaigns, Leads & Reviews</div>
+    <details class="kb-item"><summary>How to create a tracked campaign</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Campaigns</strong>.</li>
+        <li>Enter a campaign name and the ad text.</li>
+        <li>Click <strong>Create Campaign</strong>. You get 6 tracked smart links.</li>
+        <li>Share each link on the matching platform.</li>
+        <li>View live clicks under the campaign in the list.</li>
+      </ol>
+    </div></details>
+
+    <details class="kb-item"><summary>How leads and reviews work</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>When someone clicks a smart link, they're redirected and a lead is recorded.</li>
+        <li>Go to <strong>Leads</strong> to see everyone who clicked and contacted you.</li>
+        <li>Mark a lead as <strong>Delivered</strong> once you've served them.</li>
+        <li>24 hours after delivery, the system sends them a WhatsApp message asking for a Google review.</li>
+        <li>Track review requests in the <strong>Reviews</strong> tab.</li>
+      </ol>
+    </div></details>
+
+    <div class="section-title">💳 Billing & Plans</div>
+    <details class="kb-item"><summary>How to upgrade to Premium</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Home</strong> or <strong>Settings</strong>.</li>
+        <li>Click <strong>⚡ Upgrade to Premium</strong>.</li>
+        <li>Complete payment ($29/month, USD, via Flutterwave).</li>
+        <li>Premium features unlock immediately.</li>
+      </ol>
+      <div class="status info" style="font-size:12px;">💡 Card, bank transfer, USSD accepted. Cancel anytime — plan stays active until end of billing period.</div>
+    </div></details>
+
+    <div class="section-title">🔧 Troubleshooting</div>
+    <details class="kb-item"><summary>Q&A Finder returns 0 results</summary><div class="kb-content">
+      <ul class="kb-list">
+        <li><strong>Check business profile:</strong> Q&A needs one business set up first.</li>
+        <li><strong>Check your plan:</strong> Q&A is Premium only.</li>
+        <li><strong>Try a broader keyword:</strong> "buy cows" returns more than "buy brown cows in Warri".</li>
+        <li><strong>Wait 60 seconds:</strong> search sources are rate-limited.</li>
+      </ul>
+    </div></details>
+
+    <details class="kb-item"><summary>Facebook Page connection fails</summary><div class="kb-content">
+      <ul class="kb-list">
+        <li><strong>"No Facebook Pages found":</strong> Create a Page at <a href="https://facebook.com/pages/create" target="_blank" style="color:#93c5fd;">facebook.com/pages/create</a>, then reconnect.</li>
+        <li><strong>"App not active":</strong> The app owner must add you as a Tester in Meta Developer Console → App Roles → Testers.</li>
+        <li><strong>"Invalid redirect URI":</strong> Verify <code>FACEBOOK_REDIRECT_URI</code> matches Meta exactly.</li>
+        <li><strong>Token expired:</strong> Click Connect Facebook Page again.</li>
+      </ul>
+    </div></details>
+
+    <details class="kb-item"><summary>Listings skip some directories</summary><div class="kb-content">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">Some directories get auto-skipped if their compose page is down. You'll see a warning like "Locanto Nigeria: SKIPPED — HTTP 404". Skipped directories won't appear as cards, so you never click a broken link.</p>
+    </div></details>
+
+    <details class="kb-item"><summary>Translation doesn't work / returns English</summary><div class="kb-content">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">The translator tries 3 providers: Vitalets Google Translate → LibreTranslate → Google (direct). If all 3 fail, original English is returned with a warning. Wait 30 seconds and retry — translation services are rate-limited.</p>
+    </div></details>
+
+    <details class="kb-item"><summary>"AI generation failed" error</summary><div class="kb-content">
+      <ul class="kb-list">
+        <li><strong>Model mismatch:</strong> Check Render env vars — <code>AI_DRAFT_MODEL</code> and <code>AI_LISTING_MODEL</code> must match the provider (DeepSeek needs <code>deepseek-flash</code> or <code>deepseek-v4-pro</code>).</li>
+        <li><strong>API key missing:</strong> Add <code>OPENAI_API_KEY</code> or <code>DEEPSEEK_API_KEY</code>.</li>
+        <li><strong>Rate limit:</strong> Wait 60 seconds and retry.</li>
+      </ul>
+    </div></details>
+
+    <div class="section-title">❓ FAQ</div>
+    <details class="kb-item"><summary>Can I use this for multiple businesses?</summary><div class="kb-content">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">Yes. Free plan allows 1 business. Premium allows 3. Admins have unlimited. Use the business switcher in the header to switch between them.</p>
+    </div></details>
+
+    <details class="kb-item"><summary>Is there a limit on Q&A drafts per day?</summary><div class="kb-content">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">Q&A draft generation is limited to 40/hour. Q&A search is limited to 30/hour. These limits are per API key, not per business.</p>
+    </div></details>
+
+    <details class="kb-item"><summary>How do I get my API key for integrations?</summary><div class="kb-content">
+      <ol class="kb-list">
+        <li>Go to <strong>Settings</strong>.</li>
+        <li>Scroll to <strong>API Access</strong>.</li>
+        <li>Click <strong>Copy API key</strong>.</li>
+        <li>Use it as <code>?key=YOUR_KEY</code> in any API endpoint, or send as <code>Authorization: Bearer YOUR_KEY</code> header.</li>
+      </ol>
+      <div class="status warning" style="font-size:12px;">⚠️ Keep your API key secret.</div>
+    </div></details>
+
+    <details class="kb-item"><summary>How do I log out?</summary><div class="kb-content">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">Click the <strong>⏻</strong> button in the top header, or go to <strong>Settings → Log out</strong>. Sessions auto-logout after 25 minutes of inactivity.</p>
+    </div></details>
+
+    <details class="kb-item"><summary>Does it work on mobile?</summary><div class="kb-content">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">Yes. Fully responsive. Install as a PWA by clicking <strong>Install</strong> when the banner appears.</p>
+    </div></details>
+
+    <div style="text-align:center;padding:32px 20px 20px;color:var(--text-3);font-size:12px;line-height:1.6;">
+      Still stuck? Contact support at <a href="mailto:support@autotrafficengine.app" style="color:var(--accent-l);">support@autotrafficengine.app</a>
+    </div>
+  `;
+}
+
 // ===== SETTINGS =====
 function renderSettings(){
   const isFree = state.plan === 'free';
@@ -1178,6 +1501,18 @@ function renderSettings(){
   content.innerHTML = `
     <h1 class="h1">Settings</h1>
     <p class="subtitle">Account, plan, and API access.</p>
+
+    <div class="card" style="background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(139,92,246,.08));border-color:rgba(59,130,246,.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#93c5fd;">📖 Knowledge Base</div>
+          <div style="font-size:14px;font-weight:600;margin-top:2px;">Learn how to use every feature</div>
+          <div style="font-size:12px;color:var(--text-2);margin-top:2px;">Setup guides, troubleshooting, FAQ</div>
+        </div>
+        <button class="btn small" data-go="kb" style="background:linear-gradient(135deg,#3b82f6,#6366f1);margin-top:0;">📖 Open</button>
+      </div>
+    </div>
+
     <div class="section-title">Account</div>
     <div class="card"><div style="font-size:13px;line-height:2;color:var(--text-2);">Email: <strong style="color:var(--text);">${esc(state.user?.email || '—')}</strong><br>Role: <strong style="color:${state.isAdmin ? '#fcd34d' : 'var(--text)'};">${state.isAdmin ? '🛡️ Admin' : esc(state.user?.role || 'user')}</strong><br>Session: <strong style="color:var(--text);">${remaining} min before idle logout</strong></div><button class="btn danger" id="logoutBtn" style="margin-top:12px;">⏻ Log out</button></div>
     ${state.isAdmin ? `<div class="section-title">Admin Access</div><div class="card" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">You have full admin access. All limits bypassed.</p><a href="/admin.html" class="btn" style="text-decoration:none;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;">🛡️ Open Admin Panel</a></div>` : ''}
@@ -1192,6 +1527,7 @@ function renderSettings(){
     <div style="text-align:center;font-size:11px;color:var(--text-3);padding:24px 0;line-height:1.6;">Auto Traffic Engine v3.7.0<br><a href="${BACKEND}/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);">Terms</a></div>`;
   $('copyApiKey').addEventListener('click', ()=>copy(state.apiKey, 'API key copied'));
   $('logoutBtn').addEventListener('click', handleLogout);
+  content.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => navigateTo(b.getAttribute('data-go'))));
   const settingsBtn = $('installAppBtnSettings');
   if (deferredPrompt) { settingsBtn.classList.remove('hidden'); settingsBtn.addEventListener('click', async () => { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; settingsBtn.classList.add('hidden'); if (pwaBanner) pwaBanner.classList.remove('show'); }); }
 }
@@ -1201,6 +1537,75 @@ function renderUpgrade(tab){
   content.innerHTML = `<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">${labels[tab] || 'This feature'} is Premium</div><div class="empty-desc">Unlock unlimited audits, AI videos, 60-country Q&A, directories, backlinks, social posting.</div><a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" class="btn" style="display:inline-flex;text-decoration:none;max-width:320px;margin:0 auto;cursor:pointer;">⚡ Upgrade for $29/month</a><button class="btn secondary" id="backHome" style="max-width:320px;margin:8px auto 0;">← Back to home</button></div>`;
   $('backHome').addEventListener('click', ()=>navigateTo('home'));
 }
+
+// ===== PAGE PICKER MODAL =====
+function openPagePicker(sessionBlob) {
+  state.pickerSession = sessionBlob;
+  state.pickerSelected = null;
+
+  let payload;
+  try {
+    // base64url decode
+    const base64 = sessionBlob.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+    payload = JSON.parse(atob(padded));
+  } catch(e) {
+    toast('Invalid session data', 'error');
+    return;
+  }
+
+  const pages = payload.pages || [];
+  if (pages.length === 0) {
+    toast('No pages in session', 'error');
+    return;
+  }
+
+  const list = $('pickerList');
+  list.innerHTML = pages.map(p => `
+    <div class="picker-item" data-page-id="${esc(p.id)}" data-page-name="${esc(p.name)}">
+      <div class="picker-radio"></div>
+      <div class="picker-info">
+        <div class="picker-name">${esc(p.name)}</div>
+        ${p.category ? `<div class="picker-category">${esc(p.category)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.picker-item').forEach(item => {
+    item.addEventListener('click', () => {
+      list.querySelectorAll('.picker-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+      state.pickerSelected = item.getAttribute('data-page-id');
+    });
+  });
+
+  $('pickerOverlay').classList.add('show');
+}
+
+$('pickerCancel').addEventListener('click', () => {
+  $('pickerOverlay').classList.remove('show');
+  state.pickerSession = null;
+  state.pickerSelected = null;
+});
+
+$('pickerConfirm').addEventListener('click', async () => {
+  if (!state.pickerSelected) { toast('Select a page first', 'error'); return; }
+  const btn = $('pickerConfirm');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Connecting…';
+  try {
+    const d = await api('/api/social/facebook/select-page', {
+      method: 'POST',
+      body: { session: state.pickerSession, pageId: state.pickerSelected }
+    });
+    if (d.ok) {
+      $('pickerOverlay').classList.remove('show');
+      toast('✅ Connected: ' + d.page.name, 'success');
+      state.tab = 'social';
+      renderNav(); renderTab();
+    }
+  } catch(e) { toast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Connect Selected'; }
+});
 
 // === EVENTS ===
 $('hamburgerBtn').addEventListener('click', openDrawer);
@@ -1234,6 +1639,11 @@ async function init(){
     toast('✅ Facebook Page connected: ' + (urlParams.get('page') || ''), 'success');
     history.replaceState({}, '', '/app.html');
     state.tab = 'social';
+  }
+  if (urlParams.get('fb_choose')) {
+    const session = urlParams.get('session');
+    history.replaceState({}, '', '/app.html');
+    if (session) openPagePicker(session);
   }
   if (urlParams.get('fb_error')) {
     toast('Facebook: ' + urlParams.get('fb_error'), 'error');
