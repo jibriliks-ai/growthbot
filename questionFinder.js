@@ -1,14 +1,14 @@
 // ============================================================
 // Auto Traffic Engine — Question Finder
-// v8.0 — Reddit + Lemmy + Quora + Stack Exchange (free) + DDG
-// 60 countries, automatic focus per country
+// v8.1 — Reddit + Lemmy + Stack Exchange (free) + Quora + DDG
+// 60 countries, grouped by region, automatic country focus
 // ============================================================
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { chromium } from 'playwright';
 
 // ============================================================
-// COUNTRY → SOURCES MAP (60 countries)
+// COUNTRY → SOURCES MAP (60 countries + Global)
 // Every country gets: Reddit + Lemmy + Stack Exchange + Quora
 // Regional forums added where relevant.
 // ============================================================
@@ -416,7 +416,9 @@ export const QA_SOURCES_BY_COUNTRY = {
   ],
 };
 
-// Country names (same as before)
+// ============================================================
+// COUNTRY NAMES
+// ============================================================
 const COUNTRY_NAMES = {
   global: 'Global', us: 'United States', ca: 'Canada', mx: 'Mexico', gb: 'United Kingdom', ie: 'Ireland',
   de: 'Germany', fr: 'France', es: 'Spain', it: 'Italy', nl: 'Netherlands', be: 'Belgium', at: 'Austria',
@@ -429,16 +431,41 @@ const COUNTRY_NAMES = {
   br: 'Brazil', ar: 'Argentina', cl: 'Chile', co: 'Colombia', pe: 'Peru', ve: 'Venezuela', au: 'Australia', nz: 'New Zealand',
 };
 
+// ============================================================
+// REGION MAP — required by the frontend dropdown
+// ============================================================
+const REGION_MAP = {
+  global: 'Global',
+  us: 'North America', ca: 'North America', mx: 'North America',
+  gb: 'Europe', ie: 'Europe', de: 'Europe', fr: 'Europe', es: 'Europe',
+  it: 'Europe', nl: 'Europe', be: 'Europe', at: 'Europe', ch: 'Europe',
+  se: 'Europe', no: 'Europe', dk: 'Europe', fi: 'Europe', pl: 'Europe',
+  pt: 'Europe', gr: 'Europe', cz: 'Europe', ro: 'Europe',
+  ng: 'Africa', ke: 'Africa', gh: 'Africa', za: 'Africa', eg: 'Africa',
+  ma: 'Africa', tn: 'Africa', dz: 'Africa', et: 'Africa', tz: 'Africa', ug: 'Africa',
+  in: 'Asia', pk: 'Asia', bd: 'Asia', lk: 'Asia', id: 'Asia', my: 'Asia',
+  sg: 'Asia', ph: 'Asia', th: 'Asia', vn: 'Asia', jp: 'Asia', kr: 'Asia',
+  cn: 'Asia', hk: 'Asia', tw: 'Asia',
+  ae: 'Middle East', sa: 'Middle East', il: 'Middle East', tr: 'Middle East',
+  br: 'Latin America', ar: 'Latin America', cl: 'Latin America',
+  co: 'Latin America', pe: 'Latin America', ve: 'Latin America',
+  au: 'Oceania', nz: 'Oceania',
+};
+
+// ============================================================
+// EXPORT — country list with region field (THE FIX)
+// ============================================================
 export function listSupportedCountries() {
   return Object.keys(QA_SOURCES_BY_COUNTRY).map((code) => ({
     code,
     name: COUNTRY_NAMES[code] || code.toUpperCase(),
+    region: REGION_MAP[code] || 'Other',
     sources: QA_SOURCES_BY_COUNTRY[code].map((s) => s.label),
   }));
 }
 
 // ============================================================
-// BROWSER — singleton (Playwright, sandbox disabled for Render)
+// BROWSER — singleton, sandbox disabled for Render
 // ============================================================
 let browserInstance = null;
 async function getBrowser() {
@@ -495,7 +522,7 @@ async function searchLemmy(keyword, { limit = 10, instance = 'lemmy.world' } = {
   });
   try {
     const res = await axios.get(`${baseUrl}?${params.toString()}`, {
-      headers: { Accept: 'application/json', 'User-Agent': 'AutoTrafficEngine/8.0' },
+      headers: { Accept: 'application/json', 'User-Agent': 'AutoTrafficEngine/8.1' },
       timeout: 20000,
     });
     const posts = res.data?.posts || [];
@@ -529,11 +556,11 @@ async function searchStackExchange(keyword, { limit = 10, site = 'stackoverflow'
     q: keyword,
     site: site,
     pagesize: String(Math.min(limit, 100)),
-    filter: 'withbody', // include body snippet
+    filter: 'withbody',
   });
   try {
     const res = await axios.get(`${baseUrl}?${params.toString()}`, {
-      headers: { 'User-Agent': 'AutoTrafficEngine/8.0' },
+      headers: { 'User-Agent': 'AutoTrafficEngine/8.1' },
       timeout: 20000,
     });
     const items = res.data?.items || [];
@@ -541,7 +568,7 @@ async function searchStackExchange(keyword, { limit = 10, site = 'stackoverflow'
       source: 'stackexchange',
       title: item.title,
       url: item.link,
-      snippet: (item.body || '').replace(/<[^>]*>/g, '').slice(0, 300), // strip HTML
+      snippet: (item.body || '').replace(/<[^>]*>/g, '').slice(0, 300),
       score: item.score,
       answerCount: item.answer_count,
     })).filter((r) => r.title && r.url);
@@ -643,7 +670,6 @@ export async function findQuestions({ keyword, country = 'ng', limitPerSource = 
       } else if (source.method === 'lemmy') {
         results = await searchLemmy(keyword, { limit: limitPerSource });
       } else if (source.method === 'stackexchange') {
-        // Use stackoverflow by default; you can add site mapping per country later
         results = await searchStackExchange(keyword, { limit: limitPerSource, site: 'stackoverflow' });
       } else if (source.method === 'google_cse') {
         results = await searchQuoraGoogleCSE(keyword, { limit: limitPerSource });
