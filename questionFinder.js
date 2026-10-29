@@ -1,92 +1,422 @@
-// questionFinder.js — v6.1
-// Playwright scrapes Quora + Reddit. DuckDuckGo fallback for forums.
-// No API keys required.
+// ============================================================
+// Auto Traffic Engine — Question Finder
+// v8.0 — Reddit + Lemmy + Quora + Stack Exchange (free) + DDG
+// 60 countries, automatic focus per country
+// ============================================================
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { chromium } from 'playwright';
 
 // ============================================================
-// COUNTRY → SOURCES (60 countries, Quora default everywhere)
+// COUNTRY → SOURCES MAP (60 countries)
+// Every country gets: Reddit + Lemmy + Stack Exchange + Quora
+// Regional forums added where relevant.
 // ============================================================
 export const QA_SOURCES_BY_COUNTRY = {
+  // ---- GLOBAL ----
   global: [
-    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' },
     { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
   ],
+
+  // ---- NORTH AMERICA ----
   us: [
-    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' },
     { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
-    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'ddg' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
   ],
-  ca: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  mx: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  gb: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }, { id: 'mse', label: 'MoneySavingExpert', domain: 'moneysavingexpert.com', method: 'ddg' }],
-  ie: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'boards', label: 'Boards.ie', domain: 'boards.ie', method: 'ddg' }],
-  de: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'gutefrage', label: 'Gutefrage.net', domain: 'gutefrage.net', method: 'ddg' }],
-  fr: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  es: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  it: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  nl: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  be: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  at: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ch: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  se: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  no: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  dk: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  fi: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  pl: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  pt: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  gr: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  cz: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ro: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
+  ca: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  mx: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+
+  // ---- EUROPE ----
+  gb: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+    { id: 'mse', label: 'MoneySavingExpert', domain: 'moneysavingexpert.com', method: 'ddg' },
+  ],
+  ie: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+    { id: 'boards', label: 'Boards.ie', domain: 'boards.ie', method: 'ddg' },
+  ],
+  de: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+    { id: 'gutefrage', label: 'Gutefrage.net', domain: 'gutefrage.net', method: 'ddg' },
+  ],
+  fr: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  es: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  it: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  nl: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  be: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  at: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  ch: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  se: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  no: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  dk: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  fi: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  pl: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  pt: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  gr: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  cz: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  ro: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+
+  // ---- AFRICA ----
   ng: [
-    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' },
-    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
     { id: 'nairaland', label: 'Nairaland', domain: 'nairaland.com', method: 'ddg' },
-  ],
-  ke: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'kenyatalk', label: 'KenyaTalk', domain: 'kenyatalk.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  gh: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'ghanaweb', label: 'GhanaWeb', domain: 'ghanaweb.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  za: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'mybroadband', label: 'MyBroadband', domain: 'mybroadband.co.za', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  eg: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ma: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  tn: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  dz: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  et: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  tz: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'jamiiforums', label: 'JamiiForums', domain: 'jamiiforums.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ug: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  in: [
-    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' },
     { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
-    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'ddg' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
   ],
-  pk: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  bd: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  lk: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  id: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'kaskus', label: 'Kaskus', domain: 'kaskus.co.id', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  my: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'lowyat', label: 'Lowyat.NET', domain: 'lowyat.net', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  sg: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'hardwarezone', label: 'HardwareZone', domain: 'hardwarezone.com.sg', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ph: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'pinoyexchange', label: 'PinoyExchange', domain: 'pinoyexchange.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  th: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'pantip', label: 'Pantip', domain: 'pantip.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  vn: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'tinhte', label: 'Tinhte.vn', domain: 'tinhte.vn', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  jp: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'chiebukuro', label: 'Yahoo Chiebukuro', domain: 'chiebukuro.yahoo.co.jp', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  kr: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'kin', label: 'Naver Knowledge iN', domain: 'kin.naver.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  cn: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'zhihu', label: 'Zhihu', domain: 'zhihu.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  hk: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  tw: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ae: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  sa: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  il: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  tr: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'kizlarsoruyor', label: 'KizlarSoruyor', domain: 'kizlarsoruyor.com', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  br: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ar: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'taringa', label: 'Taringa', domain: 'taringa.net', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  cl: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  co: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  pe: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  ve: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  au: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'whirlpool', label: 'Whirlpool Forums', domain: 'whirlpool.net.au', method: 'ddg' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
-  nz: [{ id: 'quora', label: 'Quora', domain: 'quora.com', method: 'playwright' }, { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' }],
+  ke: [
+    { id: 'kenyatalk', label: 'KenyaTalk', domain: 'kenyatalk.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  gh: [
+    { id: 'ghanaweb', label: 'GhanaWeb', domain: 'ghanaweb.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  za: [
+    { id: 'mybroadband', label: 'MyBroadband', domain: 'mybroadband.co.za', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  eg: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  ma: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  tn: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  dz: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  et: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  tz: [
+    { id: 'jamiiforums', label: 'JamiiForums', domain: 'jamiiforums.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  ug: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+
+  // ---- ASIA ----
+  in: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  pk: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  bd: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  lk: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  id: [
+    { id: 'kaskus', label: 'Kaskus', domain: 'kaskus.co.id', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  my: [
+    { id: 'lowyat', label: 'Lowyat.NET', domain: 'lowyat.net', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  sg: [
+    { id: 'hardwarezone', label: 'HardwareZone', domain: 'hardwarezone.com.sg', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  ph: [
+    { id: 'pinoyexchange', label: 'PinoyExchange', domain: 'pinoyexchange.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  th: [
+    { id: 'pantip', label: 'Pantip', domain: 'pantip.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  vn: [
+    { id: 'tinhte', label: 'Tinhte.vn', domain: 'tinhte.vn', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  jp: [
+    { id: 'chiebukuro', label: 'Yahoo Chiebukuro', domain: 'chiebukuro.yahoo.co.jp', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  kr: [
+    { id: 'kin', label: 'Naver Knowledge iN', domain: 'kin.naver.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  cn: [
+    { id: 'zhihu', label: 'Zhihu', domain: 'zhihu.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  hk: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  tw: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+
+  // ---- MIDDLE EAST ----
+  ae: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  sa: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  il: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  tr: [
+    { id: 'kizlarsoruyor', label: 'KizlarSoruyor', domain: 'kizlarsoruyor.com', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+
+  // ---- LATIN AMERICA ----
+  br: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  ar: [
+    { id: 'taringa', label: 'Taringa', domain: 'taringa.net', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  cl: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  co: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  pe: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  ve: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+
+  // ---- OCEANIA ----
+  au: [
+    { id: 'whirlpool', label: 'Whirlpool Forums', domain: 'whirlpool.net.au', method: 'ddg' },
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
+  nz: [
+    { id: 'reddit', label: 'Reddit', domain: 'reddit.com', method: 'playwright' },
+    { id: 'lemmy', label: 'Lemmy', domain: 'lemmy.world', method: 'lemmy' },
+    { id: 'stackexchange', label: 'Stack Exchange', domain: 'stackexchange.com', method: 'stackexchange' },
+    { id: 'quora', label: 'Quora', domain: 'quora.com', method: 'google_cse' },
+  ],
 };
 
+// Country names (same as before)
 const COUNTRY_NAMES = {
   global: 'Global', us: 'United States', ca: 'Canada', mx: 'Mexico', gb: 'United Kingdom', ie: 'Ireland',
   de: 'Germany', fr: 'France', es: 'Spain', it: 'Italy', nl: 'Netherlands', be: 'Belgium', at: 'Austria',
@@ -108,10 +438,9 @@ export function listSupportedCountries() {
 }
 
 // ============================================================
-// BROWSER — singleton, sandbox disabled (Render requirement)
+// BROWSER — singleton (Playwright, sandbox disabled for Render)
 // ============================================================
 let browserInstance = null;
-
 async function getBrowser() {
   if (!browserInstance) {
     browserInstance = await chromium.launch({
@@ -123,45 +452,7 @@ async function getBrowser() {
 }
 
 // ============================================================
-// QUORA SCRAPER
-// ============================================================
-async function scrapeQuora(keyword, limit = 10) {
-  const browser = await getBrowser();
-  const page = await browser.newPage({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  });
-  const results = [];
-  try {
-    await page.goto(`https://www.quora.com/search?q=${encodeURIComponent(keyword)}`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 25000,
-    });
-    await page.waitForTimeout(3500);
-
-    const items = await page.$$eval(
-      'a[href*="/What-"], a[href*="/How-"], a[href*="/Why-"], a[href*="/When-"], a[href*="/Can-"]',
-      (els) => els.map((el) => ({ title: el.innerText.trim(), url: el.href }))
-    );
-
-    const seen = new Set();
-    for (const item of items) {
-      if (results.length >= limit) break;
-      const clean = item.url.split('?')[0];
-      if (!item.title || item.title.length < 15 || seen.has(clean)) continue;
-      seen.add(clean);
-      results.push({ source: 'quora', title: item.title, url: clean, snippet: '' });
-    }
-    console.log(`✅ Quora: ${results.length} results for "${keyword}"`);
-  } catch (e) {
-    console.warn(`❌ Quora failed: ${e.message}`);
-  } finally {
-    await page.close();
-  }
-  return results;
-}
-
-// ============================================================
-// REDDIT SCRAPER
+// REDDIT — Playwright scraper
 // ============================================================
 async function scrapeReddit(keyword, limit = 10) {
   const browser = await getBrowser();
@@ -171,15 +462,12 @@ async function scrapeReddit(keyword, limit = 10) {
   const results = [];
   try {
     await page.goto(`https://www.reddit.com/search/?q=${encodeURIComponent(keyword)}&type=link`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 25000,
+      waitUntil: 'domcontentloaded', timeout: 25000,
     });
     await page.waitForTimeout(3500);
-
     const items = await page.$$eval('a[data-testid="post-title"]', (els) =>
       els.map((el) => ({ title: el.innerText.trim(), url: el.href }))
     );
-
     const seen = new Set();
     for (const item of items) {
       if (results.length >= limit) break;
@@ -187,28 +475,133 @@ async function scrapeReddit(keyword, limit = 10) {
       seen.add(item.url);
       results.push({ source: 'reddit', title: item.title, url: item.url, snippet: '' });
     }
-    console.log(`✅ Reddit: ${results.length} results for "${keyword}"`);
-  } catch (e) {
-    console.warn(`❌ Reddit failed: ${e.message}`);
-  } finally {
-    await page.close();
-  }
+    console.log(`✅ Reddit: ${results.length} results`);
+  } catch (e) { console.warn(`❌ Reddit failed: ${e.message}`); }
+  finally { await page.close(); }
   return results;
 }
 
 // ============================================================
-// DUCKDUCKGO FALLBACK (for forums like Nairaland)
+// LEMMY — free v3 REST API (no key)
+// ============================================================
+async function searchLemmy(keyword, { limit = 10, instance = 'lemmy.world' } = {}) {
+  const baseUrl = `https://${instance}/api/v3/search`;
+  const params = new URLSearchParams({
+    q: keyword,
+    type_: 'Posts',
+    listing_type: 'All',
+    sort: 'TopAll',
+    limit: String(Math.min(limit, 50)),
+  });
+  try {
+    const res = await axios.get(`${baseUrl}?${params.toString()}`, {
+      headers: { Accept: 'application/json', 'User-Agent': 'AutoTrafficEngine/8.0' },
+      timeout: 20000,
+    });
+    const posts = res.data?.posts || [];
+    const results = posts.map((item) => {
+      const post = item.post || {};
+      return {
+        source: 'lemmy',
+        title: post.name || '',
+        url: post.ap_id || `https://${instance}/post/${post.id}`,
+        snippet: (post.body || '').slice(0, 300),
+        community: item.community?.name || '',
+      };
+    }).filter((r) => r.title.length > 5);
+    console.log(`✅ Lemmy: ${results.length} results`);
+    return results;
+  } catch (e) {
+    console.warn(`❌ Lemmy failed: ${e.message}`);
+    return [];
+  }
+}
+
+// ============================================================
+// STACK EXCHANGE — free, keyless, 300 req/day per IP
+// Covers Stack Overflow, Super User, Ask Ubuntu, and 180+ sites
+// ============================================================
+async function searchStackExchange(keyword, { limit = 10, site = 'stackoverflow' } = {}) {
+  const baseUrl = 'https://api.stackexchange.com/2.3/search/advanced';
+  const params = new URLSearchParams({
+    order: 'desc',
+    sort: 'relevance',
+    q: keyword,
+    site: site,
+    pagesize: String(Math.min(limit, 100)),
+    filter: 'withbody', // include body snippet
+  });
+  try {
+    const res = await axios.get(`${baseUrl}?${params.toString()}`, {
+      headers: { 'User-Agent': 'AutoTrafficEngine/8.0' },
+      timeout: 20000,
+    });
+    const items = res.data?.items || [];
+    const results = items.map((item) => ({
+      source: 'stackexchange',
+      title: item.title,
+      url: item.link,
+      snippet: (item.body || '').replace(/<[^>]*>/g, '').slice(0, 300), // strip HTML
+      score: item.score,
+      answerCount: item.answer_count,
+    })).filter((r) => r.title && r.url);
+    console.log(`✅ Stack Exchange (${site}): ${results.length} results`);
+    return results;
+  } catch (e) {
+    const status = e.response?.status;
+    const msg = e.response?.data?.error_message || e.message;
+    console.warn(`❌ Stack Exchange failed [${status}]: ${msg}`);
+    return [];
+  }
+}
+
+// ============================================================
+// QUORA — Google Custom Search (requires GOOGLE_CSE_API_KEY + GOOGLE_CSE_ID)
+// ============================================================
+async function searchQuoraGoogleCSE(keyword, { limit = 10 } = {}) {
+  const apiKey = process.env.GOOGLE_CSE_API_KEY;
+  const cx = process.env.GOOGLE_CSE_ID;
+  if (!apiKey || !cx) {
+    console.warn('Quora skipped: GOOGLE_CSE_API_KEY or GOOGLE_CSE_ID not set');
+    return [];
+  }
+  try {
+    const res = await axios.get('https://www.googleapis.com/customsearch/v1', {
+      params: {
+        key: apiKey,
+        cx,
+        q: `site:quora.com ${keyword}`,
+        num: Math.min(limit, 10),
+      },
+      timeout: 15000,
+    });
+    const items = res.data?.items || [];
+    const results = items.map((item) => ({
+      source: 'quora',
+      title: item.title.replace(/ - Quora$/, ''),
+      url: item.link,
+      snippet: item.snippet || '',
+    }));
+    console.log(`✅ Quora: ${results.length} results`);
+    return results;
+  } catch (e) {
+    const status = e.response?.status;
+    const msg = e.response?.data?.error?.message || e.message;
+    console.warn(`❌ Quora failed [${status}]: ${msg}`);
+    return [];
+  }
+}
+
+// ============================================================
+// DUCKDUCKGO — fallback for forums (Nairaland etc.)
 // ============================================================
 async function searchDuckDuckGo(keyword, siteDomain, limit = 10) {
   try {
     const query = `site:${siteDomain} ${keyword}`;
-    const res = await axios.get(
-      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-      {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        timeout: 15000,
-      }
-    );
+    const res = await axios.get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      timeout: 15000,
+    });
     const $ = cheerio.load(res.data);
     const results = [];
     $('.result').each((i, el) => {
@@ -216,12 +609,7 @@ async function searchDuckDuckGo(keyword, siteDomain, limit = 10) {
       const titleEl = $(el).find('.result__a');
       const urlEl = $(el).find('.result__url').attr('href');
       if (titleEl.length && urlEl) {
-        results.push({
-          source: siteDomain,
-          title: titleEl.text().trim(),
-          url: urlEl,
-          snippet: '',
-        });
+        results.push({ source: siteDomain, title: titleEl.text().trim(), url: urlEl, snippet: '' });
       }
     });
     console.log(`✅ DDG ${siteDomain}: ${results.length} results`);
@@ -233,15 +621,14 @@ async function searchDuckDuckGo(keyword, siteDomain, limit = 10) {
 }
 
 // ============================================================
-// MAIN
+// MAIN — automatic country focus
 // ============================================================
 export async function findQuestions({ keyword, country = 'ng', limitPerSource = 10 } = {}) {
-  if (!keyword || keyword.trim().length < 3) {
-    throw new Error('Keyword must be at least 3 characters');
-  }
+  if (!keyword || keyword.trim().length < 3) throw new Error('Keyword must be at least 3 characters');
 
-  const sources = QA_SOURCES_BY_COUNTRY[String(country).toLowerCase()] || QA_SOURCES_BY_COUNTRY.global;
-  console.log(`🔍 Searching "${keyword}" in ${country} (${sources.length} sources)`);
+  const normalizedCountry = String(country).toLowerCase();
+  const sources = QA_SOURCES_BY_COUNTRY[normalizedCountry] || QA_SOURCES_BY_COUNTRY.global;
+  console.log(`🔍 Searching "${keyword}" in ${normalizedCountry} (${sources.length} sources)`);
 
   const allResults = [];
   const sourceStatus = [];
@@ -251,12 +638,15 @@ export async function findQuestions({ keyword, country = 'ng', limitPerSource = 
     let error = null;
 
     try {
-      if (source.method === 'playwright') {
-        if (source.domain === 'quora.com') {
-          results = await scrapeQuora(keyword, limitPerSource);
-        } else if (source.domain === 'reddit.com') {
-          results = await scrapeReddit(keyword, limitPerSource);
-        }
+      if (source.method === 'playwright' && source.domain === 'reddit.com') {
+        results = await scrapeReddit(keyword, limitPerSource);
+      } else if (source.method === 'lemmy') {
+        results = await searchLemmy(keyword, { limit: limitPerSource });
+      } else if (source.method === 'stackexchange') {
+        // Use stackoverflow by default; you can add site mapping per country later
+        results = await searchStackExchange(keyword, { limit: limitPerSource, site: 'stackoverflow' });
+      } else if (source.method === 'google_cse') {
+        results = await searchQuoraGoogleCSE(keyword, { limit: limitPerSource });
       } else if (source.method === 'ddg') {
         results = await searchDuckDuckGo(keyword, source.domain, limitPerSource);
       }
@@ -264,16 +654,11 @@ export async function findQuestions({ keyword, country = 'ng', limitPerSource = 
       error = e.message;
     }
 
-    sourceStatus.push({
-      source: source.id,
-      label: source.label,
-      count: results.length,
-      error,
-    });
+    sourceStatus.push({ source: source.id, label: source.label, count: results.length, error });
     allResults.push(...results);
   }
 
-  // Dedupe
+  // Dedupe by URL
   const seen = new Set();
   const deduped = [];
   for (const item of allResults) {
@@ -288,8 +673,7 @@ export async function findQuestions({ keyword, country = 'ng', limitPerSource = 
 
   console.log(`📊 Total found: ${deduped.length}`);
   return {
-    keyword,
-    country,
+    keyword, country: normalizedCountry,
     totalFound: deduped.length,
     results: deduped,
     sourceStatus,
