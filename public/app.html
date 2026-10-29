@@ -206,7 +206,7 @@ a:hover{color:var(--accent)}
       <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
       <div>
         <div class="sidebar-title">Auto Traffic Engine</div>
-        <div class="sidebar-subtitle">v3.5.0</div>
+        <div class="sidebar-subtitle">v3.6.0</div>
       </div>
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
@@ -242,7 +242,7 @@ a:hover{color:var(--accent)}
     <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
     <div>
       <div class="sidebar-title">Auto Traffic Engine</div>
-      <div class="sidebar-subtitle">v3.5.0</div>
+      <div class="sidebar-subtitle">v3.6.0</div>
     </div>
     <button class="drawer-close" id="drawerClose">×</button>
   </div>
@@ -377,7 +377,7 @@ function renderNav(){
   $('sidebarNav').innerHTML = navHtml;
   $('drawerNav').innerHTML = navHtml;
   ['sidebarNav','drawerNav'].forEach(id => { $(id).querySelectorAll('[data-tab]').forEach(btn => { btn.addEventListener('click', ()=>{ const target = btn.getAttribute('data-tab'); closeDrawer(); navigateTo(target); }); }); });
-  const footerHTML = `<div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}"><div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div><div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div></div><button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button><div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.5.0</div>`;
+  const footerHTML = `<div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}"><div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div><div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div></div><button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button><div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.6.0</div>`;
   const sFooter = $('sidebarFooter'); const dFooter = $('drawerFooter');
   if (sFooter) sFooter.innerHTML = footerHTML;
   if (dFooter) dFooter.innerHTML = footerHTML;
@@ -461,7 +461,7 @@ function renderHome(){
     <div class="quick-grid">
       <button class="quick" data-go="seo"><span class="quick-icon">🔍</span><div class="quick-label">SEO Audit</div><div class="quick-sub">${state.isAdmin ? '∞' : isFree ? (state.limits.freeAudits - audits) + ' left' : 'Unlimited'}</div></button>
       <button class="quick" data-go="video" ${isFree && !state.isAdmin ? 'disabled' : ''}><span class="quick-icon">🎬</span><div class="quick-label">Video Ad</div><div class="quick-sub">${state.isAdmin ? '∞' : isFree ? '🔒 Premium' : videos + '/' + state.limits.premiumVideos}</div></button>
-      <button class="quick" data-go="qa" ${isFree && !state.isAdmin ? 'disabled' : ''}><span class="quick-icon">💬</span><div class="quick-label">Find Q&A</div><div class="quick-sub">${state.isAdmin ? '∞' : isFree ? '🔒 Premium' : '55+ countries'}</div></button>
+      <button class="quick" data-go="qa" ${isFree && !state.isAdmin ? 'disabled' : ''}><span class="quick-icon">💬</span><div class="quick-label">Find Q&A</div><div class="quick-sub">${state.isAdmin ? '∞' : isFree ? '🔒 Premium' : '60+ countries'}</div></button>
     </div>
     <div class="section-title">This month</div>
     <div class="stats"><div class="stat"><div class="stat-num">${audits}</div><div class="stat-label">Audits</div></div><div class="stat"><div class="stat-num">${videos}</div><div class="stat-label">Videos</div></div><div class="stat"><div class="stat-num">${leads}</div><div class="stat-label">Leads</div></div></div>
@@ -646,64 +646,140 @@ async function renderDirectories(){
     return;
   }
   if (state.dirCountries.length === 0) await loadDirCountries();
-  const countryOpts = state.dirCountries.map(c => `<option value="${esc(c.code)}" ${c.code === (state.business?.country || 'ng') ? 'selected' : ''}>${esc(c.name)} (${c.total} dirs)</option>`).join('');
-  const langOpts = `<option value="en">English</option><option value="fr">Français (French)</option><option value="es">Español (Spanish)</option><option value="pt">Português (Portuguese)</option><option value="ar">العربية (Arabic)</option><option value="zh-CN">中文 (Chinese)</option><option value="de">Deutsch (German)</option><option value="sw">Kiswahili (Swahili)</option><option value="ha">Hausa</option><option value="yo">Yorùbá</option><option value="ig">Igbo</option>`;
+
+  const countryOpts = state.dirCountries.map(c =>
+    `<option value="${esc(c.code)}" ${c.code === (state.business?.country || 'ng') ? 'selected' : ''}>${esc(c.name)} (${c.total} sites)</option>`
+  ).join('');
+
+  const langOpts = `
+    <option value="">Auto (country default)</option>
+    <option value="en">English</option>
+    <option value="fr">Français</option>
+    <option value="es">Español</option>
+    <option value="pt">Português</option>
+    <option value="de">Deutsch</option>
+    <option value="ar">العربية</option>
+    <option value="zh-CN">中文</option>
+    <option value="sw">Kiswahili</option>
+    <option value="ha">Hausa</option>
+    <option value="yo">Yorùbá</option>
+    <option value="ig">Igbo</option>
+  `;
+
   content.innerHTML = `
     <h1 class="h1">Directory Listings</h1>
-    <p class="subtitle">Generate unique, translated listings for 200+ directories. Copy-paste into each site.</p>
+    <p class="subtitle">Generate 4-field listings. Open + Copy + Bookmarklet = 10 sec per site.</p>
+
+    <div class="card" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.3);">
+      <div class="section-title" style="color:#93c5fd;">📌 One-time setup</div>
+      <p style="font-size:12.5px;color:var(--text-2);line-height:1.6;margin-bottom:8px;">
+        Click "Show Bookmarklet" → copy the javascript code → create a browser bookmark with that code as the URL. Click it on any compose page to autofill.
+      </p>
+      <button id="bmBtn" class="btn small" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">📎 Show Bookmarklet</button>
+      <div id="bmCode" style="display:none;margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:10px;color:#93c5fd;word-break:break-all;"></div>
+    </div>
+
     <div class="card">
-      <label class="label">Business Profile</label>
-      <input id="dirName" class="input" placeholder="Business name" value="${esc(state.business?.name||'')}" />
-      <label class="label">Category</label><input id="dirCategory" class="input" placeholder="e.g. Livestock Farm" value="${esc(state.business?.category||'')}" />
-      <label class="label">Phone</label><input id="dirPhone" class="input" placeholder="Phone" value="${esc(state.business?.phone||'')}" />
-      <label class="label">City</label><input id="dirCity" class="input" placeholder="City" value="${esc(state.business?.city||'')}" />
-      <label class="label">State / Region</label><input id="dirState" class="input" placeholder="State" value="${esc(state.business?.state||'')}" />
-      <label class="label">Website</label><input id="dirWebsite" class="input" type="url" placeholder="https://..." value="${esc(state.business?.website||'')}" />
-      <label class="label">Description</label><textarea id="dirDesc" class="textarea" placeholder="What does your business do?">${esc(state.business?.description||'')}</textarea>
+      <label class="label">Business name</label>
+      <input id="dirName" class="input" value="${esc(state.business?.name||'')}" />
+      <label class="label">Category</label>
+      <input id="dirCategory" class="input" value="${esc(state.business?.category||'')}" />
+      <label class="label">Phone</label>
+      <input id="dirPhone" class="input" value="${esc(state.business?.phone||'')}" />
+      <label class="label">City</label>
+      <input id="dirCity" class="input" value="${esc(state.business?.city||'')}" />
+      <label class="label">State</label>
+      <input id="dirState" class="input" value="${esc(state.business?.state||'')}" />
+      <label class="label">Website</label>
+      <input id="dirWebsite" class="input" type="url" value="${esc(state.business?.website||'')}" />
+      <label class="label">Description</label>
+      <textarea id="dirDesc" class="textarea">${esc(state.business?.description||'')}</textarea>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-        <div><label class="label">Country</label><select id="dirCountry" class="select">${countryOpts || '<option value="ng">Nigeria</option>'}</select></div>
+        <div><label class="label">Country</label><select id="dirCountry" class="select">${countryOpts}</select></div>
         <div><label class="label">Language</label><select id="dirLang" class="select">${langOpts}</select></div>
       </div>
       <button id="dirGo" class="btn">Generate Listings</button>
       <div id="dirResult"></div>
     </div>`;
+
+  $('bmBtn').addEventListener('click', () => {
+    const bm = `javascript:(function(){var t=prompt('Paste your listing:');if(!t)return;var m={};t.split('\\n').forEach(function(l){var i=l.indexOf(':');if(i>0)m[l.slice(0,i).trim().toLowerCase()]=l.slice(i+1).trim();});var ttl=m['post title']||m['title']||'',cnt=m['post content']||m['content']||'',kw=m['keywords']||'',cat=m['category']||'';document.querySelectorAll('input,textarea,select').forEach(function(el){var k=((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')).toLowerCase();if(/title|subject|headline/.test(k))el.value=ttl;else if(/desc|content|body|message|detail/.test(k)&&el.tagName==='TEXTAREA')el.value=cnt;else if(/keyword|tag/.test(k))el.value=kw;else if(/categ/.test(k))el.value=cat;el.dispatchEvent(new Event('input',{bubbles:true}));});alert('Filled!');})();`;
+    $('bmCode').textContent = bm;
+    $('bmCode').style.display = 'block';
+  });
+
   $('dirGo').addEventListener('click', async function(){
     const btn = this;
-    const profile = { name: $('dirName').value.trim(), category: $('dirCategory').value.trim(), phone: $('dirPhone').value.trim(), city: $('dirCity').value.trim(), state: $('dirState').value.trim(), website: $('dirWebsite').value.trim(), description: $('dirDesc').value.trim() };
-    const country = $('dirCountry').value; const language = $('dirLang').value; const r = $('dirResult');
+    const profile = {
+      name: $('dirName').value.trim(),
+      category: $('dirCategory').value.trim(),
+      phone: $('dirPhone').value.trim(),
+      city: $('dirCity').value.trim(),
+      state: $('dirState').value.trim(),
+      website: $('dirWebsite').value.trim(),
+      description: $('dirDesc').value.trim(),
+    };
+    const country = $('dirCountry').value;
+    const language = $('dirLang').value || null;
+    const r = $('dirResult');
     if (!profile.name) { toast('Business name required', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Generating ' + (language !== 'en' ? '+ translating' : '') + '…';
-    r.innerHTML = '<div class="status info">Generating listings for ' + state.dirCountries.find(c=>c.code===country)?.name + (language !== 'en' ? ' (translating to ' + language + ')' : '') + '…</div>';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Generating…';
+    r.innerHTML = '<div class="status info">Generating + translating listings…</div>';
+
     try {
-      const d = await api('/api/directories/generate', {method:'POST', body:{profile, country, limit: 30, language}});
-      let html = `<div class="status success">✓ Generated ${d.total} listings${d.translated ? ' (translated to ' + d.translated + ')' : ''}</div>`;
+      const d = await api('/api/directories/generate', { method:'POST', body:{ profile, country, limit: 30, language } });
+      let html = `<div class="status success">✓ ${d.total} listings${d.translated ? ' · ' + d.language.toUpperCase() : ''}</div>`;
+      html += `<div class="status info" style="font-size:12px;">${esc(d.instructions || '')}</div>`;
+
       d.listings.forEach((l, idx) => {
-        const typeBadge = l.type === 'api' ? '<span class="badge success" style="font-size:9px;">API</span>' : '<span class="badge source" style="font-size:9px;">MANUAL</span>';
-        html += `<div class="listing-item">
-          <div class="listing-header">
-            <div><span class="listing-platform">${esc(l.directory)}</span> ${typeBadge}</div>
-            <div class="listing-actions">
-              <button class="btn small" data-open-site="${esc(l.url)}" style="background:linear-gradient(135deg,#10b981,#059669);">🔗 Open Site</button>
-              <button class="btn small secondary" data-copy-listing="${idx}">📋 Copy</button>
+        html += `
+          <div class="listing-item">
+            <div class="listing-header">
+              <div>
+                <span class="listing-platform">${esc(l.directory)}</span>
+                <span class="badge source" style="font-size:9px;margin-left:6px;">${esc(l.categoryHint || l.category)}</span>
+              </div>
+              <div class="listing-actions">
+                <button class="btn small" data-open-copy="${idx}" style="background:linear-gradient(135deg,#10b981,#059669);">🔗 Open + Copy</button>
+                <button class="btn small secondary" data-copy-only="${idx}">📋 Copy</button>
+              </div>
             </div>
-          </div>
-          <div class="listing-field"><div class="listing-field-label">Headline</div><div class="listing-field-value">${esc(l.title)}</div></div>
-          <div class="listing-field"><div class="listing-field-label">Category</div><div class="listing-field-value">${esc(l.category || profile.category)}</div></div>
-          <div class="listing-field"><div class="listing-field-label">Keywords</div><div class="listing-field-value">${esc((l.keywords||[]).join(', '))}</div></div>
-          <div class="listing-field"><div class="listing-field-label">Listing Post</div><div class="listing-field-value">${esc(l.description)}</div></div>
-        </div>`;
+            <div class="listing-field">
+              <div class="listing-field-label">Post Title</div>
+              <div class="listing-field-value">${esc(l.postTitle)}</div>
+            </div>
+            <div class="listing-field">
+              <div class="listing-field-label">Post Content</div>
+              <div class="listing-field-value">${esc(l.postContent)}</div>
+            </div>
+            <div class="listing-field">
+              <div class="listing-field-label">Keywords</div>
+              <div class="listing-field-value">${esc((l.keywords||[]).join(', '))}</div>
+            </div>
+            <div class="listing-field">
+              <div class="listing-field-label">Category</div>
+              <div class="listing-field-value">${esc(l.category)}</div>
+            </div>
+          </div>`;
       });
+
       r.innerHTML = html;
-      r.querySelectorAll('[data-open-site]').forEach(b => b.addEventListener('click', ()=>window.open(b.getAttribute('data-open-site'), '_blank')));
-      r.querySelectorAll('[data-copy-listing]').forEach(b => b.addEventListener('click', ()=>{
-        const idx = Number(b.getAttribute('data-copy-listing'));
+
+      r.querySelectorAll('[data-open-copy]').forEach(b => b.addEventListener('click', () => {
+        const idx = Number(b.getAttribute('data-open-copy'));
         const l = d.listings[idx];
-        const text = `Headline: ${l.title}\n\nCategory: ${l.category || profile.category}\n\nKeywords: ${(l.keywords||[]).join(', ')}\n\n${l.description}`;
-        copy(text, 'Listing copied');
+        copy(l.copyText, 'Content copied — use bookmarklet on compose page');
+        window.open(l.composeUrl, '_blank', 'noopener');
+      }));
+
+      r.querySelectorAll('[data-copy-only]').forEach(b => b.addEventListener('click', () => {
+        const idx = Number(b.getAttribute('data-copy-only'));
+        copy(d.listings[idx].copyText, 'Listing copied');
       }));
     } catch(e){
-      if (e.status===403) r.innerHTML = `<div class="status warning">Premium feature. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
-      else if (e.status===503) r.innerHTML = '<div class="status error">Directory feature not available on server. Contact support.</div>';
+      if (e.status===403) r.innerHTML = `<div class="status warning">Premium required. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+      else if (e.status===503) r.innerHTML = '<div class="status error">Directory module not deployed. Check Render logs.</div>';
       else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
     }
     finally { btn.disabled = false; btn.textContent = 'Generate Listings'; }
@@ -720,13 +796,22 @@ function renderBacklinks(){
   content.querySelectorAll('.subtab').forEach(t => t.addEventListener('click', ()=>{ state.subTab = t.getAttribute('data-sub'); renderBacklinks(); }));
   const c = $('blContent');
   if (state.subTab === 'indexnow'){
-    c.innerHTML = `<div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">Submit to Bing, Yandex, Naver, Seznam, Yep, Amazon (7 engines).</p><label class="label">Page URL</label><input id="inUrl" class="input" type="url" value="${esc(location.href)}" /><button id="inGo" class="btn">Submit to IndexNow</button><div id="inResult"></div></div>`;
+    c.innerHTML = `
+      <div class="card">
+        <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">
+          One submission notifies <strong>Bing, Yandex, Naver, Seznam, Yep, DuckDuckGo, and Amazon</strong> through the shared IndexNow endpoint (7 engines). Google does not accept IndexNow — submit your sitemap once in <strong>Google Search Console</strong> for Google coverage.
+        </p>
+        <label class="label">Page URL</label>
+        <input id="inUrl" class="input" type="url" value="${esc(location.href)}" />
+        <button id="inGo" class="btn">Submit to 7 Search Engines</button>
+        <div id="inResult"></div>
+      </div>`;
     $('inGo').addEventListener('click', async function(){
       const btn = this; const url = $('inUrl').value.trim(); if (!url) return;
       btn.disabled = true; btn.innerHTML = '<span class="spin"></span>…';
-      try { const d = await api('/api/backlink/indexnow', {method:'POST', body:{urls:[url], siteUrl:url}}); const ok = d.ok !== false; $('inResult').innerHTML = `<div class="status ${ok?'success':'error'}">${esc(d.message || (ok?'Submitted':'Failed'))}</div>`; }
+      try { const d = await api('/api/backlink/indexnow', {method:'POST', body:{urls:[url], siteUrl:url}}); const ok = d.ok !== false; $('inResult').innerHTML = `<div class="status ${ok?'success':'error'}">${esc(d.message || (ok?'Submitted to all engines':'Failed'))}</div>`; }
       catch(e){ $('inResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-      finally { btn.disabled = false; btn.textContent = 'Submit to IndexNow'; }
+      finally { btn.disabled = false; btn.textContent = 'Submit to 7 Search Engines'; }
     });
   } else {
     c.innerHTML = `<div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">Generate copy-paste listings for Jiji, GBP, VConnect.</p><label class="label">Business name</label><input id="lbName" class="input" value="${esc(state.business?.name||'')}" /><label class="label">Phone</label><input id="lbPhone" class="input" value="${esc(state.business?.phone||'')}" /><label class="label">City</label><input id="lbCity" class="input" value="${esc(state.business?.city||'')}" /><label class="label">Category</label><input id="lbCat" class="input" value="${esc(state.business?.category||'')}" /><label class="label">Description</label><textarea id="lbDesc" class="textarea">${esc(state.business?.description||'')}</textarea><button id="lbGo" class="btn">Generate Listings</button><div id="lbResult"></div></div>`;
@@ -769,8 +854,7 @@ async function renderSocial(){
 async function renderCampaigns(){
   if (!state.business){
     content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="cSetupBtn">Go to Businesses</button></div>`;
-    $('cSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
-    return;
+    $('cSetupBtn').addEventListener('click', ()=>navigateTo('businesses')); return;
   }
   content.innerHTML = `
     <h1 class="h1">Campaigns</h1>
@@ -926,7 +1010,7 @@ function renderSettings(){
     <div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Use this key for integrations.</p><div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent-l);word-break:break-all;margin-bottom:10px;">${esc(state.apiKey)}</div><button id="copyApiKey" class="btn secondary">Copy API key</button></div>
     <div class="section-title">App Settings</div>
     <div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Install Auto Traffic Engine as an app.</p><button class="btn secondary hidden" id="installAppBtnSettings">📱 Install App</button><div style="font-size:11px;color:var(--text-3);margin-top:8px;">If missing, your browser doesn't support PWA install or app is already installed.</div></div>
-    <div style="text-align:center;font-size:11px;color:var(--text-3);padding:24px 0;line-height:1.6;">Auto Traffic Engine v3.5.0<br><a href="${BACKEND}/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);">Terms</a></div>`;
+    <div style="text-align:center;font-size:11px;color:var(--text-3);padding:24px 0;line-height:1.6;">Auto Traffic Engine v3.6.0<br><a href="${BACKEND}/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);">Terms</a></div>`;
   $('copyApiKey').addEventListener('click', ()=>copy(state.apiKey, 'API key copied'));
   $('logoutBtn').addEventListener('click', handleLogout);
   const settingsBtn = $('installAppBtnSettings');
