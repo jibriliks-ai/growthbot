@@ -1,6 +1,7 @@
-// directoryGenerator.js — v3.0
-// 4 fields: Post Title / Post Content / Keywords / Category
-// composeUrl per directory. Translation via googletrans.
+// ============================================================
+// Auto Traffic Engine — Directory Listing Generator
+// v3.0 — 4 fields, compose URLs, translation, bookmarklet
+// ============================================================
 import OpenAI from 'openai';
 
 const openai = process.env.OPENAI_API_KEY
@@ -8,7 +9,7 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 // ============================================================
-// TRANSLATION
+// TRANSLATION (free, no API key)
 // ============================================================
 export async function translateText(text, targetLang) {
   if (!text || !targetLang || targetLang === 'en') return text;
@@ -23,7 +24,7 @@ export async function translateText(text, targetLang) {
 }
 
 // ============================================================
-// DIRECTORY DB — composeUrl = direct post form page
+// DIRECTORY DATABASE — every entry has composeUrl
 // ============================================================
 export const DIRECTORIES_BY_COUNTRY = {
   ng: {
@@ -32,9 +33,14 @@ export const DIRECTORIES_BY_COUNTRY = {
       { name: 'Jiji.ng', composeUrl: 'https://jiji.ng/post', url: 'https://jiji.ng', type: 'manual', category: 'classified' },
       { name: 'OLX Nigeria', composeUrl: 'https://www.olx.com.ng/post', url: 'https://www.olx.com.ng', type: 'manual', category: 'classified' },
       { name: 'Locanto Nigeria', composeUrl: 'https://www.locanto.com.ng/post-ad/', url: 'https://www.locanto.com.ng', type: 'manual', category: 'classified' },
+      { name: 'Adverts Nigeria', composeUrl: 'https://adverts.com.ng/post', url: 'https://adverts.com.ng', type: 'manual', category: 'classified' },
+      { name: 'NaijaAds', composeUrl: 'https://naijaads.com/post-ad', url: 'https://naijaads.com', type: 'manual', category: 'classified' },
       { name: 'VConnect', composeUrl: 'https://www.vconnect.com/register', url: 'https://www.vconnect.com', type: 'manual', category: 'business' },
       { name: 'BusinessList.com.ng', composeUrl: 'https://www.businesslist.com.ng/add-company', url: 'https://www.businesslist.com.ng', type: 'manual', category: 'business' },
       { name: 'Yellow Pages Nigeria', composeUrl: 'https://www.yellowpages.com.ng/add-listing', url: 'https://www.yellowpages.com.ng', type: 'manual', category: 'business' },
+      { name: 'Finelib.com.ng', composeUrl: 'https://www.finelib.com.ng/add-listing/', url: 'https://www.finelib.com.ng', type: 'manual', category: 'business' },
+      { name: 'Hotfrog Nigeria', composeUrl: 'https://www.hotfrog.com.ng/add-your-business', url: 'https://www.hotfrog.com.ng', type: 'manual', category: 'business' },
+      { name: 'Cylex Nigeria', composeUrl: 'https://www.cylex.ng/add-company.html', url: 'https://www.cylex.ng', type: 'manual', category: 'business' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
       { name: 'Bing Places', composeUrl: 'https://www.bingplaces.com/', url: 'https://www.bingplaces.com', type: 'manual', category: 'local' },
     ],
@@ -45,8 +51,13 @@ export const DIRECTORIES_BY_COUNTRY = {
       { name: 'Craigslist', composeUrl: 'https://post.craigslist.org/', url: 'https://www.craigslist.org', type: 'manual', category: 'classified' },
       { name: 'Yelp', composeUrl: 'https://biz.yelp.com/', url: 'https://www.yelp.com', type: 'manual', category: 'local' },
       { name: 'Yellow Pages US', composeUrl: 'https://www.yellowpages.com/', url: 'https://www.yellowpages.com', type: 'manual', category: 'business' },
+      { name: 'Manta', composeUrl: 'https://www.manta.com/claim', url: 'https://www.manta.com', type: 'manual', category: 'business' },
+      { name: 'Better Business Bureau', composeUrl: 'https://www.bbb.org/', url: 'https://www.bbb.org', type: 'manual', category: 'business' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
       { name: 'Bing Places', composeUrl: 'https://www.bingplaces.com/', url: 'https://www.bingplaces.com', type: 'manual', category: 'local' },
+      { name: 'Foursquare', composeUrl: 'https://business.foursquare.com/', url: 'https://foursquare.com', type: 'manual', category: 'local' },
+      { name: 'Superpages', composeUrl: 'https://www.superpages.com/', url: 'https://www.superpages.com', type: 'manual', category: 'business' },
+      { name: 'Nextdoor', composeUrl: 'https://nextdoor.com/business/', url: 'https://nextdoor.com', type: 'manual', category: 'local' },
     ],
   },
   gb: {
@@ -54,6 +65,9 @@ export const DIRECTORIES_BY_COUNTRY = {
     directories: [
       { name: 'Gumtree', composeUrl: 'https://www.gumtree.com/post', url: 'https://www.gumtree.com', type: 'manual', category: 'classified' },
       { name: 'Yell.com', composeUrl: 'https://www.yell.com/account/join/', url: 'https://www.yell.com', type: 'manual', category: 'business' },
+      { name: 'Thomson Local', composeUrl: 'https://www.thomsonlocal.com/', url: 'https://www.thomsonlocal.com', type: 'manual', category: 'business' },
+      { name: 'FreeIndex', composeUrl: 'https://www.freeindex.co.uk/add/', url: 'https://www.freeindex.co.uk', type: 'manual', category: 'business' },
+      { name: 'Hotfrog UK', composeUrl: 'https://www.hotfrog.co.uk/add-your-business', url: 'https://www.hotfrog.co.uk', type: 'manual', category: 'business' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
     ],
   },
@@ -64,6 +78,8 @@ export const DIRECTORIES_BY_COUNTRY = {
       { name: 'Quikr', composeUrl: 'https://www.quikr.com/post-free-ad', url: 'https://www.quikr.com', type: 'manual', category: 'classified' },
       { name: 'JustDial', composeUrl: 'https://www.justdial.com/', url: 'https://www.justdial.com', type: 'manual', category: 'business' },
       { name: 'IndiaMART', composeUrl: 'https://seller.indiamart.com/', url: 'https://www.indiamart.com', type: 'manual', category: 'business' },
+      { name: 'Sulekha', composeUrl: 'https://www.sulekha.com/', url: 'https://www.sulekha.com', type: 'manual', category: 'business' },
+      { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
     ],
   },
   ke: {
@@ -72,6 +88,7 @@ export const DIRECTORIES_BY_COUNTRY = {
       { name: 'Jiji Kenya', composeUrl: 'https://jiji.co.ke/post', url: 'https://jiji.co.ke', type: 'manual', category: 'classified' },
       { name: 'OLX Kenya', composeUrl: 'https://www.olx.co.ke/post', url: 'https://www.olx.co.ke', type: 'manual', category: 'classified' },
       { name: 'BusinessList Kenya', composeUrl: 'https://www.businesslist.co.ke/add-company', url: 'https://www.businesslist.co.ke', type: 'manual', category: 'business' },
+      { name: 'Yellow Pages Kenya', composeUrl: 'https://www.yellowpageskenya.com/', url: 'https://www.yellowpageskenya.com', type: 'manual', category: 'business' },
     ],
   },
   za: {
@@ -79,12 +96,14 @@ export const DIRECTORIES_BY_COUNTRY = {
     directories: [
       { name: 'Gumtree South Africa', composeUrl: 'https://www.gumtree.co.za/post', url: 'https://www.gumtree.co.za', type: 'manual', category: 'classified' },
       { name: 'OLX ZA', composeUrl: 'https://www.olx.co.za/post', url: 'https://www.olx.co.za', type: 'manual', category: 'classified' },
+      { name: 'BusinessList ZA', composeUrl: 'https://www.businesslist.co.za/add-company', url: 'https://www.businesslist.co.za', type: 'manual', category: 'business' },
     ],
   },
   de: {
     name: 'Germany', language: 'de',
     directories: [
       { name: 'eBay Kleinanzeigen', composeUrl: 'https://www.kleinanzeigen.de/p-anzeige-aufgeben-schritt2.html', url: 'https://www.kleinanzeigen.de', type: 'manual', category: 'classified' },
+      { name: 'Quoka', composeUrl: 'https://www.quoka.de/inserat-aufgeben/', url: 'https://www.quoka.de', type: 'manual', category: 'classified' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
     ],
   },
@@ -93,6 +112,21 @@ export const DIRECTORIES_BY_COUNTRY = {
     directories: [
       { name: 'LeBonCoin', composeUrl: 'https://www.leboncoin.fr/deposer_une_annonce', url: 'https://www.leboncoin.fr', type: 'manual', category: 'classified' },
       { name: 'PagesJaunes', composeUrl: 'https://www.pagesjaunes.fr/pros/creer-fiche', url: 'https://www.pagesjaunes.fr', type: 'manual', category: 'business' },
+      { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
+    ],
+  },
+  es: {
+    name: 'Spain', language: 'es',
+    directories: [
+      { name: 'Milanuncios', composeUrl: 'https://www.milanuncios.com/publicar-anuncios/', url: 'https://www.milanuncios.com', type: 'manual', category: 'classified' },
+      { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
+    ],
+  },
+  pt: {
+    name: 'Portugal', language: 'pt',
+    directories: [
+      { name: 'OLX Portugal', composeUrl: 'https://www.olx.pt/ads/create', url: 'https://www.olx.pt', type: 'manual', category: 'classified' },
+      { name: 'CustoJusto', composeUrl: 'https://www.custojusto.pt/', url: 'https://www.custojusto.pt', type: 'manual', category: 'classified' },
     ],
   },
   br: {
@@ -102,16 +136,10 @@ export const DIRECTORIES_BY_COUNTRY = {
       { name: 'MercadoLivre', composeUrl: 'https://www.mercadolivre.com.br/publicar', url: 'https://www.mercadolivre.com.br', type: 'manual', category: 'classified' },
     ],
   },
-  pt: {
-    name: 'Portugal', language: 'pt',
+  ar: {
+    name: 'Argentina', language: 'es',
     directories: [
-      { name: 'OLX Portugal', composeUrl: 'https://www.olx.pt/ads/create', url: 'https://www.olx.pt', type: 'manual', category: 'classified' },
-    ],
-  },
-  es: {
-    name: 'Spain', language: 'es',
-    directories: [
-      { name: 'Milanuncios', composeUrl: 'https://www.milanuncios.com/publicar-anuncios/', url: 'https://www.milanuncios.com', type: 'manual', category: 'classified' },
+      { name: 'MercadoLibre', composeUrl: 'https://www.mercadolibre.com.ar/publicar', url: 'https://www.mercadolibre.com.ar', type: 'manual', category: 'classified' },
     ],
   },
 };
@@ -140,8 +168,8 @@ Return JSON only:
 }
 
 Rules:
-- For classifieds (Jiji, OLX): sales-focused, urgent tone
-- For business directories (Yelp, Yellow Pages): professional, formal
+- For classifieds (Jiji, OLX, Craigslist): sales-focused, urgent tone
+- For business directories (Yelp, Yellow Pages, Google Business): professional, formal
 - No spam phrases ("CLICK NOW", "100% GUARANTEED")
 - Include the phone number in postContent`;
 
@@ -170,14 +198,14 @@ function fallbackListing(profile, countryName) {
 }
 
 // ============================================================
-// BOOKMARKLET — autofills any compose page from clipboard
+// BOOKMARKLET — autofills compose page from clipboard prompt
 // ============================================================
 export function buildBookmarklet() {
   return `javascript:(function(){var t=prompt('Paste your listing (Title/Content/Keywords/Category):');if(!t)return;var m={};t.split('\\n').forEach(function(l){var i=l.indexOf(':');if(i>0)m[l.slice(0,i).trim().toLowerCase()]=l.slice(i+1).trim();});var ttl=m['post title']||m['title']||'',cnt=m['post content']||m['content']||'',kw=m['keywords']||'',cat=m['category']||'';document.querySelectorAll('input,textarea,select').forEach(function(el){var k=((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.labels&&el.labels[0]?el.labels[0].innerText:'')).toLowerCase();if(/title|subject|headline/.test(k))el.value=ttl;else if(/desc|content|body|message|detail/.test(k)&&el.tagName==='TEXTAREA')el.value=cnt;else if(/keyword|tag/.test(k))el.value=kw;else if(/categ/.test(k))el.value=cat;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});alert('Filled! Review and click Submit.');})();`;
 }
 
 // ============================================================
-// LIST
+// LIST FUNCTIONS
 // ============================================================
 export function listDirectories(country = 'ng') {
   const data = DIRECTORIES_BY_COUNTRY[String(country).toLowerCase()];
@@ -192,7 +220,7 @@ export function listSupportedCountries() {
 }
 
 // ============================================================
-// GENERATE
+// GENERATE — 4 fields + optional translation
 // ============================================================
 export async function generateListingsForCountry({ profile, country = 'ng', limit = 30, language = null }) {
   const countryData = DIRECTORIES_BY_COUNTRY[String(country).toLowerCase()];
@@ -207,7 +235,7 @@ export async function generateListingsForCountry({ profile, country = 'ng', limi
     if (openai) data = await aiListing(profile, dir, countryData.name);
     if (!data) data = fallbackListing(profile, countryData.name);
 
-    // Translate if needed
+    // Translate title + content if target language is not English
     if (targetLang !== 'en') {
       data.postTitle = await translateText(data.postTitle, targetLang);
       await new Promise((r) => setTimeout(r, 250));

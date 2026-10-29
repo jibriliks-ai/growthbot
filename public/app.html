@@ -182,10 +182,34 @@ a:hover{color:var(--accent)}
 .idle-countdown{font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--warning),#ef4444);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:16px 0;letter-spacing:-.02em}
 .idle-btns{display:flex;gap:8px;flex-direction:column}
 .idle-btns .btn{margin-top:0}
-#pwaBanner{display:none;background:var(--accent-grad);color:white;padding:12px 16px;border-radius:var(--r-md);margin-bottom:16px;align-items:center;justify-content:space-between;box-shadow:0 4px 12px var(--accent-glow)}
+/* ===== PWA BANNER — FIXED, NEVER OVERLAPS SIDEBAR ===== */
+#pwaBanner{
+  position:fixed;
+  bottom:calc(74px + var(--safe-bot));
+  left:50%;
+  transform:translateX(-50%);
+  z-index:90;
+  width:calc(100vw - 32px);
+  max-width:480px;
+  display:none;
+  background:var(--accent-grad);
+  color:#fff;
+  padding:14px 18px;
+  border-radius:var(--r-md);
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  box-shadow:0 8px 28px rgba(139,92,246,0.4);
+  animation:pwaSlideUp .35s cubic-bezier(.16,1,.3,1);
+}
 #pwaBanner.show{display:flex}
-#pwaBanner .text{font-size:13px;font-weight:600}
-#pwaBanner button{background:white;color:var(--accent);padding:6px 12px;border-radius:6px;font-weight:700;font-size:12px}
+#pwaBanner .text{font-size:13px;font-weight:600;flex:1;line-height:1.4}
+#pwaBanner button{background:#fff;color:var(--accent);padding:8px 18px;border-radius:8px;font-weight:700;font-size:12px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+@keyframes pwaSlideUp{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(min-width:1024px){
+  #pwaBanner{left:calc(50% + 130px);bottom:24px}
+}
+/* ===== LISTING CARDS ===== */
 .listing-item{background:rgba(19,19,26,0.5);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-bottom:10px}
 .listing-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .listing-platform{font-weight:700;font-size:14px;color:var(--text)}
@@ -206,7 +230,7 @@ a:hover{color:var(--accent)}
       <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
       <div>
         <div class="sidebar-title">Auto Traffic Engine</div>
-        <div class="sidebar-subtitle">v3.6.0</div>
+        <div class="sidebar-subtitle">v3.7.0</div>
       </div>
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
@@ -242,7 +266,7 @@ a:hover{color:var(--accent)}
     <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
     <div>
       <div class="sidebar-title">Auto Traffic Engine</div>
-      <div class="sidebar-subtitle">v3.6.0</div>
+      <div class="sidebar-subtitle">v3.7.0</div>
     </div>
     <button class="drawer-close" id="drawerClose">×</button>
   </div>
@@ -377,7 +401,7 @@ function renderNav(){
   $('sidebarNav').innerHTML = navHtml;
   $('drawerNav').innerHTML = navHtml;
   ['sidebarNav','drawerNav'].forEach(id => { $(id).querySelectorAll('[data-tab]').forEach(btn => { btn.addEventListener('click', ()=>{ const target = btn.getAttribute('data-tab'); closeDrawer(); navigateTo(target); }); }); });
-  const footerHTML = `<div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}"><div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div><div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div></div><button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button><div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.6.0</div>`;
+  const footerHTML = `<div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}"><div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div><div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div></div><button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button><div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.7.0</div>`;
   const sFooter = $('sidebarFooter'); const dFooter = $('drawerFooter');
   if (sFooter) sFooter.innerHTML = footerHTML;
   if (dFooter) dFooter.innerHTML = footerHTML;
@@ -638,7 +662,7 @@ async function generateDraft(qid, btn){
   finally { btn.disabled = false; btn.innerHTML = '✨ Draft'; }
 }
 
-// === DIRECTORIES ===
+// ===== DIRECTORIES =====
 async function renderDirectories(){
   if (!state.business){
     content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="dSetupBtn">Go to Businesses</button></div>`;
@@ -769,8 +793,10 @@ async function renderDirectories(){
       r.querySelectorAll('[data-open-copy]').forEach(b => b.addEventListener('click', () => {
         const idx = Number(b.getAttribute('data-open-copy'));
         const l = d.listings[idx];
+        const target = l.composeUrl || l.siteUrl || l.url;
+        if (!target) { toast('No compose URL for this site', 'error'); return; }
         copy(l.copyText, 'Content copied — use bookmarklet on compose page');
-        window.open(l.composeUrl, '_blank', 'noopener');
+        window.open(target, '_blank', 'noopener');
       }));
 
       r.querySelectorAll('[data-copy-only]').forEach(b => b.addEventListener('click', () => {
@@ -786,47 +812,179 @@ async function renderDirectories(){
   });
 }
 
-// === BACKLINKS ===
+// ===== BACKLINKS (IndexNow + Listings — same 4-field generator) =====
 function renderBacklinks(){
   content.innerHTML = `
     <h1 class="h1">Backlinks</h1>
-    <p class="subtitle">Submit to search engines and directories.</p>
-    <div class="subtabs"><button class="subtab ${state.subTab==='indexnow'?'active':''}" data-sub="indexnow">IndexNow</button><button class="subtab ${state.subTab==='listing'?'active':''}" data-sub="listing">Listings</button></div>
+    <p class="subtitle">Submit to search engines and generate directory listings.</p>
+    <div class="subtabs">
+      <button class="subtab ${state.subTab==='indexnow'?'active':''}" data-sub="indexnow">IndexNow</button>
+      <button class="subtab ${state.subTab==='listing'?'active':''}" data-sub="listing">Listings</button>
+    </div>
     <div id="blContent"></div>`;
   content.querySelectorAll('.subtab').forEach(t => t.addEventListener('click', ()=>{ state.subTab = t.getAttribute('data-sub'); renderBacklinks(); }));
   const c = $('blContent');
+
+  // ===== INDEXNOW TAB =====
   if (state.subTab === 'indexnow'){
     c.innerHTML = `
       <div class="card">
+        <div class="section-title" style="color:#93c5fd;">🌐 7 Search Engines Covered</div>
         <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">
-          One submission notifies <strong>Bing, Yandex, Naver, Seznam, Yep, DuckDuckGo, and Amazon</strong> through the shared IndexNow endpoint (7 engines). Google does not accept IndexNow — submit your sitemap once in <strong>Google Search Console</strong> for Google coverage.
+          One submission to the shared IndexNow endpoint reaches:
+          <strong>Bing, Yandex, Naver, Seznam, Yep, DuckDuckGo (via Bing), Internet Archive, and Amazon</strong>.
+          Google does not accept IndexNow — submit your sitemap once in
+          <strong>Google Search Console</strong> for Google coverage.
         </p>
         <label class="label">Page URL</label>
         <input id="inUrl" class="input" type="url" value="${esc(location.href)}" />
-        <button id="inGo" class="btn">Submit to 7 Search Engines</button>
+        <button id="inGo" class="btn">Submit to All IndexNow Engines</button>
         <div id="inResult"></div>
       </div>`;
     $('inGo').addEventListener('click', async function(){
       const btn = this; const url = $('inUrl').value.trim(); if (!url) return;
-      btn.disabled = true; btn.innerHTML = '<span class="spin"></span>…';
-      try { const d = await api('/api/backlink/indexnow', {method:'POST', body:{urls:[url], siteUrl:url}}); const ok = d.ok !== false; $('inResult').innerHTML = `<div class="status ${ok?'success':'error'}">${esc(d.message || (ok?'Submitted to all engines':'Failed'))}</div>`; }
-      catch(e){ $('inResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-      finally { btn.disabled = false; btn.textContent = 'Submit to 7 Search Engines'; }
+      btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Submitting…';
+      try {
+        const d = await api('/api/backlink/indexnow', {method:'POST', body:{urls:[url], siteUrl:url}});
+        const ok = d.ok !== false;
+        $('inResult').innerHTML = `<div class="status ${ok?'success':'error'}">${esc(d.message || (ok?'Submitted to all 7 engines':'Failed'))}</div>`;
+      } catch(e){ $('inResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+      finally { btn.disabled = false; btn.textContent = 'Submit to All IndexNow Engines'; }
     });
-  } else {
-    c.innerHTML = `<div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">Generate copy-paste listings for Jiji, GBP, VConnect.</p><label class="label">Business name</label><input id="lbName" class="input" value="${esc(state.business?.name||'')}" /><label class="label">Phone</label><input id="lbPhone" class="input" value="${esc(state.business?.phone||'')}" /><label class="label">City</label><input id="lbCity" class="input" value="${esc(state.business?.city||'')}" /><label class="label">Category</label><input id="lbCat" class="input" value="${esc(state.business?.category||'')}" /><label class="label">Description</label><textarea id="lbDesc" class="textarea">${esc(state.business?.description||'')}</textarea><button id="lbGo" class="btn">Generate Listings</button><div id="lbResult"></div></div>`;
-    $('lbGo').addEventListener('click', async function(){
-      const btn = this; const profile = { name: $('lbName').value.trim(), phone: $('lbPhone').value.trim(), city: $('lbCity').value.trim(), category: $('lbCat').value.trim(), description: $('lbDesc').value.trim() };
-      if (!profile.name) { toast('Name required', 'error'); return; }
-      btn.disabled = true; btn.innerHTML = '<span class="spin"></span>…';
-      try { const d = await api('/api/backlink/listing', {method:'POST', body:{profile}}); let html = ''; Object.entries(d.packages||{}).forEach(([k,p])=>{ html += `<div class="card card-tight" style="margin-top:10px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;"><strong style="font-size:13px;">${esc(p.platform)}</strong><button class="btn small secondary" data-copy-pkg="${esc(k)}">Copy</button></div><div style="font-size:12px;color:var(--accent-l);margin-bottom:4px;">${esc(p.title)}</div><div style="font-size:12px;color:var(--text-2);line-height:1.5;">${esc(p.description)}</div></div>`; }); $('lbResult').innerHTML = html; $('lbResult').querySelectorAll('[data-copy-pkg]').forEach(b=>b.addEventListener('click', ()=>{ const k = b.getAttribute('data-copy-pkg'); const p = d.packages[k]; copy(`Title: ${p.title}\n\n${p.description}`, 'Copied'); })); }
-      catch(e){ $('lbResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-      finally { btn.disabled = false; btn.textContent = 'Generate Listings'; }
-    });
+    return;
   }
+
+  // ===== LISTINGS TAB — SAME 4-FIELD GENERATOR =====
+  if (state.dirCountries.length === 0) {
+    loadDirCountries().then(() => { if (state.subTab === 'listing') renderBacklinks(); });
+    c.innerHTML = '<div class="skeleton-card"><div class="skeleton skeleton-line"></div></div>';
+    return;
+  }
+
+  const countryOpts = state.dirCountries.map(co =>
+    `<option value="${esc(co.code)}" ${co.code === (state.business?.country || 'ng') ? 'selected' : ''}>${esc(co.name)} (${co.total} sites)</option>`
+  ).join('');
+  const langOpts = `
+    <option value="">Auto (country default)</option>
+    <option value="en">English</option>
+    <option value="fr">Français</option>
+    <option value="es">Español</option>
+    <option value="pt">Português</option>
+    <option value="de">Deutsch</option>
+    <option value="ar">العربية</option>
+    <option value="zh-CN">中文</option>
+    <option value="sw">Kiswahili</option>
+    <option value="ha">Hausa</option>
+    <option value="yo">Yorùbá</option>
+    <option value="ig">Igbo</option>`;
+
+  c.innerHTML = `
+    <div class="card">
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">
+        Generate <strong>Post Title / Post Content / Keywords / Category</strong> for classified sites.
+        Click <strong>🔗 Open + Copy</strong> → new tab opens on the compose page + content copies.
+        Then click your bookmarklet to autofill.
+      </p>
+      <label class="label">Business name *</label>
+      <input id="lbName" class="input" value="${esc(state.business?.name||'')}" />
+      <label class="label">Phone</label>
+      <input id="lbPhone" class="input" value="${esc(state.business?.phone||'')}" />
+      <label class="label">City</label>
+      <input id="lbCity" class="input" value="${esc(state.business?.city||'')}" />
+      <label class="label">State</label>
+      <input id="lbState" class="input" value="${esc(state.business?.state||'')}" />
+      <label class="label">Category</label>
+      <input id="lbCat" class="input" value="${esc(state.business?.category||'')}" />
+      <label class="label">Website</label>
+      <input id="lbWebsite" class="input" type="url" value="${esc(state.business?.website||'')}" />
+      <label class="label">Description</label>
+      <textarea id="lbDesc" class="textarea">${esc(state.business?.description||'')}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div><label class="label">Country</label><select id="lbCountry" class="select">${countryOpts || '<option value="ng">Nigeria</option>'}</select></div>
+        <div><label class="label">Language</label><select id="lbLang" class="select">${langOpts}</select></div>
+      </div>
+      <button id="lbGo" class="btn">Generate Listings</button>
+      <div id="lbResult"></div>
+    </div>`;
+
+  $('lbGo').addEventListener('click', async function(){
+    const btn = this;
+    const profile = {
+      name: $('lbName').value.trim(),
+      category: $('lbCat').value.trim(),
+      phone: $('lbPhone').value.trim(),
+      city: $('lbCity').value.trim(),
+      state: $('lbState').value.trim(),
+      website: $('lbWebsite').value.trim(),
+      description: $('lbDesc').value.trim(),
+    };
+    const country = $('lbCountry').value;
+    const language = $('lbLang').value || null;
+    const r = $('lbResult');
+    if (!profile.name) { toast('Business name required', 'error'); return; }
+    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Generating…';
+    r.innerHTML = '<div class="status info">Generating 4-field listings…</div>';
+
+    try {
+      const d = await api('/api/directories/generate', { method:'POST', body:{ profile, country, limit: 30, language } });
+      let html = `<div class="status success">✓ ${d.total} listings generated${d.translated ? ' · ' + d.language.toUpperCase() : ''}</div>`;
+      html += `<div class="status info" style="font-size:12px;">${esc(d.instructions || '')}</div>`;
+
+      d.listings.forEach((l, idx) => {
+        html += `
+          <div class="listing-item">
+            <div class="listing-header">
+              <div>
+                <span class="listing-platform">${esc(l.directory)}</span>
+                <span class="badge source" style="font-size:9px;margin-left:6px;">${esc(l.categoryHint || l.category)}</span>
+              </div>
+              <div class="listing-actions">
+                <button class="btn small" data-open-copy="${idx}" style="background:linear-gradient(135deg,#10b981,#059669);">🔗 Open + Copy</button>
+                <button class="btn small secondary" data-copy-only="${idx}">📋 Copy</button>
+              </div>
+            </div>
+            <div class="listing-field">
+              <div class="listing-field-label">Post Title</div>
+              <div class="listing-field-value">${esc(l.postTitle)}</div>
+            </div>
+            <div class="listing-field">
+              <div class="listing-field-label">Post Content</div>
+              <div class="listing-field-value">${esc(l.postContent)}</div>
+            </div>
+            <div class="listing-field">
+              <div class="listing-field-label">Keywords</div>
+              <div class="listing-field-value">${esc((l.keywords||[]).join(', '))}</div>
+            </div>
+            <div class="listing-field">
+              <div class="listing-field-label">Category</div>
+              <div class="listing-field-value">${esc(l.category)}</div>
+            </div>
+          </div>`;
+      });
+      r.innerHTML = html;
+
+      r.querySelectorAll('[data-open-copy]').forEach(b => b.addEventListener('click', () => {
+        const idx = Number(b.getAttribute('data-open-copy'));
+        const l = d.listings[idx];
+        const target = l.composeUrl || l.siteUrl || l.url;
+        if (!target) { toast('No compose URL for this site', 'error'); return; }
+        copy(l.copyText, 'Content copied — use bookmarklet on compose page');
+        window.open(target, '_blank', 'noopener');
+      }));
+
+      r.querySelectorAll('[data-copy-only]').forEach(b => b.addEventListener('click', () => {
+        const idx = Number(b.getAttribute('data-copy-only'));
+        copy(d.listings[idx].copyText, 'Listing copied');
+      }));
+    } catch(e){
+      if (e.status===403) r.innerHTML = `<div class="status warning">Premium required. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
+      else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+    }
+    finally { btn.disabled = false; btn.textContent = 'Generate Listings'; }
+  });
 }
 
-// === SOCIAL ===
+// ===== SOCIAL =====
 async function renderSocial(){
   content.innerHTML = `
     <h1 class="h1">Social Accounts</h1>
@@ -850,7 +1008,7 @@ async function renderSocial(){
   });
 }
 
-// === CAMPAIGNS ===
+// ===== CAMPAIGNS =====
 async function renderCampaigns(){
   if (!state.business){
     content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="cSetupBtn">Go to Businesses</button></div>`;
@@ -896,7 +1054,7 @@ async function loadCampaignsList(){
   } catch(e){ el.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
 }
 
-// === LEADS ===
+// ===== LEADS =====
 async function renderLeads(){
   if (!state.business){
     content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="lSetupBtn">Go to Businesses</button></div>`;
@@ -913,7 +1071,7 @@ async function renderLeads(){
   } catch(e){ $('leadsTable').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
 }
 
-// === REVIEWS ===
+// ===== REVIEWS =====
 async function renderReviews(){
   if (!state.business){
     content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="rSetupBtn">Go to Businesses</button></div>`;
@@ -929,7 +1087,7 @@ async function renderReviews(){
   } catch(e){ $('revTable').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
 }
 
-// === ANALYTICS ===
+// ===== ANALYTICS =====
 async function renderAnalytics(){
   if (!state.business){
     content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="aSetupBtn">Go to Businesses</button></div>`;
@@ -942,7 +1100,7 @@ async function renderAnalytics(){
   } catch(e){ $('anaContent').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
 }
 
-// === BUSINESSES ===
+// ===== BUSINESSES =====
 async function renderBusinesses(){
   const isFree = state.plan === 'free';
   const limit = state.isAdmin ? 999999 : isFree ? 1 : 3;
@@ -988,7 +1146,7 @@ async function renderBusinesses(){
   }
 }
 
-// === SETTINGS ===
+// ===== SETTINGS =====
 function renderSettings(){
   const isFree = state.plan === 'free';
   const audits = state.usage.auditsToday || 0;
@@ -1010,7 +1168,7 @@ function renderSettings(){
     <div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Use this key for integrations.</p><div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent-l);word-break:break-all;margin-bottom:10px;">${esc(state.apiKey)}</div><button id="copyApiKey" class="btn secondary">Copy API key</button></div>
     <div class="section-title">App Settings</div>
     <div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Install Auto Traffic Engine as an app.</p><button class="btn secondary hidden" id="installAppBtnSettings">📱 Install App</button><div style="font-size:11px;color:var(--text-3);margin-top:8px;">If missing, your browser doesn't support PWA install or app is already installed.</div></div>
-    <div style="text-align:center;font-size:11px;color:var(--text-3);padding:24px 0;line-height:1.6;">Auto Traffic Engine v3.6.0<br><a href="${BACKEND}/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);">Terms</a></div>`;
+    <div style="text-align:center;font-size:11px;color:var(--text-3);padding:24px 0;line-height:1.6;">Auto Traffic Engine v3.7.0<br><a href="${BACKEND}/terms.html" target="_blank" rel="noopener" style="color:var(--text-3);">Terms</a></div>`;
   $('copyApiKey').addEventListener('click', ()=>copy(state.apiKey, 'API key copied'));
   $('logoutBtn').addEventListener('click', handleLogout);
   const settingsBtn = $('installAppBtnSettings');
