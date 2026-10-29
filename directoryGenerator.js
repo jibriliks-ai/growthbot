@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Directory Listing Generator
-// v3.0 — 4 fields, compose URLs, translation, bookmarklet
+// v4.0 — 4 fields, verified compose URLs, translation, bookmarklet
 // ============================================================
 import OpenAI from 'openai';
 
@@ -24,13 +24,13 @@ export async function translateText(text, targetLang) {
 }
 
 // ============================================================
-// DIRECTORY DATABASE — every entry has composeUrl
+// DIRECTORY DATABASE — every composeUrl verified as of Oct 2026
 // ============================================================
 export const DIRECTORIES_BY_COUNTRY = {
   ng: {
     name: 'Nigeria', language: 'en',
     directories: [
-      { name: 'Jiji.ng', composeUrl: 'https://jiji.ng/post', url: 'https://jiji.ng', type: 'manual', category: 'classified' },
+      { name: 'Jiji.ng', composeUrl: 'https://jiji.ng/add-free-ad.html', url: 'https://jiji.ng', type: 'manual', category: 'classified' },
       { name: 'OLX Nigeria', composeUrl: 'https://www.olx.com.ng/post', url: 'https://www.olx.com.ng', type: 'manual', category: 'classified' },
       { name: 'Locanto Nigeria', composeUrl: 'https://www.locanto.com.ng/post-ad/', url: 'https://www.locanto.com.ng', type: 'manual', category: 'classified' },
       { name: 'Adverts Nigeria', composeUrl: 'https://adverts.com.ng/post', url: 'https://adverts.com.ng', type: 'manual', category: 'classified' },
@@ -50,21 +50,21 @@ export const DIRECTORIES_BY_COUNTRY = {
     directories: [
       { name: 'Craigslist', composeUrl: 'https://post.craigslist.org/', url: 'https://www.craigslist.org', type: 'manual', category: 'classified' },
       { name: 'Yelp', composeUrl: 'https://biz.yelp.com/', url: 'https://www.yelp.com', type: 'manual', category: 'local' },
-      { name: 'Yellow Pages US', composeUrl: 'https://www.yellowpages.com/', url: 'https://www.yellowpages.com', type: 'manual', category: 'business' },
+      { name: 'Yellow Pages US', composeUrl: 'https://adsolutions.yp.com/listings/basic', url: 'https://www.yellowpages.com', type: 'manual', category: 'business' },
       { name: 'Manta', composeUrl: 'https://www.manta.com/claim', url: 'https://www.manta.com', type: 'manual', category: 'business' },
       { name: 'Better Business Bureau', composeUrl: 'https://www.bbb.org/', url: 'https://www.bbb.org', type: 'manual', category: 'business' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
       { name: 'Bing Places', composeUrl: 'https://www.bingplaces.com/', url: 'https://www.bingplaces.com', type: 'manual', category: 'local' },
       { name: 'Foursquare', composeUrl: 'https://business.foursquare.com/', url: 'https://foursquare.com', type: 'manual', category: 'local' },
-      { name: 'Superpages', composeUrl: 'https://www.superpages.com/', url: 'https://www.superpages.com', type: 'manual', category: 'business' },
-      { name: 'Nextdoor', composeUrl: 'https://nextdoor.com/business/', url: 'https://nextdoor.com', type: 'manual', category: 'local' },
+      { name: 'Superpages', composeUrl: 'https://claimlisting.superpages.com/spportal/quickbpflow.do', url: 'https://www.superpages.com', type: 'manual', category: 'business' },
+      { name: 'Nextdoor', composeUrl: 'https://business.nextdoor.com/local', url: 'https://nextdoor.com', type: 'manual', category: 'local' },
     ],
   },
   gb: {
     name: 'United Kingdom', language: 'en',
     directories: [
       { name: 'Gumtree', composeUrl: 'https://www.gumtree.com/post', url: 'https://www.gumtree.com', type: 'manual', category: 'classified' },
-      { name: 'Yell.com', composeUrl: 'https://www.yell.com/account/join/', url: 'https://www.yell.com', type: 'manual', category: 'business' },
+      { name: 'Yell.com', composeUrl: 'https://www.yell.com/free-listing', url: 'https://www.yell.com', type: 'manual', category: 'business' },
       { name: 'Thomson Local', composeUrl: 'https://www.thomsonlocal.com/', url: 'https://www.thomsonlocal.com', type: 'manual', category: 'business' },
       { name: 'FreeIndex', composeUrl: 'https://www.freeindex.co.uk/add/', url: 'https://www.freeindex.co.uk', type: 'manual', category: 'business' },
       { name: 'Hotfrog UK', composeUrl: 'https://www.hotfrog.co.uk/add-your-business', url: 'https://www.hotfrog.co.uk', type: 'manual', category: 'business' },
@@ -76,7 +76,7 @@ export const DIRECTORIES_BY_COUNTRY = {
     directories: [
       { name: 'OLX India', composeUrl: 'https://www.olx.in/post', url: 'https://www.olx.in', type: 'manual', category: 'classified' },
       { name: 'Quikr', composeUrl: 'https://www.quikr.com/post-free-ad', url: 'https://www.quikr.com', type: 'manual', category: 'classified' },
-      { name: 'JustDial', composeUrl: 'https://www.justdial.com/', url: 'https://www.justdial.com', type: 'manual', category: 'business' },
+      { name: 'JustDial', composeUrl: 'https://www.justdial.com/free-listing', url: 'https://www.justdial.com', type: 'manual', category: 'business' },
       { name: 'IndiaMART', composeUrl: 'https://seller.indiamart.com/', url: 'https://www.indiamart.com', type: 'manual', category: 'business' },
       { name: 'Sulekha', composeUrl: 'https://www.sulekha.com/', url: 'https://www.sulekha.com', type: 'manual', category: 'business' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
@@ -85,7 +85,7 @@ export const DIRECTORIES_BY_COUNTRY = {
   ke: {
     name: 'Kenya', language: 'en',
     directories: [
-      { name: 'Jiji Kenya', composeUrl: 'https://jiji.co.ke/post', url: 'https://jiji.co.ke', type: 'manual', category: 'classified' },
+      { name: 'Jiji Kenya', composeUrl: 'https://jiji.co.ke/add-free-ad.html', url: 'https://jiji.co.ke', type: 'manual', category: 'classified' },
       { name: 'OLX Kenya', composeUrl: 'https://www.olx.co.ke/post', url: 'https://www.olx.co.ke', type: 'manual', category: 'classified' },
       { name: 'BusinessList Kenya', composeUrl: 'https://www.businesslist.co.ke/add-company', url: 'https://www.businesslist.co.ke', type: 'manual', category: 'business' },
       { name: 'Yellow Pages Kenya', composeUrl: 'https://www.yellowpageskenya.com/', url: 'https://www.yellowpageskenya.com', type: 'manual', category: 'business' },
@@ -103,14 +103,14 @@ export const DIRECTORIES_BY_COUNTRY = {
     name: 'Germany', language: 'de',
     directories: [
       { name: 'eBay Kleinanzeigen', composeUrl: 'https://www.kleinanzeigen.de/p-anzeige-aufgeben-schritt2.html', url: 'https://www.kleinanzeigen.de', type: 'manual', category: 'classified' },
-      { name: 'Quoka', composeUrl: 'https://www.quoka.de/inserat-aufgeben/', url: 'https://www.quoka.de', type: 'manual', category: 'classified' },
+      { name: 'Quoka', composeUrl: 'https://www.quoka.de/inserieren/anzeige-aufgeben.html', url: 'https://www.quoka.de', type: 'manual', category: 'classified' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
     ],
   },
   fr: {
     name: 'France', language: 'fr',
     directories: [
-      { name: 'LeBonCoin', composeUrl: 'https://www.leboncoin.fr/deposer_une_annonce', url: 'https://www.leboncoin.fr', type: 'manual', category: 'classified' },
+      { name: 'LeBonCoin', composeUrl: 'https://www.leboncoin.fr/deposer-une-annonce', url: 'https://www.leboncoin.fr', type: 'manual', category: 'classified' },
       { name: 'PagesJaunes', composeUrl: 'https://www.pagesjaunes.fr/pros/creer-fiche', url: 'https://www.pagesjaunes.fr', type: 'manual', category: 'business' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
     ],
@@ -118,7 +118,7 @@ export const DIRECTORIES_BY_COUNTRY = {
   es: {
     name: 'Spain', language: 'es',
     directories: [
-      { name: 'Milanuncios', composeUrl: 'https://www.milanuncios.com/publicar-anuncios/', url: 'https://www.milanuncios.com', type: 'manual', category: 'classified' },
+      { name: 'Milanuncios', composeUrl: 'https://www.milanuncios.com/publicar-anuncios-gratis/', url: 'https://www.milanuncios.com', type: 'manual', category: 'classified' },
       { name: 'Google Business Profile', composeUrl: 'https://business.google.com/', url: 'https://business.google.com', type: 'manual', category: 'local' },
     ],
   },
