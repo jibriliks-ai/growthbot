@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Main Express server
-// v3.6.0 — Anti-spam, Facebook OAuth, directories, all features
+// v3.8.0 — Facebook iframe-safe OAuth, KB, anti-spam, super-brain
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -48,7 +48,7 @@ import { analyzeKeywords } from './keywordEngine.js';
 import {
   createVideo, pollShotstackStatus, DURATION_PRESETS, STYLE_TEMPLATES,
 } from './videoEngine.js';
-import { postForAccount, encryptToken } from './socialPoster.js';
+import { postForAccount, encryptToken, listFacebookPages } from './socialPoster.js';
 import { startScheduler, runSocialNow } from './scheduler.js';
 import {
   resolveSmartLink,
@@ -61,7 +61,6 @@ import {
 import { findQuestions, listSupportedCountries } from './questionFinder.js';
 import { generateDraft } from './draftGenerator.js';
 
-// Optional directory module (won't crash if missing)
 let dirModule = null;
 try {
   dirModule = await import('./directoryGenerator.js');
@@ -100,6 +99,14 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   frameguard: false,
 }));
+
+// Allow the app to be embedded in iframes (Blogspot etc.)
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Content-Security-Policy', "frame-ancestors *");
+  next();
+});
 
 app.use(cors({
   origin: '*',
@@ -188,20 +195,13 @@ function getClientIp(req) {
 // ============================================================
 app.get('/health', (req, res) => {
   res.json({
-    ok: true,
-    version: '3.6.0',
-    env: NODE_ENV,
-    uptime: Math.round(process.uptime()),
-    ai: AI_PROVIDER,
+    ok: true, version: '3.8.0', env: NODE_ENV,
+    uptime: Math.round(process.uptime()), ai: AI_PROVIDER,
     demoMode: process.env.DEMO_MODE === 'true',
     price: { USD: PREMIUM_PRICE_USD },
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_PUBLIC_KEY && process.env.FLUTTERWAVE_SECRET_KEY),
     facebookOAuthConfigured: Boolean(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.env.FACEBOOK_REDIRECT_URI),
-    auth: {
-      enabled: true,
-      jwtConfigured: Boolean(process.env.JWT_SECRET),
-      adminConfigured: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
-    },
+    auth: { enabled: true, jwtConfigured: Boolean(process.env.JWT_SECRET), adminConfigured: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) },
     services: {
       openai: Boolean(process.env.OPENAI_API_KEY),
       deepseek: Boolean(process.env.DEEPSEEK_API_KEY),
@@ -211,9 +211,8 @@ app.get('/health', (req, res) => {
       flutterwave: Boolean(process.env.FLUTTERWAVE_SECRET_KEY),
       whatsapp: isWhatsAppConfigured(),
       indexnow: Boolean(process.env.INDEXNOW_KEY),
-      dataForSeo: Boolean(process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD),
       directoryGenerator: Boolean(dirModule),
-      googleCse: Boolean(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_ID),
+      tokenEncryption: Boolean(process.env.TOKEN_ENCRYPTION_KEY),
     },
     time: new Date().toISOString(),
   });
@@ -251,15 +250,13 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     const user = await findUserByEmail(email);
     if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ error: 'Invalid email or password' });
     await updateUserLastLogin(user.id);
     const token = signToken({ userId: user.id, email: user.email, role: user.role, apiKey: user.api_key });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, apiKey: user.api_key } });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/auth/me', requireAuth, async (req, res) => {
@@ -292,7 +289,7 @@ app.get('/api/admin/overview', requireAdmin, async (req, res) => {
 });
 
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
-  try { res.json({ users: await listAllUsers(), total: (await listAllUsers()).length }); }
+  try { const u = await listAllUsers(); res.json({ users: u, total: u.length }); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -351,8 +348,7 @@ app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => 
     }
     const blog = await getOrCreateBlog(req.apiKey, req.query.url || 'unknown');
     res.json({
-      plan: blog.plan,
-      usage: blog.usage,
+      plan: blog.plan, usage: blog.usage,
       limits: {
         freeAudits: Number(process.env.FREE_AUDITS_PER_DAY) || 3,
         premiumVideos: Number(process.env.PREMIUM_VIDEOS_PER_MONTH) || 30,
@@ -479,14 +475,16 @@ app.post('/api/social/post-now', generalLimiter, requireApiKey, async (req, res)
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// === FACEBOOK OAUTH ===
+// === FACEBOOK OAUTH WITH IFRAME-SAFE RETURN URL ===
 app.get('/api/social/facebook/connect', generalLimiter, requireApiKey, (req, res) => {
   const appId = process.env.FACEBOOK_APP_ID;
   const redirectUri = process.env.FACEBOOK_REDIRECT_URI;
   if (!appId || !redirectUri) {
-    return res.status(500).json({ error: 'Facebook OAuth not configured on server' });
+    return res.status(500).json({ error: 'Facebook OAuth not configured on server. Add FACEBOOK_APP_ID and FACEBOOK_REDIRECT_URI to env.' });
   }
-  const state = Buffer.from(JSON.stringify({ apiKey: req.apiKey })).toString('base64url');
+  // returnUrl = the page to send the user back to after OAuth (e.g., Blogspot URL)
+  const returnUrl = req.query.redirect || '';
+  const state = Buffer.from(JSON.stringify({ apiKey: req.apiKey, returnUrl })).toString('base64url');
   const scopes = 'pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata';
   const authUrl =
     `https://www.facebook.com/v23.0/dialog/oauth?` +
@@ -502,17 +500,35 @@ app.get('/api/social/facebook/callback', async (req, res) => {
   const { code, state, error, error_description } = req.query;
   const FRONTEND = process.env.PUBLIC_BASE_URL || 'https://growthbot-aprv.onrender.com';
 
+  // Helper: build a redirect to app.html with returnUrl attached
+  const buildRedirect = (params) => {
+    let apiKeyForError = '';
+    let returnForUrl = '';
+    try {
+      if (state) {
+        const decoded = JSON.parse(Buffer.from(state, 'base64url').toString());
+        apiKeyForError = decoded.apiKey || '';
+        returnForUrl = decoded.returnUrl || '';
+      }
+    } catch {}
+    const qs = new URLSearchParams(params).toString();
+    let url = `${FRONTEND}/app.html?${qs}`;
+    if (returnForUrl) url += `&return=${encodeURIComponent(returnForUrl)}`;
+    return url;
+  };
+
   if (error || !code || !state) {
-    return res.redirect(`${FRONTEND}/app.html?fb_error=${encodeURIComponent(error_description || 'cancelled')}`);
+    return res.redirect(buildRedirect({ fb_error: error_description || 'cancelled' }));
   }
 
-  let apiKey;
+  let apiKey, returnUrl = '';
   try {
     const decoded = JSON.parse(Buffer.from(state, 'base64url').toString());
     apiKey = decoded.apiKey;
+    returnUrl = decoded.returnUrl || '';
     if (!apiKey) throw new Error('Missing apiKey');
   } catch (e) {
-    return res.redirect(`${FRONTEND}/app.html?fb_error=invalid_state`);
+    return res.redirect(buildRedirect({ fb_error: 'invalid_state' }));
   }
 
   try {
@@ -532,32 +548,78 @@ app.get('/api/social/facebook/callback', async (req, res) => {
       timeout: 15000,
     });
     const longToken = longRes.data.access_token;
-    if (!longToken) throw new Error('No long token');
+    if (!longToken) throw new Error('No long-lived token');
 
-    const pagesRes = await axios.get('https://graph.facebook.com/v23.0/me/accounts', {
-      params: { access_token: longToken, fields: 'id,name,access_token,category' },
-      timeout: 15000,
-    });
-    const pages = pagesRes.data.data || [];
+    const pagesResult = await listFacebookPages(longToken);
+    if (!pagesResult.ok) {
+      return res.redirect(buildRedirect({ fb_error: pagesResult.error }));
+    }
+    const pages = pagesResult.pages || [];
+
     if (pages.length === 0) {
-      return res.redirect(`${FRONTEND}/app.html?fb_error=no_pages_found`);
+      return res.redirect(buildRedirect({
+        fb_error: 'No Facebook Pages found. You must be an admin of at least one Page. Create one at facebook.com/pages/create, then reconnect.',
+      }));
     }
 
-    const page = pages[0];
-    await upsertSocialAccount({
-      apiKey,
-      platform: 'facebook',
-      accountId: page.id,
-      accountName: page.name,
-      accessTokenEnc: encryptToken(page.access_token),
-      expiresAt: null,
-    });
+    if (pages.length === 1) {
+      const page = pages[0];
+      await upsertSocialAccount({
+        apiKey, platform: 'facebook',
+        accountId: page.id, accountName: page.name,
+        accessTokenEnc: encryptToken(page.accessToken), expiresAt: null,
+      });
+      return res.redirect(buildRedirect({ fb_connected: '1', page: page.name }));
+    }
 
-    return res.redirect(`${FRONTEND}/app.html?fb_connected=1&page=${encodeURIComponent(page.name)}`);
+    // Multiple pages — send picker blob
+    const pickerPayload = {
+      apiKey,
+      pages: pages.map((p) => ({
+        id: p.id, name: p.name,
+        category: p.category || '',
+        token: encryptToken(p.accessToken),
+      })),
+      issuedAt: Date.now(),
+    };
+    const sessionBlob = Buffer.from(JSON.stringify(pickerPayload)).toString('base64url');
+    return res.redirect(buildRedirect({ fb_choose: '1', session: sessionBlob }));
   } catch (e) {
     console.error('Facebook OAuth error:', e.response?.data || e.message);
     const msg = e.response?.data?.error?.message || e.message || 'oauth_failed';
-    return res.redirect(`${FRONTEND}/app.html?fb_error=${encodeURIComponent(msg)}`);
+    return res.redirect(buildRedirect({ fb_error: msg }));
+  }
+});
+
+app.post('/api/social/facebook/select-page', generalLimiter, requireApiKey, async (req, res) => {
+  const { session, pageId } = req.body;
+  if (!session || !pageId) return res.status(400).json({ error: 'session and pageId required' });
+
+  let payload;
+  try {
+    payload = JSON.parse(Buffer.from(session, 'base64url').toString());
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid session blob' });
+  }
+  if (Date.now() - (payload.issuedAt || 0) > 15 * 60 * 1000) {
+    return res.status(400).json({ error: 'Session expired. Please reconnect Facebook.' });
+  }
+  if (payload.apiKey !== req.apiKey) {
+    return res.status(403).json({ error: 'Session does not match API key' });
+  }
+  const page = (payload.pages || []).find((p) => p.id === pageId);
+  if (!page) return res.status(404).json({ error: 'Page not found in session' });
+
+  try {
+    await upsertSocialAccount({
+      apiKey: req.apiKey, platform: 'facebook',
+      accountId: page.id, accountName: page.name,
+      accessTokenEnc: page.token, expiresAt: null,
+    });
+    res.json({ ok: true, page: { id: page.id, name: page.name } });
+  } catch (e) {
+    console.error('Page select error:', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -721,7 +783,6 @@ app.get('/api/businesses/:id/questions', generalLimiter, requireApiKey, async (r
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// === DRAFT ENDPOINT WITH ANTI-SPAM ===
 app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, res) => {
   const { blogUrl, blogTitle } = req.body;
   if (!blogUrl) return res.status(400).json({ error: 'blogUrl required' });
@@ -732,24 +793,26 @@ app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, re
     const question = await getQuestionFind(Number(req.params.id));
     if (!question) return res.status(404).json({ error: 'Question not found' });
 
-    // 🛡️ ANTI-SPAM — 5-post link lock
     if (!isAdmin) {
       const linkStatus = await canPostLink(question.business_id, 5);
       if (!linkStatus.allowed) {
         return res.status(403).json({
           error: 'LINK_LOCKED',
           message: `New businesses must post ${linkStatus.required} times before including links. You have ${linkStatus.postCount}/${linkStatus.required} posts. ${linkStatus.remaining} more needed.`,
-          postCount: linkStatus.postCount,
-          required: linkStatus.required,
-          remaining: linkStatus.remaining,
+          postCount: linkStatus.postCount, required: linkStatus.required, remaining: linkStatus.remaining,
         });
       }
     }
 
-    const result = await generateDraft({ questionTitle: question.title, questionUrl: question.question_url, blogTitle: blogTitle || blog.url || 'Full guide', blogUrl });
+    const biz = await getBusiness(question.business_id);
+    const result = await generateDraft({
+      questionTitle: question.title, questionUrl: question.question_url,
+      blogTitle: blogTitle || blog.url || 'Full guide', blogUrl,
+      businessName: biz?.name || '', businessCategory: biz?.category || '',
+    });
     if (!result.ok) return res.status(422).json({ error: 'DRAFT_REJECTED', reason: result.reason, draft: result.draft });
     const saved = await saveDraft({ businessId: question.business_id, questionId: question.id, draftText: result.draft, blogUrl, platform: result.platform, wordCount: result.wordCount });
-    res.json({ draft: saved, platform: result.platform, wordCount: result.wordCount });
+    res.json({ draft: saved, platform: result.platform, wordCount: result.wordCount, quality: result.quality, variants: result.variants });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -766,7 +829,7 @@ app.put('/api/drafts/:id/status', generalLimiter, requireApiKey, async (req, res
 });
 
 // ============================================================
-// DIRECTORIES — uses new generator with internal translation
+// DIRECTORIES
 // ============================================================
 app.get('/api/directories/countries', (req, res) => {
   if (!dirModule) return res.status(503).json({ error: 'Directory feature not available' });
@@ -795,7 +858,7 @@ app.post('/api/directories/generate', dirLimiter, requireApiKey, async (req, res
   }
 
   try {
-    const lang = language && language.trim() ? language.trim() : null; // '' → null → use country default
+    const lang = language && language.trim() ? language.trim() : null;
     const result = await dirModule.generateListingsForCountry({ profile, country, limit, language: lang });
     res.json(result);
   } catch (e) {
@@ -955,12 +1018,12 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.6.0 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.8.0 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
-      console.log(`   AI: ${AI_PROVIDER}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
-      console.log(`   Directory generator: ${dirModule ? '✅ available' : '⚠️  not loaded'}`);
-      console.log(`   Facebook OAuth: ${process.env.FACEBOOK_APP_ID ? '✅ configured' : '⚠️  not configured'}`);
+      console.log(`   Directory generator: ${dirModule ? '✅' : '⚠️ not loaded'}`);
+      console.log(`   Facebook OAuth: ${process.env.FACEBOOK_APP_ID ? '✅ configured' : '⚠️ not configured'}`);
+      console.log(`   iframe embedding: ✅ allowed (Blogspot-safe)`);
     });
   } catch (e) {
     console.error('❌ Boot failed:', e.message);
