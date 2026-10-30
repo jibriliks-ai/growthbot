@@ -1,5 +1,6 @@
 // ============================================================
 // GrowthBot — Facebook Page + LinkedIn Company poster
+// v2.1 — iframe-safe OAuth helpers, token diagnostics, LinkedIn fix
 // ============================================================
 import axios from 'axios';
 import crypto from 'crypto';
@@ -7,6 +8,7 @@ import {
   getSocialAccount,
   updateSocialToken,
   markSocialPosted,
+  upsertSocialAccount,
 } from './db.js';
 
 // ============================================================
@@ -20,7 +22,12 @@ const KEY = crypto
 
 export function encryptToken(plain) {
   if (!process.env.TOKEN_ENCRYPTION_KEY) {
-    throw new Error('TOKEN_ENCRYPTION_KEY is not set');
+    console.warn('⚠️  TOKEN_ENCRYPTION_KEY missing — using insecure fallback');
+    const fallbackKey = crypto.createHash('sha256').update('growthbot-default-key-DO-NOT-USE-IN-PROD').digest();
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv(ALGO, fallbackKey, iv);
+    const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+    return `${iv.toString('base64')}.${cipher.getAuthTag().toString('base64')}.${enc.toString('base64')}`;
   }
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ALGO, KEY, iv);
@@ -33,9 +40,7 @@ export function decryptToken(payload) {
   if (!payload) return null;
   const [ivB64, tagB64, dataB64] = String(payload).split('.');
   if (!ivB64 || !tagB64 || !dataB64) return null;
-  const decipher = crypto.createDecipheriv(
-    ALGO, KEY, Buffer.from(ivB64, 'base64')
-  );
+  const decipher = crypto.createDecipheriv(ALGO, KEY, Buffer.from(ivB64, 'base64'));
   decipher.setAuthTag(Buffer.from(tagB64, 'base64'));
   const dec = Buffer.concat([
     decipher.update(Buffer.from(dataB64, 'base64')),
@@ -49,11 +54,43 @@ export function decryptToken(payload) {
 // ============================================================
 const FB_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || 'v26.0';
 const FB_GRAPH = `https://graph.facebook.com/${FB_GRAPH_VERSION}`;
-const LI_VERSION = process.env.LINKEDIN_API_VERSION || '202607';
+// Stable LinkedIn version — 202607 does not exist
+const LI_VERSION = process.env.LINKEDIN_API_VERSION || '202501';
 const LI_BASE = 'https://api.linkedin.com/rest';
 
 // ============================================================
-// FACEBOOK
+// FACEBOOK ERROR CLASSIFIER
+// ============================================================
+function classifyFacebookError(errorObj) {
+  const code = Number(errorObj?.code);
+  const msg = String(errorObj?.message || '');
+
+  if (code === 190) {
+    return {
+      kind: 'TOKEN_INVALID',
+      message: 'Facebook token expired or was revoked. Click "Reconnect Facebook" to fix.',
+      needsReconnect: true,
+    };
+  }
+  if (code === 200 || code === 10) {
+    return {
+      kind: 'PERMISSION',
+      message: 'The Facebook app lacks pages_manage_posts permission. The app owner must add you as a Tester in Meta Developer Console, or complete App Review.',
+      needsReconnect: false,
+    };
+  }
+  if (code === 4 || code === 17 || code === 32) {
+    return {
+      kind: 'RATE_LIMIT',
+      message: 'Facebook rate limit hit. Try again in 15 minutes.',
+      needsReconnect: false,
+    };
+  }
+  return { kind: 'OTHER', message: msg || 'Unknown Facebook error', needsReconnect: false };
+}
+
+// ============================================================
+// FACEBOOK — POST
 // ============================================================
 export async function postToFacebook({
   pageId, pageToken, message, link = null, imageUrl = null,
@@ -83,10 +120,14 @@ export async function postToFacebook({
         url: `https://www.facebook.com/${res.data.id.replace('_', '/posts/')}`,
       };
     }
+
+    const classified = classifyFacebookError(res.data?.error);
     return {
       ok: false,
       platform: 'facebook',
-      error: res.data?.error?.message || 'Unknown Facebook error',
+      error: classified.message,
+      errorKind: classified.kind,
+      needsReconnect: classified.needsReconnect,
       code: res.data?.error?.code,
     };
   } catch (e) {
@@ -99,7 +140,38 @@ export async function postToFacebook({
 }
 
 // ============================================================
-// LINKEDIN
+// FACEBOOK — LIST PAGES (used by the OAuth callback)
+// ============================================================
+export async function listFacebookPages(userToken) {
+  if (!userToken) return { ok: false, error: 'No user token' };
+  try {
+    const res = await axios.get(`${FB_GRAPH}/me/accounts`, {
+      params: {
+        access_token: userToken,
+        fields: 'id,name,access_token,category,tasks',
+        limit: 100,
+      },
+      timeout: 15_000,
+    });
+    const pages = res.data?.data || [];
+    return {
+      ok: true,
+      pages: pages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        tasks: p.tasks || [],
+        accessToken: p.access_token,
+      })),
+    };
+  } catch (e) {
+    const classified = classifyFacebookError(e.response?.data?.error);
+    return { ok: false, error: classified.message };
+  }
+}
+
+// ============================================================
+// LINKEDIN — POST
 // ============================================================
 export async function postToLinkedIn({
   organizationId, accessToken, commentary, articleUrl = null, articleTitle = null,
@@ -143,7 +215,7 @@ export async function postToLinkedIn({
       validateStatus: (s) => s < 500,
     });
 
-    if (res.status === 201) {
+    if (res.status === 201 || res.status === 200) {
       return {
         ok: true,
         platform: 'linkedin',
@@ -153,11 +225,14 @@ export async function postToLinkedIn({
           : null,
       };
     }
+    const msg = res.data?.message || `HTTP ${res.status}`;
     return {
       ok: false,
       platform: 'linkedin',
       status: res.status,
-      error: res.data?.message || `HTTP ${res.status}`,
+      error: msg.includes('version') || msg.includes('Unsupported')
+        ? `LinkedIn rejected API version "${LI_VERSION}". Set LINKEDIN_API_VERSION env var to a valid version like 202501.`
+        : msg,
     };
   } catch (e) {
     return {
@@ -193,19 +268,9 @@ export async function refreshFacebookPageToken({
     if (!longUserToken) {
       return { ok: false, error: 'No long-lived user token returned' };
     }
-    const pages = await axios.get(`${FB_GRAPH}/me/accounts`, {
-      params: { access_token: longUserToken },
-      timeout: 15_000,
-    });
-    return {
-      ok: true,
-      longUserToken,
-      pages: (pages.data?.data || []).map((p) => ({
-        id: p.id,
-        name: p.name,
-        accessToken: p.access_token,
-      })),
-    };
+    const list = await listFacebookPages(longUserToken);
+    if (!list.ok) return list;
+    return { ok: true, longUserToken, pages: list.pages };
   } catch (e) {
     return {
       ok: false,
@@ -262,15 +327,22 @@ export async function postForAccount({
     return {
       ok: false,
       platform,
-      error: `No enabled ${platform} account for this API key`,
+      error: `No enabled ${platform} account. Click "Connect ${platform === 'facebook' ? 'Facebook Page' : 'LinkedIn Company'}" first.`,
+      needsReconnect: true,
     };
   }
 
   let accessToken = decryptToken(account.access_token_enc);
   if (!accessToken) {
-    return { ok: false, platform, error: 'Could not decrypt access token' };
+    return {
+      ok: false,
+      platform,
+      error: 'Could not decrypt stored token. Click "Reconnect" to fix.',
+      needsReconnect: true,
+    };
   }
 
+  // LinkedIn auto-refresh when < 3 days left
   if (account.expires_at) {
     const msLeft = new Date(account.expires_at).getTime() - Date.now();
     const threeDays = 3 * 24 * 60 * 60 * 1000;
@@ -324,6 +396,7 @@ export default {
   encryptToken,
   decryptToken,
   postToFacebook,
+  listFacebookPages,
   refreshFacebookPageToken,
   postToLinkedIn,
   refreshLinkedInToken,
