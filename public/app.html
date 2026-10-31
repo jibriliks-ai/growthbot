@@ -433,6 +433,12 @@ function renderNav(){
   $('bottomNav').querySelectorAll('[data-bnav]').forEach(btn => { btn.addEventListener('click', ()=>{ const key = btn.getAttribute('data-bnav'); if (key === 'menu') { openDrawer(); return; } navigateTo(key); }); });
 }
 
+function stopPolling(){
+  if (state.pollTimer) {
+    clearTimeout(state.pollTimer);
+    state.pollTimer = null;
+  }
+}
 function navigateTo(target){
   if (target === state.tab) return;
   let tabDef = null;
