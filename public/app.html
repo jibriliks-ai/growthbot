@@ -242,7 +242,7 @@ a:hover{color:var(--accent)}
       <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
       <div>
         <div class="sidebar-title">Auto Traffic Engine</div>
-        <div class="sidebar-subtitle">v3.8.0</div>
+        <div class="sidebar-subtitle">v3.8.1</div>
       </div>
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
@@ -278,7 +278,7 @@ a:hover{color:var(--accent)}
     <div class="sidebar-logo"><img src="/logo.png" alt="Logo"></div>
     <div>
       <div class="sidebar-title">Auto Traffic Engine</div>
-      <div class="sidebar-subtitle">v3.8.0</div>
+      <div class="sidebar-subtitle">v3.8.1</div>
     </div>
     <button class="drawer-close" id="drawerClose">×</button>
   </div>
@@ -424,7 +424,7 @@ function renderNav(){
   $('sidebarNav').innerHTML = navHtml;
   $('drawerNav').innerHTML = navHtml;
   ['sidebarNav','drawerNav'].forEach(id => { $(id).querySelectorAll('[data-tab]').forEach(btn => { btn.addEventListener('click', ()=>{ const target = btn.getAttribute('data-tab'); closeDrawer(); navigateTo(target); }); }); });
-  const footerHTML = `<div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}"><div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div><div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div></div><button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button><div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.8.0</div>`;
+  const footerHTML = `<div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}"><div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div><div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div></div><button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button><div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.8.1</div>`;
   const sFooter = $('sidebarFooter'); const dFooter = $('drawerFooter');
   if (sFooter) sFooter.innerHTML = footerHTML;
   if (dFooter) dFooter.innerHTML = footerHTML;
@@ -499,756 +499,682 @@ function renderHome(){
   const leads = state.analytics?.leads || 0;
   const questions = state.analytics?.questions_found || 0;
   const hour = new Date().getHours();
-  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const name = state.user?.name || state.user?.email?.split('@')[0] || '';
+  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening   const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   content.innerHTML = `
-    <div style="font-size:13px;color:var(--text-2);margin-bottom:4px;font-weight:500;">${greet}${name ? ', ' + esc(name) : ''} 👋${state.isAdmin ? ' <span style="background:rgba(245,158,11,.15);color:#fcd34d;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;margin-left:6px;">🛡️ ADMIN</span>' : ''}</div>
-    <h1 class="h1">${esc(state.business?.name || 'Welcome to Auto Traffic Engine')}</h1>
-    <p class="subtitle">${state.business ? "Here's what's happening today." : 'Set up your business to unlock every tool.'}</p>
-    <div class="section-title">Quick actions</div>
-    <div class="quick-grid">
-      <button class="quick" data-go="seo"><span class="quick-icon">🔍</span><div class="quick-label">SEO Audit</div><div class="quick-sub">${state.isAdmin ? '∞' : isFree ? (state.limits.freeAudits - audits) + ' left' : 'Unlimited'}</div></button>
-      <button class="quick" data-go="video" ${isFree && !state.isAdmin ? 'disabled' : ''}><span class="quick-icon">🎬</span><div class="quick-label">Video Ad</div><div class="quick-sub">${state.isAdmin ? '∞' : isFree ? '🔒 Premium' : videos + '/' + state.limits.premiumVideos}</div></button>
-      <button class="quick" data-go="qa" ${isFree && !state.isAdmin ? 'disabled' : ''}><span class="quick-icon">💬</span><div class="quick-label">Find Q&A</div><div class="quick-sub">${state.isAdmin ? '∞' : isFree ? '🔒 Premium' : '60+ countries'}</div></button>
+    <h1 class="h1">${esc(greet)}, ${esc(state.user?.name || state.user?.email || 'there')}!</h1>
+    <p class="subtitle">Here's your growth overview${state.business ? ' for ' + esc(state.business.name) : ''}.</p>
+
+    ${state.plan === 'free' && !state.isAdmin ? `
+      <div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1));border-color:rgba(139,92,246,0.3);">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent-l);margin-bottom:8px;">Upgrade to Premium</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Unlock every growth tool</div>
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.5;">Video ads, keyword research, Q&A finder, social posting, directory listings, and unlimited audits.</div>
+        <button class="btn" onclick="location.href='/pay.html'">Upgrade for $${state.limits.price}/mo</button>
+      </div>
+    ` : ''}
+
+    <div class="stats">
+      <div class="stat"><div class="stat-num">${audits}</div><div class="stat-label">Audits Today</div></div>
+      <div class="stat"><div class="stat-num">${videos}</div><div class="stat-label">Videos Month</div></div>
+      <div class="stat"><div class="stat-num">${leads}</div><div class="stat-label">Leads</div></div>
     </div>
-    <div class="section-title">This month</div>
-    <div class="stats"><div class="stat"><div class="stat-num">${audits}</div><div class="stat-label">Audits</div></div><div class="stat"><div class="stat-num">${videos}</div><div class="stat-label">Videos</div></div><div class="stat"><div class="stat-num">${leads}</div><div class="stat-label">Leads</div></div></div>
-    ${questions > 0 ? `<div class="section-title">Q&A activity</div><div class="card card-tight" style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><div><div style="font-size:14px;font-weight:600;">${questions} questions found</div><div style="font-size:11px;color:var(--text-2);margin-top:2px;">${state.analytics?.drafts_posted||0} posted · ${state.analytics?.drafts_pending||0} pending</div></div><button class="btn small secondary" data-go="qa">View →</button></div>` : ''}
-    ${state.isAdmin ? `<div class="section-title">Admin</div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;">🛡️ ADMIN ACCESS</div><div style="font-size:14px;font-weight:600;margin-top:2px;">Monitor users, businesses, leads</div></div><a href="/admin.html" class="btn small" style="text-decoration:none;background:linear-gradient(135deg,#f59e0b,#d97706);">Open Admin Panel →</a></div></div>` : !state.business ? `<div class="section-title">Get started</div><button class="btn" id="openDash">Set up your business →</button>` : `<div class="section-title">Your plan</div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">${isFree?'Free':'Premium'}</div><div style="font-size:14px;font-weight:600;margin-top:2px;">${isFree?'Upgrade for full features':'All features unlocked'}</div></div>${isFree?`<a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" class="btn small" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">⚡ Upgrade to Premium</a>`:''}</div></div>`}
+
+    ${!state.business ? `
+      <div class="card">
+        <div class="empty">
+          <div class="empty-icon">🏢</div>
+          <div class="empty-title">Add your first business</div>
+          <div class="empty-desc">Set up your business profile to unlock campaigns, leads, reviews, and analytics.</div>
+          <button class="btn" onclick="window.navigateTo('businesses')">Add Business</button>
+        </div>
+      </div>
+    ` : `
+      <div class="section-title">Quick Actions</div>
+      <div class="quick-grid">
+        <button class="quick" onclick="window.navigateTo('seo')">
+          <span class="quick-icon">🔍</span><span class="quick-label">SEO Audit</span>
+        </button>
+        <button class="quick" onclick="window.navigateTo('qa')" ${state.plan === 'free' && !state.isAdmin ? 'disabled' : ''}>
+          <span class="quick-icon">💬</span><span class="quick-label">Find Q&A</span>
+          <span class="quick-sub">${state.plan === 'free' && !state.isAdmin ? '🔒 Premium' : ''}</span>
+        </button>
+        <button class="quick" onclick="window.navigateTo('social')" ${state.plan === 'free' && !state.isAdmin ? 'disabled' : ''}>
+          <span class="quick-icon">📱</span><span class="quick-label">Post Social</span>
+          <span class="quick-sub">${state.plan === 'free' && !state.isAdmin ? '🔒 Premium' : ''}</span>
+        </button>
+      </div>
+
+      <div class="section-title">Business Snapshot</div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:4px;">Questions Found</div><div style="font-size:22px;font-weight:800;">${questions}</div></div>
+          <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:4px;">Reviews</div><div style="font-size:22px;font-weight:800;">${state.analytics?.reviews || 0}</div></div>
+        </div>
+      </div>
+    `}
   `;
-  content.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click', ()=>navigateTo(btn.getAttribute('data-go'))));
-  const od = $('openDash'); if (od) od.addEventListener('click', ()=>navigateTo('businesses'));
 }
 
 function renderSEO(){
   content.innerHTML = `
     <h1 class="h1">SEO Audit</h1>
-    <p class="subtitle">Analyze any page for free. Get an instant score with auto-fixes.</p>
+    <p class="subtitle">Scan your site for SEO issues and get AI-powered fixes.</p>
     <div class="card">
-      <label class="label">Page URL</label>
-      <input id="seoUrl" class="input" type="url" value="${esc(location.href)}" />
-      <label class="label">Target keyword (optional)</label>
-      <input id="seoKw" class="input" placeholder="e.g. buy cows in lagos" />
-      <button id="seoGo" class="btn">Audit &amp; Auto-fix</button>
-      <div id="seoResult"></div>
-    </div>`;
-  $('seoGo').addEventListener('click', async function(){
-    const btn = this; const url = $('seoUrl').value.trim(); const kw = $('seoKw').value.trim(); const r = $('seoResult');
-    if (!url) return;
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Auditing…';
-    r.innerHTML = '<div class="status info">Analyzing…</div>';
+      <label class="label">Website URL</label>
+      <input class="input" id="auditUrl" type="url" placeholder="https://example.com" value="${esc(state.business?.url || '')}" />
+      <label class="label">Target Keyword (optional)</label>
+      <input class="input" id="auditKeyword" placeholder="best coffee shop near me" />
+      <button class="btn" id="auditBtn">Run SEO Audit</button>
+      <div id="auditResult"></div>
+    </div>
+  `;
+  $('auditBtn').addEventListener('click', async () => {
+    const url = $('auditUrl').value.trim();
+    const keyword = $('auditKeyword').value.trim();
+    if (!url) return toast('Enter a URL', 'error');
+    $('auditBtn').disabled = true;
+    $('auditBtn').innerHTML = '<span class="spin"></span>Running audit...';
+    $('auditResult').innerHTML = '';
     try {
-      const d = await api('/api/audit', {method:'POST', body:{url, keyword: kw, autoFix: true}});
-      const b = d.before || {score:0, issues:[]}; const a = d.after; const fixes = d.fixes || [];
-      let html = '<div class="score-row"><div class="score-block"><div class="score-num">' + b.score + '</div><div class="score-label">Before</div></div>';
-      if (a) html += '<div class="score-arrow">→</div><div class="score-block"><div class="score-num good">' + a.score + '</div><div class="score-label">After</div></div>';
-      html += '</div>';
-      const issues = b.issues || [];
-      if (issues.length){ html += `<div class="section-title">Issues (${issues.length})</div><ul class="list">`; issues.slice(0,10).forEach(i=>{ html += `<li class="list-item ${i.severity==='error'?'error':'warning'}">${esc(i.message||i)}</li>`; }); html += '</ul>'; }
-      else html += '<div class="status success">✓ No critical issues</div>';
-      if (fixes.length){ html += `<div class="section-title">Fixes (${fixes.length})</div><ul class="list">`; fixes.slice(0,10).forEach(f=>{ html += `<li class="list-item success">${esc(f)}</li>`; }); html += '</ul>'; }
-      html += '<button id="copyReport" class="btn secondary">Copy report</button>';
-      r.innerHTML = html;
-      $('copyReport').addEventListener('click', ()=>{ const txt = ['Auto Traffic Engine SEO Report','URL: '+d.url,'Score: '+(b.score||0)+(a?' → '+a.score:''),'','Issues:',...(b.issues||[]).map(i=>'  - '+(i.message||i)),'','Fixes:',...(d.fixes||[]).map(f=>'  - '+f)].join('\n'); copy(txt, 'Report copied!'); });
-      loadPlan().then(()=>{ renderNav(); updateHeader(); });
-    } catch(e){
-      if (e.status===403 && e.data?.error==='FREE_LIMIT') r.innerHTML = `<div class="status warning">Daily limit. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
-      else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
-    } finally { btn.disabled = false; btn.textContent = 'Audit & Auto-fix'; }
+      const r = await api('/api/audit', { method: 'POST', body: { url, keyword } });
+      renderAuditResult(r);
+    } catch (e) {
+      if (e.data?.error === 'FREE_LIMIT') {
+        $('auditResult').innerHTML = '<div class="status warning">Daily free limit reached. Upgrade for unlimited audits.</div>';
+      } else {
+        $('auditResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+      }
+    } finally {
+      $('auditBtn').disabled = false;
+      $('auditBtn').textContent = 'Run SEO Audit';
+    }
   });
+}
+
+function renderAuditResult(r){
+  const before = r.before?.score ?? 0;
+  const after = r.after?.score ?? null;
+  const issues = r.before?.issues || [];
+  const fixes = r.fixes || [];
+  let html = `
+    <div class="score-row">
+      <div class="score-block"><div class="score-num ${before >= 70 ? 'good' : ''}">${before}</div><div class="score-label">Current</div></div>
+      ${after !== null ? `<div class="score-arrow">→</div><div class="score-block"><div class="score-num good">${after}</div><div class="score-label">After Fix</div></div>` : ''}
+    </div>`;
+  if (issues.length) {
+    html += `<div class="section-title">Issues Found (${issues.length})</div><ul class="list">`;
+    issues.slice(0, 20).forEach(i => {
+      html += `<li class="list-item ${i.severity || 'warning'}"><strong>${esc(i.type || 'Issue')}:</strong> ${esc(i.description || i.detail || '')}</li>`;
+    });
+    html += '</ul>';
+  }
+  if (fixes.length) {
+    html += `<div class="section-title">Recommended Fixes</div><ul class="list">`;
+    fixes.slice(0, 15).forEach(f => {
+      html += `<li class="list-item success"><strong>${esc(f.title || 'Fix')}:</strong> ${esc(f.description || f.detail || '')}</li>`;
+    });
+    html += '</ul>';
+  }
+  $('auditResult').innerHTML = html;
 }
 
 function renderVideo(){
   content.innerHTML = `
     <h1 class="h1">Video Ads</h1>
-    <p class="subtitle">AI script + real voiceover. 10–25s, ready for Reels, TikTok, WhatsApp.</p>
+    <p class="subtitle">Turn any topic into a short video ad.</p>
     <div class="card">
-      <label class="label">Topic</label><input id="vidTopic" class="input" placeholder="Fresh cows in Warri" />
-      <label class="label">Business name</label><input id="vidBiz" class="input" value="${esc(state.business?.name||'')}" />
-      <label class="label">Duration</label><select id="vidDur" class="select"><option value="10">10s</option><option value="15" selected>15s</option><option value="20">20s</option><option value="25">25s</option></select>
-      <label class="label">Style</label><select id="vidStyle" class="select"><option value="documentary">Documentary</option><option value="infomercial">Infomercial</option><option value="tutorial">Tutorial</option><option value="testimonial">Testimonial</option><option value="product-showcase">Product Showcase</option></select>
-      <button id="vidGo" class="btn">Generate Video</button><div id="vidResult"></div>
-    </div>`;
-  $('vidGo').addEventListener('click', async function(){
-    const btn = this; const topic = $('vidTopic').value.trim(); const businessName = $('vidBiz').value.trim(); const durationSeconds = Number($('vidDur').value); const style = $('vidStyle').value; const r = $('vidResult');
-    if (!topic) { toast('Enter topic', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Generating…'; r.innerHTML = '<div class="status info">Writing script…</div>';
+      <label class="label">Topic</label>
+      <input class="input" id="videoTopic" placeholder="e.g. Why our coffee is the best in Lagos" />
+      <label class="label">Business Name</label>
+      <input class="input" id="videoBizName" value="${esc(state.business?.name || '')}" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+        <div>
+          <label class="label">Duration</label>
+          <select class="select" id="videoDuration"><option value="15">15s</option><option value="30">30s</option><option value="60">60s</option></select>
+        </div>
+        <div>
+          <label class="label">Style</label>
+          <select class="select" id="videoStyle"><option value="documentary">Documentary</option><option value="energetic">Energetic</option><option value="minimal">Minimal</option></select>
+        </div>
+      </div>
+      <button class="btn" id="videoBtn">Create Video Ad</button>
+      <div id="videoResult"></div>
+    </div>
+  `;
+  $('videoBtn').addEventListener('click', async () => {
+    const topic = $('videoTopic').value.trim();
+    const businessName = $('videoBizName').value.trim();
+    const durationSeconds = Number($('videoDuration').value);
+    const style = $('videoStyle').value;
+    if (!topic) return toast('Enter a topic', 'error');
+    $('videoBtn').disabled = true;
+    $('videoBtn').innerHTML = '<span class="spin"></span>Creating video...';
     try {
-      const d = await api('/api/create-video', {method:'POST', body:{topic, businessName, durationSeconds, style}});
-      let html = '';
-      if (d.script){ html += `<div class="card card-tight" style="margin-top:12px;"><div class="section-title">Script</div><div style="font-size:13px;line-height:1.6;">${esc(d.script.fullScript||'')}</div></div>`; if (d.script.caption) html += `<div class="card card-tight"><div class="section-title">Caption</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;">${esc(d.script.caption)}</div><button id="copyCap" class="btn secondary small">Copy caption</button></div>`; }
-      if (d.renderId && d.pollUrl){ html += '<div class="status info" id="vidStatus">Rendering…</div><div id="vidPreview"></div>'; r.innerHTML = html; startVideoPolling(d.pollUrl, r); }
-      else r.innerHTML = html + '<div class="status success">Ready</div>';
-      if ($('copyCap')) $('copyCap').addEventListener('click', ()=>copy(d.script.caption, 'Caption copied'));
-    } catch(e){ if (e.status===403) r.innerHTML = `<div class="status warning">Premium required. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`; else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-    finally { btn.disabled = false; btn.textContent = 'Generate Video'; }
+      const r = await api('/api/create-video', { method: 'POST', body: { topic, businessName, durationSeconds, style } });
+      $('videoResult').innerHTML = `
+        <div class="status info" style="margin-top:16px;">
+          <strong>Video is rendering</strong><br>
+          Render ID: <code>${esc(r.renderId || '')}</code>
+          <div style="margin-top:8px;font-size:12px;color:var(--text-2);">Usually ready in 2–5 minutes.</div>
+          <button class="btn small secondary" id="videoCheckBtn" style="margin-top:8px;">Check Status</button>
+        </div>
+        <div id="videoStatus"></div>`;
+      $('videoCheckBtn').addEventListener('click', async () => {
+        try {
+          const s = await api('/api/video-status/' + encodeURIComponent(r.renderId));
+          if (s?.status === 'done' && s.url) {
+            $('videoStatus').innerHTML = `<div class="status success">Ready! <a href="${esc(s.url)}" target="_blank" rel="noopener">Download video</a></div>`;
+          } else {
+            $('videoStatus').innerHTML = `<div class="status info">Status: ${esc(s?.status || 'processing')}</div>`;
+          }
+        } catch (e) { toast(e.message, 'error'); }
+      });
+    } catch (e) {
+      $('videoResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+    } finally {
+      $('videoBtn').disabled = false;
+      $('videoBtn').textContent = 'Create Video Ad';
+    }
   });
 }
-
-function startVideoPolling(pollUrl, container){
-  stopPolling();
-  const tick = async ()=>{ try { const d = await api(pollUrl); const s = container.querySelector('#vidStatus'); const p = container.querySelector('#vidPreview');
-    if (d.status==='done' && d.url){ if (s){ s.className='status success'; s.textContent='✓ Ready'; } if (p) p.innerHTML = `<div style="aspect-ratio:9/16;max-height:400px;margin-top:12px;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--border);"><video src="${esc(d.url)}" controls muted playsinline style="width:100%;height:100%;object-fit:contain;"></video></div><a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener" download style="display:block;text-align:center;text-decoration:none;margin-top:12px;">⬇ Download</a>`; return; }
-    if (d.status==='failed'){ if (s){ s.className='status error'; s.textContent='Failed'; } return; }
-    state.pollTimer = setTimeout(tick, 5000);
-  } catch { state.pollTimer = setTimeout(tick, 8000); } };
-  tick();
-}
-function stopPolling(){ if (state.pollTimer){ clearTimeout(state.pollTimer); state.pollTimer=null; } }
 
 function renderKeywords(){
   content.innerHTML = `
     <h1 class="h1">Keyword Research</h1>
-    <p class="subtitle">Discover high-opportunity keywords.</p>
+    <p class="subtitle">Discover high-intent keywords and search volume.</p>
     <div class="card">
-      <label class="label">Seed keywords</label><input id="kwSeeds" class="input" placeholder="buy cows in nigeria, livestock farm" />
-      <label class="label">Or paste keywords (one per line)</label><textarea id="kwManual" class="textarea"></textarea>
-      <label class="label">Analyze against URL (optional)</label><input id="kwUrl" class="input" type="url" placeholder="https://yourblog.com/post" />
-      <button id="kwGo" class="btn">Analyze Keywords</button><div id="kwResult"></div>
-    </div>`;
-  $('kwGo').addEventListener('click', async function(){
-    const btn = this; const seeds = $('kwSeeds').value.split(',').map(s=>s.trim()).filter(Boolean); const manualKeywords = $('kwManual').value.split('\n').map(s=>s.trim()).filter(Boolean); const url = $('kwUrl').value.trim() || null; const r = $('kwResult');
-    if (seeds.length===0 && manualKeywords.length===0){ toast('Enter seeds or keywords', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Analyzing…'; r.innerHTML = '<div class="status info">Fetching…</div>';
+      <label class="label">Seed Keywords (comma separated)</label>
+      <input class="input" id="kwSeeds" placeholder="coffee shop, latte, espresso" />
+      <label class="label">Country</label>
+      <select class="select" id="kwCountry">
+        <option value="ng">Nigeria</option>
+        <option value="us">United States</option>
+        <option value="uk">United Kingdom</option>
+        <option value="ca">Canada</option>
+      </select>
+      <button class="btn" id="kwBtn">Analyze Keywords</button>
+      <div id="kwResult"></div>
+    </div>
+  `;
+  $('kwBtn').addEventListener('click', async () => {
+    const seeds = $('kwSeeds').value.split(',').map(s => s.trim()).filter(Boolean);
+    if (!seeds.length) return toast('Enter at least one keyword', 'error');
+    $('kwBtn').disabled = true;
+    $('kwBtn').innerHTML = '<span class="spin"></span>Analyzing...';
     try {
-      const d = await api('/api/keywords', {method:'POST', body:{seeds, manualKeywords, url, country: state.business?.country || 'ng'}});
-      let html = `<div class="stats" style="margin-top:16px;"><div class="stat"><div class="stat-num">${d.totalKeywords}</div><div class="stat-label">Keywords</div></div><div class="stat"><div class="stat-num">${d.clusters?.length || 0}</div><div class="stat-label">Clusters</div></div><div class="stat"><div class="stat-num">${d.summary?.highOpportunity || 0}</div><div class="stat-label">High Opp</div></div></div><div class="status info" style="font-size:11px;">${esc(d.honestNote || '')}</div>`;
-      html += '<div class="section-title">Top keywords</div><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Keyword</th><th>Score</th><th>Intent</th></tr></thead><tbody>';
-      d.keywords.slice(0, 30).forEach(k=>{ const scoreColor = k.opportunityScore >= 70 ? 'success' : k.opportunityScore >= 40 ? 'pending' : 'source'; html += `<tr><td style="color:var(--text);font-weight:500;">${esc(k.keyword)}</td><td><span class="badge ${scoreColor}">${k.opportunityScore}</span></td><td>${esc(k.intent)}</td></tr>`; });
-      html += '</tbody></table></div><button id="kwCopy" class="btn secondary" style="margin-top:12px;">Copy all</button>';
-      r.innerHTML = html;
-      $('kwCopy').addEventListener('click', ()=>copy(d.keywords.map(k=>k.keyword).join('\n'), 'Copied'));
-    } catch(e){ r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-    finally { btn.disabled = false; btn.textContent = 'Analyze Keywords'; }
+      const r = await api('/api/keywords', { method: 'POST', body: { seeds, country: $('kwCountry').value } });
+      const rows = r.keywords || r.results || [];
+      $('kwResult').innerHTML = `
+        <div class="section-title">Results (${rows.length})</div>
+        <div class="card" style="padding:0;overflow:auto;">
+          <table class="data-table">
+            <thead><tr><th>Keyword</th><th>Volume</th><th>Difficulty</th></tr></thead>
+            <tbody>${rows.slice(0, 50).map(k => `<tr><td>${esc(k.keyword || k.term)}</td><td>${esc(String(k.volume ?? k.searchVolume ?? '—'))}</td><td>${esc(String(k.difficulty ?? k.competition ?? '—'))}</td></tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+    } catch (e) {
+      $('kwResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+    } finally {
+      $('kwBtn').disabled = false;
+      $('kwBtn').textContent = 'Analyze Keywords';
+    }
   });
 }
 
 function renderQA(){
-  if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><div class="empty-desc">The Q&A finder needs a business profile.</div><button class="btn" id="qaSetupBtn">Go to Businesses</button></div>`;
-    $('qaSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
-    return;
-  }
-  const byRegion = {};
-  state.countries.forEach(c => { if (!byRegion[c.region]) byRegion[c.region] = []; byRegion[c.region].push(c); });
-  const regionOrder = ['Global','North America','Europe','Africa','Asia','Middle East','Latin America','Oceania'];
-  let groups = '';
-  regionOrder.forEach(region => { if (!byRegion[region]) return; groups += `<optgroup label="${esc(region)}">`; byRegion[region].forEach(c => { groups += `<option value="${esc(c.code)}" ${c.code === (state.business?.country || 'ng') ? 'selected' : ''}>${esc(c.name)}</option>`; }); groups += '</optgroup>'; });
   content.innerHTML = `
     <h1 class="h1">Q&A Finder</h1>
-    <p class="subtitle">Discover questions across 60 countries. AI drafts helpful answers with your blog link.</p>
+    <p class="subtitle">Find questions your customers are asking across Reddit, Quora, Nairaland and more.</p>
     <div class="card">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"><div><label class="label">Keyword</label><input id="qaKw" class="input" placeholder="e.g. buy cows in nigeria" /></div><div><label class="label">Country</label><select id="qaCountry" class="select">${groups || '<option value="ng">Nigeria</option>'}</select></div></div>
-      <button id="qaFind" class="btn">Find Questions</button>
+      <label class="label">Keyword</label>
+      <input class="input" id="qaKeyword" placeholder="e.g. best coffee shop in Lagos" />
+      <label class="label">Country</label>
+      <select class="select" id="qaCountry">${(state.countries.length ? state.countries : [{code:'ng',name:'Nigeria'}]).map(c => `<option value="${esc(c.code)}">${esc(c.name)}</option>`).join('')}</select>
+      <button class="btn" id="qaBtn" ${!state.business ? 'disabled' : ''}>${!state.business ? 'Add a business first' : 'Find Questions'}</button>
       <div id="qaResult"></div>
-    </div>`;
-  $('qaFind').addEventListener('click', async function(){
-    const btn = this; const keyword = $('qaKw').value.trim(); const country = $('qaCountry').value; const r = $('qaResult');
-    if (!keyword) { toast('Enter keyword', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Searching…';
-    r.innerHTML = '<div class="skeleton-card"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div>';
-    try {
-      const d = await api('/api/questions/find', {method:'POST', body:{businessId: state.business.id, keyword, country}});
-      if (!d.questions || d.questions.length === 0){
-        let debug = '<div class="status warning">No questions found. Sources checked:<br>';
-        (d.sourceStatus||[]).forEach(s => { debug += `• <strong>${esc(s.label)}</strong>: ${s.count} result(s)${s.error ? ' — ' + esc(s.error) : ''}<br>`; });
-        debug += '</div>';
-        r.innerHTML = debug;
-        return;
-      }
-      const meta = (d.sourceStatus || []).map(s => `${s.label}: ${s.count}`).join(' · ');
-      let html = `<div class="section-title">${d.questions.length} questions · ${esc(meta)}</div>`;
-      d.questions.forEach(q => {
-        const cls = ['reddit','quora','nairaland','lemmy','stackexchange'].includes(q.source) ? q.source : 'default';
-        const label = q.source.charAt(0).toUpperCase() + q.source.slice(1);
-        html += `<div class="q-card"><div class="q-head"><span class="q-badge ${cls}">${esc(label)}</span><div class="q-title">${esc(q.title)}</div></div>${q.snippet ? `<div class="q-snippet">${esc(q.snippet)}</div>` : ''}<div class="q-actions"><a href="${esc(q.question_url)}" target="_blank" rel="noopener" class="btn ghost small" style="text-decoration:none;">Open ↗</a><button class="btn small" data-draft="${q.id}">✨ Draft</button></div><div id="draft-${q.id}"></div></div>`;
-      });
-      r.innerHTML = html;
-      r.querySelectorAll('[data-draft]').forEach(b => b.addEventListener('click', ()=>generateDraft(b.getAttribute('data-draft'), b)));
-      loadAnalytics();
-    } catch(e){ if (e.status===403) r.innerHTML = `<div class="status warning">Premium feature. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`; else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-    finally { btn.disabled = false; btn.textContent = 'Find Questions'; }
-  });
-}
-
-async function generateDraft(qid, btn){
-  const container = $('draft-' + qid);
-  const blogUrl = prompt('Blog post URL:', state.business?.website || location.href); if (!blogUrl) return;
-  const blogTitle = prompt('Blog post title:', '') || 'Full guide';
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>…'; container.innerHTML = '<div class="status info">Drafting…</div>';
-  try {
-    const d = await api('/api/questions/' + qid + '/draft', {method:'POST', body:{blogUrl, blogTitle}});
-    const dr = d.draft;
-    let quality = d.quality ? ` · Quality ${d.quality}/100` : '';
-    container.innerHTML = `<div class="draft-preview">${esc(dr.draft_text)}</div><div style="font-size:11px;color:var(--text-3);margin-top:6px;">${esc(dr.platform)} · ${dr.word_count} words · ${esc(dr.status)}${quality}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn small secondary" data-copy="${dr.id}">📋 Copy</button><button class="btn small" data-posted="${dr.id}">✓ Mark posted</button></div>`;
-    container.querySelector('[data-copy]').addEventListener('click', ()=>copy(dr.draft_text, 'Copied'));
-    container.querySelector('[data-posted]').addEventListener('click', async ev=>{ const b = ev.currentTarget; b.disabled = true; b.innerHTML = '<span class="spin"></span>'; try { await api('/api/drafts/' + dr.id + '/status', {method:'PUT', body:{status:'posted'}}); toast('Posted'); b.innerHTML = '✓ Posted'; } catch(err){ toast(err.message, 'error'); b.disabled = false; b.textContent = '✓ Mark posted'; } });
-  } catch(e){
-    if (e.status === 403 && e.data?.error === 'LINK_LOCKED') {
-      container.innerHTML = `<div class="status warning">🔒 <strong>Link locked.</strong> ${esc(e.data.message)}<br><span style="font-size:11px;">Post ${e.data.remaining} more time${e.data.remaining === 1 ? '' : 's'} to unlock links.</span></div>`;
-    } else if (e.status === 422) {
-      container.innerHTML = `<div class="status warning">Draft rejected: ${esc(e.data?.reason || 'quality check failed')}</div>`;
-    } else {
-      container.innerHTML = `<div class="status error">${esc(e.message)}</div>`;
-    }
-  }
-  finally { btn.disabled = false; btn.innerHTML = '✨ Draft'; }
-}
-
-async function renderDirectories(){
-  if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="dSetupBtn">Go to Businesses</button></div>`;
-    $('dSetupBtn').addEventListener('click', ()=>navigateTo('businesses'));
-    return;
-  }
-  if (state.dirCountries.length === 0) await loadDirCountries();
-
-  const countryOpts = state.dirCountries.map(c =>
-    `<option value="${esc(c.code)}" ${c.code === (state.business?.country || 'ng') ? 'selected' : ''}>${esc(c.name)} (${c.total} sites)</option>`
-  ).join('');
-
-  const langOpts = `
-    <option value="">Auto (country default)</option>
-    <option value="en">English</option>
-    <option value="fr">Français</option>
-    <option value="es">Español</option>
-    <option value="pt">Português</option>
-    <option value="de">Deutsch</option>
-    <option value="ar">العربية</option>
-    <option value="zh-CN">中文</option>
-    <option value="sw">Kiswahili</option>
-    <option value="ha">Hausa</option>
-    <option value="yo">Yorùbá</option>
-    <option value="ig">Igbo</option>
+    </div>
   `;
+  const qaBtn = $('qaBtn');
+  if (qaBtn && state.business) {
+    qaBtn.addEventListener('click', async () => {
+      const keyword = $('qaKeyword').value.trim();
+      if (!keyword) return toast('Enter a keyword', 'error');
+      qaBtn.disabled = true;
+      qaBtn.innerHTML = '<span class="spin"></span>Searching...';
+      try {
+        const r = await api('/api/questions/find', { method: 'POST', body: { businessId: state.business.id, keyword, country: $('qaCountry').value } });
+        $('qaResult').innerHTML = `
+          <div class="section-title">Found ${r.newlySaved || 0} new (${r.totalFound || 0} total)</div>
+          ${(r.questions || []).map(q => `
+            <div class="q-card">
+              <div class="q-head">
+                <span class="q-badge ${esc((q.source_platform || 'default').toLowerCase())}">${esc(q.source_platform || 'web')}</span>
+                <div class="q-title">${esc(q.title)}</div>
+              </div>
+              ${q.snippet ? `<div class="q-snippet">${esc(q.snippet)}</div>` : ''}
+              <div class="q-actions">
+                <a class="btn small secondary" href="${esc(q.question_url)}" target="_blank" rel="noopener">Open</a>
+                <button class="btn small" data-draft="${q.id}">Generate Draft</button>
+              </div>
+              <div id="draft-${q.id}"></div>
+            </div>`).join('')}
+        `;
+        $('qaResult').querySelectorAll('[data-draft]').forEach(b => {
+          b.addEventListener('click', async () => {
+            const id = b.getAttribute('data-draft');
+            const blogUrl = state.business?.url || '';
+            if (!blogUrl) return toast('Add your business URL first', 'error');
+            b.disabled = true; b.innerHTML = '<span class="spin"></span>Drafting...';
+            try {
+              const d = await api('/api/questions/' + id + '/draft', { method: 'POST', body: { blogUrl, blogTitle: state.business?.name } });
+              $('draft-' + id).innerHTML = `<div class="draft-preview">${esc(d.draft?.draft_text || '')}</div><button class="btn small secondary" data-copy="${id}">Copy Draft</button>`;
+              $('draft-' + id).querySelector('[data-copy]').addEventListener('click', () => copy(d.draft?.draft_text || '', 'Draft copied'));
+            } catch (e) {
+              $('draft-' + id).innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+            } finally { b.disabled = false; b.textContent = 'Generate Draft'; }
+          });
+        });
+      } catch (e) {
+        $('qaResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+      } finally {
+        qaBtn.disabled = false; qaBtn.textContent = 'Find Questions';
+      }
+    });
+  }
+}
 
+function renderDirectories(){
   content.innerHTML = `
     <h1 class="h1">Directory Listings</h1>
-    <p class="subtitle">Generate 4-field listings. Open + Copy + Bookmarklet = 10 sec per site.</p>
-
-    <div class="card" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.3);">
-      <div class="section-title" style="color:#93c5fd;">📌 One-time setup</div>
-      <p style="font-size:12.5px;color:var(--text-2);line-height:1.6;margin-bottom:8px;">Click "Show Bookmarklet" → copy the javascript code → create a browser bookmark with that code as the URL.</p>
-      <button id="bmBtn" class="btn small" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">📎 Show Bookmarklet</button>
-      <div id="bmCode" style="display:none;margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:10px;color:#93c5fd;word-break:break-all;"></div>
-    </div>
-
+    <p class="subtitle">Get your business listed on top local directories.</p>
     <div class="card">
-      <label class="label">Business name</label><input id="dirName" class="input" value="${esc(state.business?.name||'')}" />
-      <label class="label">Category</label><input id="dirCategory" class="input" value="${esc(state.business?.category||'')}" />
-      <label class="label">Phone</label><input id="dirPhone" class="input" value="${esc(state.business?.phone||'')}" />
-      <label class="label">City</label><input id="dirCity" class="input" value="${esc(state.business?.city||'')}" />
-      <label class="label">State</label><input id="dirState" class="input" value="${esc(state.business?.state||'')}" />
-      <label class="label">Website</label><input id="dirWebsite" class="input" type="url" value="${esc(state.business?.website||'')}" />
-      <label class="label">Description</label><textarea id="dirDesc" class="textarea">${esc(state.business?.description||'')}</textarea>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-        <div><label class="label">Country</label><select id="dirCountry" class="select">${countryOpts}</select></div>
-        <div><label class="label">Language</label><select id="dirLang" class="select">${langOpts}</select></div>
-      </div>
-      <button id="dirGo" class="btn">Generate Listings</button>
+      <label class="label">Business Name</label>
+      <input class="input" id="dirName" value="${esc(state.business?.name || '')}" />
+      <label class="label">Category</label>
+      <input class="input" id="dirCategory" value="${esc(state.business?.category || '')}" />
+      <label class="label">Country</label>
+      <select class="select" id="dirCountry">
+        <option value="ng">Nigeria</option>
+        <option value="us">United States</option>
+        <option value="uk">United Kingdom</option>
+      </select>
+      <button class="btn" id="dirBtn">Generate Listings</button>
       <div id="dirResult"></div>
-    </div>`;
-
-  $('bmBtn').addEventListener('click', () => {
-    const bm = `javascript:(function(){var t=prompt('Paste your listing:');if(!t)return;var m={};t.split('\\n').forEach(function(l){var i=l.indexOf(':');if(i>0)m[l.slice(0,i).trim().toLowerCase()]=l.slice(i+1).trim();});var ttl=m['post title']||m['title']||'',cnt=m['post content']||m['content']||'',kw=m['keywords']||'',cat=m['category']||'';document.querySelectorAll('input,textarea,select').forEach(function(el){var k=((el.name||'')+' '+(el.id||'')+' '+(el.placeholder||'')+' '+(el.getAttribute('aria-label')||'')).toLowerCase();if(/title|subject|headline/.test(k))el.value=ttl;else if(/desc|content|body|message|detail/.test(k)&&el.tagName==='TEXTAREA')el.value=cnt;else if(/keyword|tag/.test(k))el.value=kw;else if(/categ/.test(k))el.value=cat;el.dispatchEvent(new Event('input',{bubbles:true}));});alert('Filled!');})();`;
-    $('bmCode').textContent = bm;
-    $('bmCode').style.display = 'block';
-  });
-
-  $('dirGo').addEventListener('click', async function(){
-    const btn = this;
-    const profile = {
-      name: $('dirName').value.trim(), category: $('dirCategory').value.trim(),
-      phone: $('dirPhone').value.trim(), city: $('dirCity').value.trim(),
-      state: $('dirState').value.trim(), website: $('dirWebsite').value.trim(),
-      description: $('dirDesc').value.trim(),
-    };
-    const country = $('dirCountry').value;
-    const language = $('dirLang').value || null;
-    const r = $('dirResult');
-    if (!profile.name) { toast('Business name required', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Generating…';
-    r.innerHTML = '<div class="status info">Generating + translating listings…</div>';
+    </div>
+  `;
+  $('dirBtn').addEventListener('click', async () => {
+    const name = $('dirName').value.trim();
+    if (!name) return toast('Enter business name', 'error');
+    $('dirBtn').disabled = true; $('dirBtn').innerHTML = '<span class="spin"></span>Generating...';
     try {
-      const d = await api('/api/directories/generate', { method:'POST', body:{ profile, country, limit: 30, language } });
-      let html = `<div class="status success">✓ ${d.total} listings${d.translated ? ' · ' + d.language.toUpperCase() : ''}</div>`;
-      if (d.skipped > 0) {
-        html += `<div class="status warning" style="font-size:12px;">⚠️ ${d.skipped} director${d.skipped === 1 ? 'y' : 'ies'} skipped (URL unreachable).</div>`;
-        (d.skippedDetails || []).forEach(s => { html += `<div style="font-size:11px;color:var(--text-3);margin:4px 0;">• <strong>${esc(s.directory)}</strong>: ${esc(s.reason)}</div>`; });
-      }
-      html += `<div class="status info" style="font-size:12px;">${esc(d.instructions || '')}</div>`;
-      d.listings.forEach((l, idx) => {
-        html += `
+      const r = await api('/api/directories/generate', {
+        method: 'POST',
+        body: { profile: { name, category: $('dirCategory').value.trim() }, country: $('dirCountry').value, limit: 20 },
+      });
+      const listings = r.listings || r.results || [];
+      $('dirResult').innerHTML = `<div class="section-title">Listings (${listings.length})</div>` +
+        listings.map(l => `
           <div class="listing-item">
             <div class="listing-header">
-              <div><span class="listing-platform">${esc(l.directory)}</span><span class="badge source" style="font-size:9px;margin-left:6px;">${esc(l.categoryHint || l.category)}</span></div>
-              <div class="listing-actions">
-                <button class="btn small" data-open-copy="${idx}" style="background:linear-gradient(135deg,#10b981,#059669);">🔗 Open + Copy</button>
-                <button class="btn small secondary" data-copy-only="${idx}">📋 Copy</button>
-              </div>
+              <div class="listing-platform">${esc(l.directory || l.platform || 'Directory')}</div>
+              <div class="listing-actions"><a class="btn small secondary" href="${esc(l.url || '#')}" target="_blank" rel="noopener">Open</a></div>
             </div>
-            <div class="listing-field"><div class="listing-field-label">Post Title</div><div class="listing-field-value">${esc(l.postTitle)}</div></div>
-            <div class="listing-field"><div class="listing-field-label">Post Content</div><div class="listing-field-value">${esc(l.postContent)}</div></div>
-            <div class="listing-field"><div class="listing-field-label">Keywords</div><div class="listing-field-value">${esc((l.keywords||[]).join(', '))}</div></div>
-            <div class="listing-field"><div class="listing-field-label">Category</div><div class="listing-field-value">${esc(l.category)}</div></div>
-          </div>`;
-      });
-      r.innerHTML = html;
-      r.querySelectorAll('[data-open-copy]').forEach(b => b.addEventListener('click', () => {
-        const idx = Number(b.getAttribute('data-open-copy'));
-        const l = d.listings[idx];
-        const target = l.composeUrl || l.siteUrl || l.url;
-        if (!target) { toast('No compose URL for this site', 'error'); return; }
-        copy(l.copyText, 'Content copied — use bookmarklet on compose page');
-        window.open(target, '_blank', 'noopener');
-      }));
-      r.querySelectorAll('[data-copy-only]').forEach(b => b.addEventListener('click', () => {
-        const idx = Number(b.getAttribute('data-copy-only'));
-        copy(d.listings[idx].copyText, 'Listing copied');
-      }));
-    } catch(e){
-      if (e.status===403) r.innerHTML = `<div class="status warning">Premium required. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
-      else if (e.status===503) r.innerHTML = '<div class="status error">Directory module not deployed.</div>';
-      else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+            ${l.description ? `<div class="listing-field"><div class="listing-field-label">Description</div><div class="listing-field-value">${esc(l.description)}</div></div>` : ''}
+          </div>`).join('');
+    } catch (e) {
+      $('dirResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+    } finally {
+      $('dirBtn').disabled = false; $('dirBtn').textContent = 'Generate Listings';
     }
-    finally { btn.disabled = false; btn.textContent = 'Generate Listings'; }
   });
 }
 
 function renderBacklinks(){
   content.innerHTML = `
     <h1 class="h1">Backlinks</h1>
-    <p class="subtitle">Submit to search engines and generate directory listings.</p>
-    <div class="subtabs"><button class="subtab ${state.subTab==='indexnow'?'active':''}" data-sub="indexnow">IndexNow</button><button class="subtab ${state.subTab==='listing'?'active':''}" data-sub="listing">Listings</button></div>
-    <div id="blContent"></div>`;
-  content.querySelectorAll('.subtab').forEach(t => t.addEventListener('click', ()=>{ state.subTab = t.getAttribute('data-sub'); renderBacklinks(); }));
-  const c = $('blContent');
-  if (state.subTab === 'indexnow'){
-    c.innerHTML = `
-      <div class="card">
-        <div class="section-title" style="color:#93c5fd;">🌐 7 Search Engines Covered</div>
-        <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">One submission reaches <strong>Bing, Yandex, Naver, Seznam, Yep, DuckDuckGo, Internet Archive, and Amazon</strong>. Google does NOT accept IndexNow — submit your sitemap once in <strong>Google Search Console</strong>.</p>
-        <label class="label">Page URL</label>
-        <input id="inUrl" class="input" type="url" value="${esc(location.href)}" />
-        <button id="inGo" class="btn">Submit to All IndexNow Engines</button>
-        <div id="inResult"></div>
-      </div>`;
-    $('inGo').addEventListener('click', async function(){
-      const btn = this; const url = $('inUrl').value.trim(); if (!url) return;
-      btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Submitting…';
-      try {
-        const d = await api('/api/backlink/indexnow', {method:'POST', body:{urls:[url], siteUrl:url}});
-        const ok = d.ok !== false;
-        $('inResult').innerHTML = `<div class="status ${ok?'success':'error'}">${esc(d.message || (ok?'Submitted to all 7 engines':'Failed'))}</div>`;
-      } catch(e){ $('inResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-      finally { btn.disabled = false; btn.textContent = 'Submit to All IndexNow Engines'; }
-    });
-    return;
-  }
-  if (state.dirCountries.length === 0) {
-    loadDirCountries().then(() => { if (state.subTab === 'listing') renderBacklinks(); });
-    c.innerHTML = '<div class="skeleton-card"><div class="skeleton skeleton-line"></div></div>';
-    return;
-  }
-  const countryOpts = state.dirCountries.map(co => `<option value="${esc(co.code)}" ${co.code === (state.business?.country || 'ng') ? 'selected' : ''}>${esc(co.name)} (${co.total} sites)</option>`).join('');
-  const langOpts = `<option value="">Auto</option><option value="en">English</option><option value="fr">Français</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="ar">العربية</option><option value="zh-CN">中文</option><option value="sw">Kiswahili</option><option value="ha">Hausa</option><option value="yo">Yorùbá</option><option value="ig">Igbo</option>`;
-  c.innerHTML = `
+    <p class="subtitle">Submit URLs to IndexNow and verify your SEO setup.</p>
     <div class="card">
-      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:14px;">Generate <strong>Post Title / Post Content / Keywords / Category</strong>. Click <strong>🔗 Open + Copy</strong> → new tab opens on the compose page + content copies.</p>
-      <label class="label">Business name *</label><input id="lbName" class="input" value="${esc(state.business?.name||'')}" />
-      <label class="label">Phone</label><input id="lbPhone" class="input" value="${esc(state.business?.phone||'')}" />
-      <label class="label">City</label><input id="lbCity" class="input" value="${esc(state.business?.city||'')}" />
-      <label class="label">State</label><input id="lbState" class="input" value="${esc(state.business?.state||'')}" />
-      <label class="label">Category</label><input id="lbCat" class="input" value="${esc(state.business?.category||'')}" />
-      <label class="label">Website</label><input id="lbWebsite" class="input" type="url" value="${esc(state.business?.website||'')}" />
-      <label class="label">Description</label><textarea id="lbDesc" class="textarea">${esc(state.business?.description||'')}</textarea>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-        <div><label class="label">Country</label><select id="lbCountry" class="select">${countryOpts || '<option value="ng">Nigeria</option>'}</select></div>
-        <div><label class="label">Language</label><select id="lbLang" class="select">${langOpts}</select></div>
-      </div>
-      <button id="lbGo" class="btn">Generate Listings</button>
-      <div id="lbResult"></div>
-    </div>`;
-  $('lbGo').addEventListener('click', async function(){
-    const btn = this;
-    const profile = { name: $('lbName').value.trim(), category: $('lbCat').value.trim(), phone: $('lbPhone').value.trim(), city: $('lbCity').value.trim(), state: $('lbState').value.trim(), website: $('lbWebsite').value.trim(), description: $('lbDesc').value.trim() };
-    const country = $('lbCountry').value;
-    const language = $('lbLang').value || null;
-    const r = $('lbResult');
-    if (!profile.name) { toast('Business name required', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Generating…';
-    r.innerHTML = '<div class="status info">Generating 4-field listings…</div>';
+      <label class="label">Website URL</label>
+      <input class="input" id="blUrl" type="url" placeholder="https://example.com" value="${esc(state.business?.url || '')}" />
+      <label class="label">Page URLs to Submit (one per line)</label>
+      <textarea class="textarea" id="blUrls" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>
+      <button class="btn" id="blSubmitBtn">Submit to IndexNow</button>
+      <div id="blResult"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Verify Setup</div>
+      <button class="btn secondary small" id="blVerifyKey">Verify IndexNow Key File</button>
+      <button class="btn secondary small" id="blVerifySitemap" style="margin-left:8px;">Check Sitemap</button>
+      <div id="blVerifyResult"></div>
+    </div>
+  `;
+  $('blSubmitBtn').addEventListener('click', async () => {
+    const siteUrl = $('blUrl').value.trim();
+    const urls = $('blUrls').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!siteUrl || !urls.length) return toast('Enter site URL and at least one page URL', 'error');
+    $('blSubmitBtn').disabled = true; $('blSubmitBtn').innerHTML = '<span class="spin"></span>Submitting...';
     try {
-      const d = await api('/api/directories/generate', { method:'POST', body:{ profile, country, limit: 30, language } });
-      let html = `<div class="status success">✓ ${d.total} listings generated${d.translated ? ' · ' + d.language.toUpperCase() : ''}</div>`;
-      if (d.skipped > 0) html += `<div class="status warning" style="font-size:12px;">⚠️ ${d.skipped} skipped (unreachable)</div>`;
-      html += `<div class="status info" style="font-size:12px;">${esc(d.instructions || '')}</div>`;
-      d.listings.forEach((l, idx) => {
-        html += `
-          <div class="listing-item">
-            <div class="listing-header">
-              <div><span class="listing-platform">${esc(l.directory)}</span><span class="badge source" style="font-size:9px;margin-left:6px;">${esc(l.categoryHint || l.category)}</span></div>
-              <div class="listing-actions">
-                <button class="btn small" data-open-copy="${idx}" style="background:linear-gradient(135deg,#10b981,#059669);">🔗 Open + Copy</button>
-                <button class="btn small secondary" data-copy-only="${idx}">📋 Copy</button>
-              </div>
-            </div>
-            <div class="listing-field"><div class="listing-field-label">Post Title</div><div class="listing-field-value">${esc(l.postTitle)}</div></div>
-            <div class="listing-field"><div class="listing-field-label">Post Content</div><div class="listing-field-value">${esc(l.postContent)}</div></div>
-            <div class="listing-field"><div class="listing-field-label">Keywords</div><div class="listing-field-value">${esc((l.keywords||[]).join(', '))}</div></div>
-            <div class="listing-field"><div class="listing-field-label">Category</div><div class="listing-field-value">${esc(l.category)}</div></div>
-          </div>`;
-      });
-      r.innerHTML = html;
-      r.querySelectorAll('[data-open-copy]').forEach(b => b.addEventListener('click', () => {
-        const idx = Number(b.getAttribute('data-open-copy'));
-        const l = d.listings[idx];
-        const target = l.composeUrl || l.siteUrl || l.url;
-        if (!target) { toast('No compose URL for this site', 'error'); return; }
-        copy(l.copyText, 'Content copied — use bookmarklet on compose page');
-        window.open(target, '_blank', 'noopener');
-      }));
-      r.querySelectorAll('[data-copy-only]').forEach(b => b.addEventListener('click', () => {
-        const idx = Number(b.getAttribute('data-copy-only'));
-        copy(d.listings[idx].copyText, 'Listing copied');
-      }));
-    } catch(e){
-      if (e.status===403) r.innerHTML = `<div class="status warning">Premium required. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade →</a></div>`;
-      else r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
-    }
-    finally { btn.disabled = false; btn.textContent = 'Generate Listings'; }
+      const r = await api('/api/backlink/indexnow', { method: 'POST', body: { urls, siteUrl } });
+      $('blResult').innerHTML = `<div class="status success">Submitted ${r.submitted || urls.length} URLs. Status: ${esc(String(r.status || 'ok'))}</div>`;
+    } catch (e) {
+      $('blResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+    } finally { $('blSubmitBtn').disabled = false; $('blSubmitBtn').textContent = 'Submit to IndexNow'; }
+  });
+  $('blVerifyKey').addEventListener('click', async () => {
+    const url = $('blUrl').value.trim();
+    if (!url) return toast('Enter site URL', 'error');
+    try {
+      const r = await api('/api/backlink/verify-key?url=' + encodeURIComponent(url));
+      $('blVerifyResult').innerHTML = r.ok ? '<div class="status success">Key file verified ✓</div>' : `<div class="status error">${esc(r.error || 'Key file not found')}</div>`;
+    } catch (e) { $('blVerifyResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`; }
+  });
+  $('blVerifySitemap').addEventListener('click', async () => {
+    const url = $('blUrl').value.trim();
+    if (!url) return toast('Enter site URL', 'error');
+    try {
+      const r = await api('/api/backlink/sitemap?url=' + encodeURIComponent(url));
+      $('blVerifyResult').innerHTML = r.ok ? '<div class="status success">Sitemap found ✓</div>' : `<div class="status error">${esc(r.error || 'Sitemap not found')}</div>`;
+    } catch (e) { $('blVerifyResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`; }
   });
 }
 
-// ==== SOCIAL WITH IFRAME-SAFE FACEBOOK CONNECT ====
-async function renderSocial(){
+// ============================================================
+// SOCIAL — Facebook connection w/ persistent error display
+// ============================================================
+function renderSocial(){
   content.innerHTML = `
     <h1 class="h1">Social Accounts</h1>
-    <p class="subtitle">Connect Facebook Pages and LinkedIn. Post with one click.</p>
+    <p class="subtitle">Connect your Facebook Page or LinkedIn Company to auto-post campaigns.</p>
 
-    <div class="card" style="background:rgba(24,119,242,.08);border-color:rgba(24,119,242,.3);">
-      <div class="section-title" style="color:#60a5fa;">📘 Facebook Page</div>
-      <p style="font-size:12.5px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Connect a Facebook Page you administer. Your Page token is stored securely with AES-256 encryption and does not expire.</p>
-      <button id="fbConnectBtn" type="button" class="btn" style="background:linear-gradient(135deg,#1877F2,#0a58ca);display:inline-flex;">📘 Connect Facebook Page</button>
+    <div class="card">
+      <div class="section-title">Facebook Page</div>
+      <div id="socialFbStatus" style="font-size:13px;color:var(--text-2);margin-bottom:8px;">Not connected</div>
+      <button class="btn" id="fbConnectBtn">Connect Facebook Page</button>
+      <div id="socialFbError"></div>
     </div>
 
-    <div id="socialList"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>
-
-    <div class="section-title" style="margin-top:20px;">Post now</div>
     <div class="card">
-      <label class="label">Platform</label>
-      <select id="postPlatform" class="select"><option value="facebook">Facebook Page</option><option value="linkedin">LinkedIn Company</option></select>
-      <label class="label">Message</label>
-      <textarea id="postMsg" class="textarea" placeholder="What do you want to share?"></textarea>
-      <button id="postGo" class="btn">Post now</button>
-      <div id="postResult"></div>
-    </div>`;
+      <div class="section-title">LinkedIn Company</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:8px;">Connect via API token from LinkedIn Developer Portal.</div>
+      <button class="btn secondary" id="liConnectBtn">Connect LinkedIn Company</button>
+      <div id="liResult"></div>
+    </div>
 
-  // Wire up the Facebook connect button to break out of iframe
+    <div class="card">
+      <div class="section-title">Connected Accounts</div>
+      <div id="socialList"><div class="skeleton skeleton-card"><div class="skeleton skeleton-line" style="width:60%"></div><div class="skeleton skeleton-line" style="width:40%"></div></div></div>
+    </div>
+  `;
+
+  // Facebook connect button
   const fbBtn = $('fbConnectBtn');
   if (fbBtn) {
     fbBtn.addEventListener('click', () => {
-      // Determine return URL — the parent page (Blogspot) if we're embedded
       let returnUrl = '';
       try {
         if (window.top !== window.self) {
-          // We're in an iframe
           const ref = document.referrer || '';
-          if (ref && !ref.startsWith(location.origin)) {
-            returnUrl = ref;
-          }
+          if (ref && !ref.startsWith(location.origin)) returnUrl = ref;
         }
-      } catch (e) { /* cross-origin — use referrer fallback */ }
-
+      } catch (e) {}
       const connectUrl = BACKEND + '/api/social/facebook/connect?key=' + encodeURIComponent(state.apiKey) +
                          (returnUrl ? '&redirect=' + encodeURIComponent(returnUrl) : '');
-
-      // Break out of iframe — navigate the TOP window
       try {
-        if (window.top !== window.self) {
-          window.top.location.href = connectUrl;
-        } else {
-          window.location.href = connectUrl;
-        }
+        if (window.top !== window.self) window.top.location.href = connectUrl;
+        else window.location.href = connectUrl;
+      } catch (e) { window.open(connectUrl, '_blank'); }
+    });
+  }
+
+  // LinkedIn connect button
+  const liBtn = $('liConnectBtn');
+  if (liBtn) {
+    liBtn.addEventListener('click', async () => {
+      const orgId = prompt('LinkedIn Organization ID:');
+      if (!orgId) return;
+      const token = prompt('LinkedIn Access Token:');
+      if (!token) return;
+      try {
+        await api('/api/social/connect', { method: 'POST', body: { platform: 'linkedin', accountId: orgId, accountName: orgId, accessToken: token } });
+        toast('LinkedIn connected', 'success');
+        await loadSocialAccounts();
       } catch (e) {
-        // Fallback if window.top is inaccessible
-        window.open(connectUrl, '_blank');
+        $('liResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
       }
     });
   }
 
+  loadSocialAccounts();
+}
+
+async function loadSocialAccounts(){
+  const el = $('socialList');
+  if (!el) return;
   try {
     const d = await api('/api/social/accounts');
-    const accs = d.accounts || [];
-    if (accs.length === 0) {
-      $('socialList').innerHTML = `<div class="empty"><div class="empty-icon">🔗</div><div class="empty-title">No accounts connected</div><div class="empty-desc">Click the connect button above to link your Facebook Page or LinkedIn Company.</div></div>`;
-    } else {
-      let html = '<div class="card"><table class="data-table"><thead><tr><th>Platform</th><th>Account</th><th>Status</th></tr></thead><tbody>';
-      accs.forEach(a => {
-        const statusBadge = a.enabled ? `<span class="badge success">connected</span>` : `<span class="badge failed">${esc(a.last_error || 'disabled')}</span>`;
-        html += `<tr><td><strong>${esc(a.platform)}</strong></td><td>${esc(a.account_name || a.account_id)}</td><td>${statusBadge}</td></tr>`;
-      });
-      html += '</tbody></table></div>';
-      $('socialList').innerHTML = html;
+    const accounts = d.accounts || [];
+    if (!accounts.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">No accounts connected yet.</div>';
+      return;
     }
-  } catch(e) { $('socialList').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-
-  $('postGo').addEventListener('click', async function(){
-    const btn = this; const platform = $('postPlatform').value; const message = $('postMsg').value.trim(); const r = $('postResult');
-    if (!message) { toast('Enter message', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Posting…';
-    try {
-      const d = await api('/api/social/post-now', {method:'POST', body:{platform, message}});
-      r.innerHTML = d.ok
-        ? `<div class="status success">✓ Posted${d.url?' — <a href="'+esc(d.url)+'" target="_blank" rel="noopener" style="color:inherit;">view</a>':''}</div>`
-        : `<div class="status error">${esc(d.error||'Failed')}${d.needsReconnect ? ' <button class="btn small secondary" onclick="document.getElementById(\'fbConnectBtn\')?.click()">Reconnect</button>' : ''}</div>`;
-    } catch(e){ r.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-    finally { btn.disabled = false; btn.textContent = 'Post now'; }
-  });
+    el.innerHTML = accounts.map(a => `
+      <div class="listing-item">
+        <div class="listing-header">
+          <div class="listing-platform">${esc(a.platform === 'facebook' ? '📘 Facebook' : '💼 LinkedIn')} — ${esc(a.account_name || a.account_id)}</div>
+          <span class="badge ${a.enabled ? 'success' : 'failed'}">${a.enabled ? 'Active' : 'Disabled'}</span>
+        </div>
+        ${a.last_posted_at ? `<div style="font-size:11px;color:var(--text-3);">Last posted: ${esc(new Date(a.last_posted_at).toLocaleString())}</div>` : ''}
+        ${a.last_error ? `<div class="status error" style="margin-top:8px;font-size:12px;">${esc(a.last_error)}</div>` : ''}
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+  }
 }
 
-async function renderCampaigns(){
-  if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="cSetupBtn">Go to Businesses</button></div>`;
-    $('cSetupBtn').addEventListener('click', ()=>navigateTo('businesses')); return;
-  }
+function renderCampaigns(){
   content.innerHTML = `
     <h1 class="h1">Campaigns</h1>
-    <p class="subtitle">Create a campaign and get 6 tracked smart links.</p>
-    <div class="card">
-      <label class="label">Campaign name</label><input id="campName" class="input" placeholder="Fresh Cows — May 2026" />
-      <label class="label">Ad text</label><textarea id="campText" class="textarea"></textarea>
-      <button id="campCreate" class="btn">Create Campaign</button>
-      <div id="campCreateResult"></div>
-    </div>
-    <div class="section-title">Your campaigns</div>
-    <div id="campList"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>`;
-  $('campCreate').addEventListener('click', async function(){
-    const btn = this; const name = $('campName').value.trim(); const text = $('campText').value.trim();
-    if (!name) { toast('Name required', 'error'); return; }
-    btn.disabled = true; btn.innerHTML = '<span class="spin"></span>…';
-    try { const d = await api('/api/campaigns', {method:'POST', body:{businessId: state.business.id, name, text}}); $('campCreateResult').innerHTML = `<div class="status success">✓ Created with ${d.links.length} links</div>`; $('campName').value = ''; $('campText').value = ''; loadCampaignsList(); }
-    catch(e){ $('campCreateResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-    finally { btn.disabled = false; btn.textContent = 'Create Campaign'; }
-  });
-  loadCampaignsList();
+    <p class="subtitle">Multi-platform campaigns with smart tracking links.</p>
+    ${!state.business ? '<div class="card"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Add a business first</div><button class="btn" onclick="window.navigateTo(\'businesses\')">Add Business</button></div></div>' : `
+      <div class="card">
+        <label class="label">Campaign Name</label>
+        <input class="input" id="campName" placeholder="e.g. Summer Coffee Promo" />
+        <label class="label">Text</label>
+        <textarea class="textarea" id="campText" placeholder="Ad copy..."></textarea>
+        <button class="btn" id="campBtn">Create Campaign</button>
+        <div id="campResult"></div>
+      </div>
+      <div class="card"><div class="section-title">Existing Campaigns</div><div id="campList"><div class="skeleton skeleton-card"></div></div></div>
+    `}
+  `;
+  if (state.business) {
+    $('campBtn').addEventListener('click', async () => {
+      const name = $('campName').value.trim();
+      const text = $('campText').value.trim();
+      if (!name) return toast('Enter a campaign name', 'error');
+      $('campBtn').disabled = true;
+      try {
+        const r = await api('/api/campaigns', { method: 'POST', body: { businessId: state.business.id, name, text } });
+        $('campResult').innerHTML = `<div class="status success">Campaign created with ${r.links?.length || 0} tracking links.</div>`;
+        loadCampaigns();
+      } catch (e) {
+        $('campResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+      } finally { $('campBtn').disabled = false; }
+    });
+    loadCampaigns();
+  }
 }
 
-async function loadCampaignsList(){
+async function loadCampaigns(){
   const el = $('campList'); if (!el) return;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/campaigns'); const camps = d.campaigns || [];
-    if (camps.length === 0){ el.innerHTML = `<div class="empty"><div class="empty-icon">📣</div><div class="empty-title">No campaigns yet</div></div>`; return; }
-    let html = '<div class="card"><table class="data-table"><thead><tr><th>Name</th><th>Created</th><th></th></tr></thead><tbody>';
-    camps.forEach(c=>{ html += `<tr><td style="color:var(--text);font-weight:500;">${esc(c.name)}</td><td>${new Date(c.created_at).toLocaleDateString()}</td><td><button class="btn small secondary" data-links="${c.id}">Links</button></td></tr><tr style="display:none;" id="camp-links-${c.id}"><td colspan="3" id="camp-links-inner-${c.id}"></td></tr>`; });
-    html += '</tbody></table></div>'; el.innerHTML = html;
-    el.querySelectorAll('[data-links]').forEach(b=>b.addEventListener('click', async ()=>{
-      const cid = b.getAttribute('data-links'); const row = $('camp-links-' + cid); const inner = $('camp-links-inner-' + cid);
-      if (row.style.display === 'table-row'){ row.style.display = 'none'; return; }
-      row.style.display = 'table-row'; inner.innerHTML = '<div class="skeleton skeleton-line"></div>';
-      try { const r = await api('/api/campaigns/' + cid); let links = '<div style="padding:8px 0;">'; (r.links||[]).forEach(l=>{ links += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;flex-wrap:wrap;"><span class="badge source">${esc(l.platform)}</span><code style="flex:1;color:var(--accent-l);font-family:'JetBrains Mono',monospace;font-size:10px;word-break:break-all;min-width:150px;">${esc(l.publicUrl||l.slug)}</code><span style="color:var(--success);font-weight:700;">${l.clicks||0} clicks</span><button class="btn small secondary" data-copy-link="${esc(l.publicUrl||l.slug)}">Copy</button></div>`; }); links += '</div>'; inner.innerHTML = links; inner.querySelectorAll('[data-copy-link]').forEach(cb=>cb.addEventListener('click', ()=>copy(cb.getAttribute('data-copy-link'), 'Link copied'))); }
-      catch(e){ inner.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-    }));
-  } catch(e){ el.innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+    const r = await api('/api/businesses/' + state.business.id + '/campaigns');
+    const list = r.campaigns || [];
+    if (!list.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">No campaigns yet.</div>'; return; }
+    el.innerHTML = list.map(c => `<div class="listing-item"><div class="listing-header"><div class="listing-platform">${esc(c.name)}</div><span class="badge pending">${esc(c.status || 'active')}</span></div><div style="font-size:12px;color:var(--text-2);">${esc(c.text || '').slice(0, 120)}</div></div>`).join('');
+  } catch (e) { el.innerHTML = `<div class="status error">${esc(e.message)}</div>`; }
 }
 
-async function renderLeads(){
-  if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="lSetupBtn">Go to Businesses</button></div>`;
-    $('lSetupBtn').addEventListener('click', ()=>navigateTo('businesses')); return;
-  }
-  content.innerHTML = `<h1 class="h1">Leads</h1><p class="subtitle">Everyone who clicked a smart link.</p><div id="leadsTable"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>`;
+function renderLeads(){
+  content.innerHTML = `
+    <h1 class="h1">Leads</h1>
+    <p class="subtitle">Track and manage incoming leads.</p>
+    ${!state.business ? '<div class="card"><div class="empty"><div class="empty-title">Add a business first</div><button class="btn" onclick="window.navigateTo(\'businesses\')">Add Business</button></div></div>' : `<div class="card" id="leadList"><div class="skeleton skeleton-card"></div></div>`}
+  `;
+  if (state.business) loadLeads();
+}
+
+async function loadLeads(){
+  const el = $('leadList'); if (!el) return;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/leads'); const leads = d.leads || [];
-    if (leads.length === 0){ $('leadsTable').innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No leads yet</div></div>`; return; }
-    let html = '<div class="card"><table class="data-table"><thead><tr><th>Source</th><th>Contact</th><th>Status</th><th>When</th><th></th></tr></thead><tbody>';
-    leads.forEach(l=>{ html += `<tr><td><span class="badge source">${esc(l.source_platform)}</span></td><td><div style="font-weight:600;color:var(--text);">${esc(l.name||'—')}</div><div style="font-size:11px;color:var(--text-3);">${esc(l.phone || l.ip_city || 'anonymous')}</div></td><td><span class="badge ${esc(l.status)}">${esc(l.status)}</span></td><td style="font-size:11px;color:var(--text-3);">${new Date(l.created_at).toLocaleDateString()}</td><td>${l.status==='new'?`<button class="btn small secondary" data-deliver="${l.id}">Mark delivered</button>`:''}</td></tr>`; });
-    html += '</tbody></table></div>'; $('leadsTable').innerHTML = html;
-    $('leadsTable').querySelectorAll('[data-deliver]').forEach(b=>b.addEventListener('click', async ()=>{ b.disabled = true; b.innerHTML = '<span class="spin"></span>'; try { await api('/api/leads/' + b.getAttribute('data-deliver') + '/delivered', {method:'POST'}); toast('Delivered'); renderLeads(); } catch(e){ toast(e.message, 'error'); b.disabled = false; b.textContent = 'Mark delivered'; } }));
-  } catch(e){ $('leadsTable').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+    const r = await api('/api/businesses/' + state.business.id + '/leads');
+    const list = r.leads || [];
+    if (!list.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">No leads yet.</div>'; return; }
+    el.innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Contact</th><th>Source</th><th>Status</th></tr></thead>
+        <tbody>${list.map(l => `<tr><td>${esc(l.name || '—')}</td><td>${esc(l.phone || l.email || '—')}</td><td><span class="badge source">${esc(l.source_platform || 'direct')}</span></td><td><span class="badge ${esc(l.status)}">${esc(l.status)}</span></td></tr>`).join('')}</tbody>
+      </table>`;
+  } catch (e) { el.innerHTML = `<div class="status error">${esc(e.message)}</div>`; }
 }
 
-async function renderReviews(){
-  if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="rSetupBtn">Go to Businesses</button></div>`;
-    $('rSetupBtn').addEventListener('click', ()=>navigateTo('businesses')); return;
-  }
-  content.innerHTML = `<h1 class="h1">Reviews</h1><p class="subtitle">Automated review requests 24h after delivery.</p><div id="revTable"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>`;
+function renderReviews(){
+  content.innerHTML = `<h1 class="h1">Reviews</h1><p class="subtitle">Customer reviews and sentiment.</p>
+    ${!state.business ? '<div class="card"><div class="empty"><div class="empty-title">Add a business first</div></div></div>' : '<div class="card" id="reviewList"><div class="skeleton skeleton-card"></div></div>'}`;
+  if (state.business) loadReviews();
+}
+
+async function loadReviews(){
+  const el = $('reviewList'); if (!el) return;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/reviews'); const revs = d.reviews || [];
-    if (revs.length === 0){ $('revTable').innerHTML = `<div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">No review requests yet</div><div class="empty-desc">Mark a lead as delivered in the Leads tab.</div><button class="btn" data-go="leads">Go to Leads</button></div>`; content.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click', ()=>navigateTo(b.getAttribute('data-go')))); return; }
-    let html = '<div class="card"><table class="data-table"><thead><tr><th>Lead</th><th>Status</th><th>Sent</th><th>Submitted</th></tr></thead><tbody>';
-    revs.forEach(r=>{ html += `<tr><td>${esc(r.lead_name||'—')}<br><span style="font-size:11px;color:var(--text-3);">${esc(r.lead_phone||'')}</span></td><td><span class="badge ${esc(r.status)}">${esc(r.status)}</span></td><td style="font-size:11px;color:var(--text-3);">${new Date(r.requested_at).toLocaleDateString()}</td><td style="font-size:11px;color:var(--text-3);">${r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : '—'}</td></tr>`; });
-    html += '</tbody></table></div>'; $('revTable').innerHTML = html;
-  } catch(e){ $('revTable').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+    const r = await api('/api/businesses/' + state.business.id + '/reviews');
+    const list = r.reviews || [];
+    if (!list.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">No reviews yet.</div>'; return; }
+    el.innerHTML = list.map(rv => `<div class="listing-item"><div class="listing-header"><div class="listing-platform">${'⭐'.repeat(rv.rating || 5)}</div><span class="badge source">${esc(rv.source || 'direct')}</span></div><div style="font-size:13px;color:var(--text-2);">${esc(rv.text || '')}</div></div>`).join('');
+  } catch (e) { el.innerHTML = `<div class="status error">${esc(e.message)}</div>`; }
 }
 
-async function renderAnalytics(){
-  if (!state.business){
-    content.innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">Set up a business first</div><button class="btn" id="aSetupBtn">Go to Businesses</button></div>`;
-    $('aSetupBtn').addEventListener('click', ()=>navigateTo('businesses')); return;
-  }
-  content.innerHTML = `<h1 class="h1">Analytics</h1><p class="subtitle">Performance across campaigns, links, and leads.</p><div id="anaContent"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>`;
+function renderAnalytics(){
+  content.innerHTML = `<h1 class="h1">Analytics</h1><p class="subtitle">Business performance at a glance.</p>
+    ${!state.business ? '<div class="card"><div class="empty"><div class="empty-title">Add a business first</div></div></div>' : '<div id="analyticsBody"><div class="skeleton skeleton-card"></div></div>'}`;
+  if (state.business) loadAnalyticsView();
+}
+
+async function loadAnalyticsView(){
+  const el = $('analyticsBody'); if (!el) return;
   try {
-    const d = await api('/api/businesses/' + state.business.id + '/analytics'); const a = d.analytics || {};
-    $('anaContent').innerHTML = `<div class="stats"><div class="stat"><div class="stat-num">${a.campaigns||0}</div><div class="stat-label">Campaigns</div></div><div class="stat"><div class="stat-num">${a.smart_links||0}</div><div class="stat-label">Smart Links</div></div><div class="stat"><div class="stat-num">${a.total_clicks||0}</div><div class="stat-label">Clicks</div></div></div><div class="stats"><div class="stat"><div class="stat-num">${a.leads||0}</div><div class="stat-label">Leads</div></div><div class="stat"><div class="stat-num">${a.leads_delivered||0}</div><div class="stat-label">Delivered</div></div><div class="stat"><div class="stat-num">${a.reviews_submitted||0}</div><div class="stat-label">Reviews</div></div></div><div class="card"><div class="section-title">Q&A Module</div><div class="stats"><div class="stat"><div class="stat-num">${a.questions_found||0}</div><div class="stat-label">Found</div></div><div class="stat"><div class="stat-num">${a.drafts_pending||0}</div><div class="stat-label">Pending</div></div><div class="stat"><div class="stat-num">${a.drafts_posted||0}</div><div class="stat-label">Posted</div></div></div></div><div class="card"><div class="section-title">Conversion funnel</div><div style="font-size:13px;line-height:2;color:var(--text-2);">Clicks → Leads: <strong style="color:var(--text);">${a.total_clicks ? ((a.leads/a.total_clicks)*100).toFixed(1) : '0.0'}%</strong><br>Leads → Delivered: <strong style="color:var(--text);">${a.leads ? ((a.leads_delivered/a.leads)*100).toFixed(1) : '0.0'}%</strong><br>Delivered → Reviewed: <strong style="color:var(--text);">${a.leads_delivered ? ((a.reviews_submitted/a.leads_delivered)*100).toFixed(1) : '0.0'}%</strong></div></div>`;
-  } catch(e){ $('anaContent').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
+    const r = await api('/api/businesses/' + state.business.id + '/analytics');
+    const a = r.analytics || {};
+    el.innerHTML = `
+      <div class="stats">
+        <div class="stat"><div class="stat-num">${a.leads || 0}</div><div class="stat-label">Leads</div></div>
+        <div class="stat"><div class="stat-num">${a.campaigns || 0}</div><div class="stat-label">Campaigns</div></div>
+        <div class="stat"><div class="stat-num">${a.questions_found || 0}</div><div class="stat-label">Questions</div></div>
+      </div>`;
+  } catch (e) { el.innerHTML = `<div class="status error">${esc(e.message)}</div>`; }
 }
 
-async function renderBusinesses(){
-  const isFree = state.plan === 'free';
-  const limit = state.isAdmin ? 999999 : isFree ? 1 : 3;
-  const count = state.businesses.length;
-  const canAdd = count < limit;
+function renderBusinesses(){
+  const canAdd = state.businesses.length < (state.limits.businesses || 1) || state.isAdmin;
   content.innerHTML = `
     <h1 class="h1">Businesses</h1>
-    <p class="subtitle">${count}/${state.isAdmin ? '∞' : limit} businesses · ${state.isAdmin ? 'Unlimited (Admin)' : isFree ? 'Upgrade for 3' : 'Premium allows 3'}</p>
-    <div id="bizList"><div class="skeleton-card"><div class="skeleton skeleton-line"></div></div></div>
-    ${canAdd ? `<div class="section-title">Add a business</div><div class="card">
-      <label class="label">Business name *</label><input id="bizName" class="input" placeholder="Business name" />
-      <label class="label">Category</label><input id="bizCategory" class="input" placeholder="Category" />
-      <label class="label">Phone</label><input id="bizPhone" class="input" placeholder="Phone" />
-      <label class="label">WhatsApp</label><input id="bizWhatsapp" class="input" placeholder="WhatsApp" />
-      <label class="label">City</label><input id="bizCity" class="input" placeholder="City" />
-      <label class="label">State</label><input id="bizState" class="input" placeholder="State" />
-      <label class="label">Country</label><select id="bizCountry" class="select"><option value="ng">Nigeria</option><option value="us">US</option><option value="gb">UK</option><option value="ca">Canada</option><option value="au">Australia</option><option value="in">India</option><option value="ke">Kenya</option><option value="gh">Ghana</option><option value="za">South Africa</option></select>
-      <label class="label">Website</label><input id="bizWebsite" class="input" type="url" placeholder="https://" />
-      <label class="label">Google Review URL</label><input id="bizReviewUrl" class="input" type="url" placeholder="https://g.page/r/xxx/review" />
-      <label class="label">Description</label><textarea id="bizDesc" class="textarea"></textarea>
-      <button id="bizAdd" class="btn">Add Business</button><div id="bizAddResult"></div>
-    </div>` : `<div class="status warning" style="margin-top:16px;">${isFree ? `Free limit reached. <a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" style="color:inherit;text-decoration:underline;font-weight:700;">Upgrade for 3 businesses →</a>` : `Limit reached.`}</div>`}`;
-  try {
-    const d = await api('/api/businesses/list'); const bizs = d.businesses || [];
-    if (bizs.length === 0){ $('bizList').innerHTML = `<div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">No businesses yet</div></div>`; }
-    else {
-      let html = '<div class="card"><table class="data-table"><thead><tr><th>Name</th><th>Country</th><th>Status</th><th></th></tr></thead><tbody>';
-      bizs.forEach(b=>{ html += `<tr><td><div style="font-weight:600;color:var(--text);">${esc(b.name)} ${b.is_primary?'<span class="badge new" style="margin-left:6px;">Primary</span>':''}</div><div style="font-size:11px;color:var(--text-3);">${esc(b.category||'—')}</div></td><td>${esc((b.country||'ng').toUpperCase())}</td><td>${state.business?.id===b.id?'<span class="badge success">Active</span>':'<span class="badge">Inactive</span>'}</td><td><button class="btn small danger" data-del-biz="${b.id}">Delete</button></td></tr>`; });
-      html += '</tbody></table></div>'; $('bizList').innerHTML = html;
-      $('bizList').querySelectorAll('[data-del-biz]').forEach(b=>b.addEventListener('click', async ()=>{ if (!confirm('Delete business?')) return; b.disabled = true; b.innerHTML = '<span class="spin"></span>'; try { await api('/api/businesses/' + b.getAttribute('data-del-biz'), {method:'DELETE'}); toast('Deleted'); await loadBusinesses(); updateHeader(); renderBusinesses(); } catch(e){ toast(e.message, 'error'); b.disabled = false; b.textContent = 'Delete'; } }));
-    }
-  } catch(e){ $('bizList').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; }
-  if (canAdd && $('bizAdd')){
-    $('bizAdd').addEventListener('click', async function(){
-      const btn = this; const name = $('bizName').value.trim();
-      if (!name) { toast('Name required', 'error'); return; }
-      btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Creating…';
+    <p class="subtitle">Manage your business profiles.</p>
+    ${state.businesses.map(b => `
+      <div class="listing-item">
+        <div class="listing-header"><div class="listing-platform">${esc(b.name)}</div><span class="badge source">${esc(b.category || 'business')}</span></div>
+        <div style="font-size:12px;color:var(--text-2);">${esc(b.url || '')}</div>
+        <button class="btn small secondary" data-edit="${b.id}">Edit</button>
+      </div>`).join('')}
+    ${canAdd ? `
+      <div class="card">
+        <div class="section-title">Add Business</div>
+        <label class="label">Name</label><input class="input" id="bizName" />
+        <label class="label">Category</label><input class="input" id="bizCat" placeholder="e.g. Coffee Shop" />
+        <label class="label">Website URL</label><input class="input" id="bizUrl" type="url" placeholder="https://" />
+        <button class="btn" id="bizAddBtn">Add Business</button>
+        <div id="bizResult"></div>
+      </div>` : `<div class="status warning" style="margin-top:16px;">Free plan allows ${state.limits.businesses} business. Upgrade to add more.</div>`}
+  `;
+  const addBtn = $('bizAddBtn');
+  if (addBtn) {
+    addBtn.addEventListener('click', async () => {
+      const name = $('bizName').value.trim();
+      if (!name) return toast('Enter business name', 'error');
+      addBtn.disabled = true;
       try {
-        await api('/api/businesses', {method:'POST', body:{ name, category: $('bizCategory').value.trim(), phone: $('bizPhone').value.trim(), whatsapp: $('bizWhatsapp').value.trim(), city: $('bizCity').value.trim(), state: $('bizState').value.trim(), country: $('bizCountry').value, website: $('bizWebsite').value.trim(), googleReviewUrl: $('bizReviewUrl').value.trim(), description: $('bizDesc').value.trim() }});
-        toast('Added'); await loadBusinesses(); updateHeader(); renderBusinesses();
-      } catch(e){ if (e.status === 403 && e.data?.error === 'BUSINESS_LIMIT') $('bizAddResult').innerHTML = `<div class="status warning">${esc(e.data.message)}</div>`; else $('bizAddResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>'; btn.disabled = false; btn.textContent = 'Add Business'; }
+        await api('/api/businesses', { method: 'POST', body: { name, category: $('bizCat').value.trim(), url: $('bizUrl').value.trim() } });
+        toast('Business added', 'success');
+        await loadBusinesses();
+        updateHeader();
+        renderTab();
+      } catch (e) {
+        $('bizResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+      } finally { addBtn.disabled = false; }
     });
   }
 }
 
 function renderKnowledgeBase(){
+  const faqs = [
+    { q: 'How does the SEO Audit work?', a: '<p>We crawl your page, score on-page SEO, and (optionally) apply AI-generated fixes. Free plan: 3 audits/day. Premium: unlimited.</p>' },
+    { q: 'How do I connect my Facebook Page?', a: '<p>Go to Social → Connect Facebook Page. You will be redirected to Facebook to authorize. After approval, you will either land back on the Social tab automatically (single page) or see a picker (multiple pages).</p><p><strong>If nothing happens after Facebook login:</strong> check your Render logs for "Facebook OAuth error". Common causes: expired app credentials, redirect URI mismatch, or Graph API version mismatch (set <code>FACEBOOK_GRAPH_VERSION=v23.0</code>).</p>' },
+    { q: 'How do I connect LinkedIn?', a: '<p>You need a LinkedIn Organization ID and access token from the LinkedIn Developer Portal. Paste both into the Social tab.</p>' },
+    { q: 'What is IndexNow?', a: '<p>IndexNow pings search engines (Bing, Yandex, Seznam) to crawl your pages immediately. You must first verify a key file at your domain root.</p>' },
+    { q: 'How does the free vs premium plan work?', a: '<ul class="kb-list"><li><strong>Free:</strong> 3 audits/day, 1 business</li><li><strong>Premium:</strong> unlimited audits, 3 businesses, video ads, keyword research, Q&A finder, social posting, directory listings</li></ul>' },
+    { q: 'How do leads get into the system?', a: '<p>Leads come from your tracking links (e.g. <code>/l/slug</code>), WhatsApp webhook, or manual entry. Each lead is linked to a business and campaign.</p>' },
+    { q: 'How do I upgrade to premium?', a: '<p>Go to <a href="/pay.html">/pay.html</a>. In demo mode you can upgrade instantly. In production, payment goes through Flutterwave.</p>' },
+  ];
   content.innerHTML = `
     <h1 class="h1">Knowledge Base</h1>
-    <p class="subtitle">Everything you need to grow your business with Auto Traffic Engine.</p>
-
-    <div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(99,102,241,.08));border-color:rgba(139,92,246,.3);">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-l);margin-bottom:6px;">📌 Start here</div>
-      <div style="font-size:15px;font-weight:700;margin-bottom:6px;">New to Auto Traffic Engine?</div>
-      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">Fast path: 1) Add a business → 2) Run SEO audit → 3) Find Q&A questions → 4) Generate directory listings → 5) Post to social media.</p>
-    </div>
-
-    <div class="section-title">🎯 Getting Started</div>
-    <details class="kb-item"><summary>How to add your first business</summary><div class="kb-content">
-      <ol class="kb-list"><li>Go to <strong>Businesses</strong>.</li><li>Fill in name, category, phone, city, state, website.</li><li>Click <strong>Add Business</strong>.</li><li>Free plan allows 1, Premium allows 3, Admin unlimited.</li></ol>
-    </div></details>
-
-    <details class="kb-item"><summary>Understanding your plan (Free vs Premium $29)</summary><div class="kb-content">
-      <table class="data-table"><thead><tr><th>Feature</th><th>Free</th><th>Premium</th></tr></thead><tbody>
-        <tr><td>SEO Audits</td><td>3/day</td><td>Unlimited</td></tr>
-        <tr><td>Businesses</td><td>1</td><td>3</td></tr>
-        <tr><td>Q&A Finder</td><td>🔒</td><td>✅</td></tr>
-        <tr><td>Directory Listings</td><td>🔒</td><td>✅</td></tr>
-        <tr><td>Backlinks</td><td>🔒</td><td>✅</td></tr>
-        <tr><td>Video Ads</td><td>🔒</td><td>✅ 30/month</td></tr>
-        <tr><td>Social Posting</td><td>🔒</td><td>✅</td></tr>
-      </tbody></table>
-    </div></details>
-
-    <div class="section-title">📱 Social Media</div>
-    <details class="kb-item"><summary>How to connect a Facebook Page</summary><div class="kb-content">
-      <ol class="kb-list">
-        <li>Go to <strong>Social</strong>.</li>
-        <li>Click <strong>📘 Connect Facebook Page</strong>.</li>
-        <li>Log in to Facebook and click <strong>Continue</strong>.</li>
-        <li>⚠️ You must be an <strong>Admin of at least one Page</strong>.</li>
-        <li>If you manage multiple pages, a picker appears.</li>
-        <li>Once connected, use <strong>Post now</strong> to publish.</li>
-      </ol>
-      <div class="status warning" style="font-size:12px;">⚠️ If you see "App not active", add your Facebook account as a Tester in <a href="https://developers.facebook.com/apps" target="_blank" style="color:#93c5fd;">Meta Developer Console</a> → App Roles → Testers.</div>
-      <div class="status info" style="font-size:12px;">💡 If the widget is embedded in a blog (Blogspot), the Connect button opens Facebook in a full page, then redirects back to your blog automatically.</div>
-    </div></details>
-
-    <div class="section-title">🔧 Troubleshooting</div>
-    <details class="kb-item"><summary>Facebook connect shows "refused to connect"</summary><div class="kb-content">
-      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">This happens when the widget is embedded in an iframe. Facebook blocks its own login pages from loading inside iframes. Our Connect button now breaks out of the iframe and loads Facebook full-page, then returns you to your blog automatically.</p>
-    </div></details>
-
-    <details class="kb-item"><summary>"AI generation failed" error</summary><div class="kb-content">
-      <ul class="kb-list">
-        <li><strong>Model mismatch:</strong> Check Render env vars — <code>AI_DRAFT_MODEL</code> must match provider (DeepSeek: <code>deepseek-flash</code> or <code>deepseek-v4-pro</code>).</li>
-        <li><strong>API key missing:</strong> Add <code>OPENAI_API_KEY</code> or <code>DEEPSEEK_API_KEY</code>.</li>
-      </ul>
-    </div></details>
-
-    <div class="section-title">❓ FAQ</div>
-    <details class="kb-item"><summary>How do I get my API key for integrations?</summary><div class="kb-content">
-      <ol class="kb-list"><li>Go to <strong>Settings</strong>.</li><li>Scroll to <strong>API Access</strong>.</li><li>Click <strong>Copy API key</strong>.</li></ol>
-    </div></details>
-
-    <details class="kb-item"><summary>Does it work on mobile?</summary><div class="kb-content">
-      <p style="font-size:13px;color:var(--text-2);line-height:1.6;">Yes. Fully responsive. Install as a PWA by clicking <strong>Install</strong> when the banner appears.</p>
-    </div></details>
-
-    <div style="text-align:center;padding:32px 20px 20px;color:var(--text-3);font-size:12px;">Need help? <a href="mailto:support@autotrafficengine.app" style="color:var(--accent-l);">support@autotrafficengine.app</a></div>
+    <p class="subtitle">Answers to common questions.</p>
+    ${faqs.map(f => `<details class="kb-item"><summary>${esc(f.q)}</summary><div class="kb-content">${f.a}</div></details>`).join('')}
   `;
 }
 
 function renderSettings(){
-  const isFree = state.plan === 'free';
-  const audits = state.usage.auditsToday || 0;
-  const videos = state.usage.videosMonth || 0;
-  const lastActivity = getLastActivity();
-  const idleMinAgo = Math.floor((Date.now() - lastActivity) / 60000);
-  const remaining = Math.max(0, 25 - idleMinAgo);
   content.innerHTML = `
     <h1 class="h1">Settings</h1>
-    <p class="subtitle">Account, plan, and API access.</p>
+    <p class="subtitle">Account and app preferences.</p>
+    <div class="card">
+      <div class="section-title">Account</div>
+      <div style="font-size:13px;color:var(--text-2);line-height:1.8;">
+        <div><strong>Email:</strong> ${esc(state.user?.email || '')}</div>
+        <div><strong>Name:</strong> ${esc(state.user?.name || '—')}</div>
+        <div><strong>Plan:</strong> ${esc(state.plan)}</div>
+        <div><strong>API Key:</strong> <code style="background:var(--surface-3);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;">${esc(state.apiKey || '')}</code></div>
+      </div>
+      <button class="btn secondary small" id="copyApiKeyBtn" style="margin-top:12px;">Copy API Key</button>
+    </div>
+    <div class="card">
+      <div class="section-title">Danger Zone</div>
+      <button class="btn danger" id="signOutSettings">Sign Out</button>
+    </div>
+  `;
+  $('copyApiKeyBtn').addEventListener('click', () => copy(state.apiKey, 'API key copied'));
+  $('signOutSettings').addEventListener('click', handleLogout);
+}
 
-    <div class="card" style="background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(139,92,246,.08));border-color:rgba(59,130,246,.3);">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div>
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#93c5fd;">📖 Knowledge Base</div>
-          <div style="font-size:14px;font-weight:600;margin-top:2px;">Learn how to use every feature</div>
-        </div>
-        <button class="btn small" data-go="kb" style="background:linear-gradient(135deg,#3b82f6,#6366f1);margin-top:0;">📖 Open</button>
+function renderUpgrade(tabName){
+  content.innerHTML = `
+    <h1 class="h1">🔒 Premium Feature</h1>
+    <p class="subtitle">Upgrade to access ${esc(tabName)} and all growth tools.</p>
+    <div class="card">
+      <div class="empty">
+        <div class="empty-icon">⭐</div>
+        <div class="empty-title">Unlock Premium</div>
+        <div class="empty-desc">Video ads, keyword research, Q&A finder, social posting, directory listings, and unlimited audits.</div>
+        <button class="btn" onclick="location.href='/pay.html'">Upgrade for $${state.limits.price}/mo</button>
       </div>
     </div>
-
-    <div class="section-title">Account</div>
-    <div class="card"><div style="font-size:13px;line-height:2;color:var(--text-2);">Email: <strong style="color:var(--text);">${esc(state.user?.email || '—')}</strong><br>Role: <strong style="color:${state.isAdmin ? '#fcd34d' : 'var(--text)'};">${state.isAdmin ? '🛡️ Admin' : esc(state.user?.role || 'user')}</strong><br>Session: <strong style="color:var(--text);">${remaining} min before idle logout</strong></div><button class="btn danger" id="logoutBtn" style="margin-top:12px;">⏻ Log out</button></div>
-    ${state.isAdmin ? `<div class="section-title">Admin Access</div><div class="card" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">You have full admin access.</p><a href="/admin.html" class="btn" style="text-decoration:none;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;">🛡️ Open Admin Panel</a></div>` : ''}
-    <div class="section-title">Your plan</div>
-    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${state.isAdmin ? '#f59e0b' : 'var(--text-3)'};">${state.isAdmin ? '🛡️ Admin' : isFree?'Free':'⭐ Premium'}</div><div style="font-size:16px;font-weight:700;margin-top:2px;">${state.isAdmin ? 'Unlimited' : isFree?'Limited features':'Everything unlocked'}</div></div>${isFree && !state.isAdmin?`<a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" class="btn small" style="text-decoration:none;">⚡ Upgrade</a>`:''}</div></div>
-    <div class="section-title">API Access</div>
-    <div class="card"><p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:12px;">Use this key for integrations.</p><div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent-l);word-break:break-all;margin-bottom:10px;">${esc(state.apiKey)}</div><button id="copyApiKey" class="btn secondary">Copy API key</button></div>
-    <div style="text-align:center;font-size:11px;color:var(--text-3);padding:24px 0;">Auto Traffic Engine v3.8.0</div>`;
-  $('copyApiKey').addEventListener('click', ()=>copy(state.apiKey, 'API key copied'));
-  $('logoutBtn').addEventListener('click', handleLogout);
-  content.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => navigateTo(b.getAttribute('data-go'))));
+  `;
 }
 
-function renderUpgrade(tab){
-  const labels = { video:'Video generation', keywords:'Keyword research', qa:'Q&A finder', directories:'Directory listings', backlinks:'Backlink tools', social:'Social posting' };
-  content.innerHTML = `<div class="empty"><div class="empty-icon">🔒</div><div class="empty-title">${labels[tab] || 'This feature'} is Premium</div><div class="empty-desc">Unlock unlimited audits, AI videos, 60-country Q&A, directories, backlinks, social posting.</div><a href="/pay.html?key=${encodeURIComponent(state.apiKey)}" class="btn" style="display:inline-flex;text-decoration:none;max-width:320px;margin:0 auto;">⚡ Upgrade for $29/month</a><button class="btn secondary" id="backHome" style="max-width:320px;margin:8px auto 0;">← Back to home</button></div>`;
-  $('backHome').addEventListener('click', ()=>navigateTo('home'));
-}
-
-// === PAGE PICKER ===
-function openPagePicker(sessionBlob, returnUrl) {
+// ============================================================
+// PAGE PICKER (multi-page Facebook)
+// ============================================================
+function openPagePicker(sessionBlob, returnUrl){
   state.pickerSession = sessionBlob;
   state.pickerSelected = null;
   state.pickerReturn = returnUrl || null;
@@ -1258,28 +1184,25 @@ function openPagePicker(sessionBlob, returnUrl) {
     const base64 = sessionBlob.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
     payload = JSON.parse(atob(padded));
-  } catch(e) {
-    toast('Invalid session data', 'error');
+  } catch (e) {
+    toast('Invalid session data. Please reconnect Facebook.', 'error');
     return;
   }
-
   const pages = payload.pages || [];
-  if (pages.length === 0) { toast('No pages in session', 'error'); return; }
+  if (!pages.length) { toast('No pages in session', 'error'); return; }
 
-  const list = $('pickerList');
-  list.innerHTML = pages.map(p => `
-    <div class="picker-item" data-page-id="${esc(p.id)}" data-page-name="${esc(p.name)}">
+  $('pickerList').innerHTML = pages.map((p, i) => `
+    <div class="picker-item" data-page-id="${esc(p.id)}" data-idx="${i}">
       <div class="picker-radio"></div>
       <div class="picker-info">
         <div class="picker-name">${esc(p.name)}</div>
         ${p.category ? `<div class="picker-category">${esc(p.category)}</div>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 
-  list.querySelectorAll('.picker-item').forEach(item => {
+  $('pickerList').querySelectorAll('.picker-item').forEach(item => {
     item.addEventListener('click', () => {
-      list.querySelectorAll('.picker-item').forEach(i => i.classList.remove('selected'));
+      $('pickerList').querySelectorAll('.picker-item').forEach(x => x.classList.remove('selected'));
       item.classList.add('selected');
       state.pickerSelected = item.getAttribute('data-page-id');
     });
@@ -1288,117 +1211,136 @@ function openPagePicker(sessionBlob, returnUrl) {
   $('pickerOverlay').classList.add('show');
 }
 
-$('pickerCancel').addEventListener('click', () => {
-  $('pickerOverlay').classList.remove('show');
-  state.pickerSession = null;
-  state.pickerSelected = null;
-  state.pickerReturn = null;
-});
-
-$('pickerConfirm').addEventListener('click', async () => {
-  if (!state.pickerSelected) { toast('Select a page first', 'error'); return; }
-  const btn = $('pickerConfirm');
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Connecting…';
+async function confirmPickerSelection(){
+  if (!state.pickerSelected) return toast('Select a page first', 'error');
+  $('pickerConfirm').disabled = true;
+  $('pickerConfirm').innerHTML = '<span class="spin"></span>Connecting...';
   try {
-    const d = await api('/api/social/facebook/select-page', {
-      method: 'POST',
-      body: { session: state.pickerSession, pageId: state.pickerSelected }
-    });
-    if (d.ok) {
-      $('pickerOverlay').classList.remove('show');
-      toast('✅ Connected: ' + d.page.name, 'success');
-
-      // If we came from Blogspot, redirect back
-      if (state.pickerReturn) {
-        localStorage.setItem('ate_landing_tab', 'social');
-        const ret = state.pickerReturn;
-        state.pickerReturn = null;
-        setTimeout(() => { window.location.href = ret; }, 2000);
-      } else {
-        // Stay on Social tab
-        state.tab = 'social';
-        renderNav(); renderTab();
-      }
+    const r = await api('/api/social/facebook/select-page', { method: 'POST', body: { session: state.pickerSession, pageId: state.pickerSelected } });
+    $('pickerOverlay').classList.remove('show');
+    toast('✅ Page connected: ' + (r.page?.name || ''), 'success');
+    if (state.pickerReturn) {
+      localStorage.setItem('ate_landing_tab', 'social');
+      setTimeout(() => { window.location.href = state.pickerReturn; }, 2000);
+    } else {
+      await loadSocialAccounts();
     }
-  } catch(e) { toast(e.message, 'error'); }
-  finally { btn.disabled = false; btn.textContent = 'Connect Selected'; }
-});
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    $('pickerConfirm').disabled = false;
+    $('pickerConfirm').textContent = 'Connect Selected';
+  }
+}
 
-$('hamburgerBtn').addEventListener('click', openDrawer);
-$('drawerClose').addEventListener('click', closeDrawer);
-$('drawerOverlay').addEventListener('click', closeDrawer);
-document.addEventListener('keydown', e=>{ if (e.key === 'Escape') closeDrawer(); });
-$('idleStayBtn').addEventListener('click', ()=>{ touchActivity(); hideWarn(); toast('Session extended', 'success'); });
-$('idleLogoutBtn').addEventListener('click', ()=>{ forceLogout('manual'); });
-window.handleLogout = handleLogout;
-
-// === INIT ===
+// ============================================================
+// INIT
+// ============================================================
 async function init(){
   try {
     const r = await fetch(BACKEND + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN } });
-    if (!r.ok) { localStorage.removeItem(TOKEN_KEY); location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH)); return; }
+    if (!r.ok) {
+      localStorage.removeItem(TOKEN_KEY);
+      location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH));
+      return;
+    }
     const data = await r.json();
     state.user = data.user;
     state.apiKey = data.user.api_key;
     state.isAdmin = data.user.role === 'admin';
-  } catch (e) { localStorage.removeItem(TOKEN_KEY); location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH)); return; }
+  } catch (e) {
+    localStorage.removeItem(TOKEN_KEY);
+    location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH));
+    return;
+  }
 
   startIdleWatcher();
   touchActivity();
   updateHeader();
-  const hLogout = $('headerLogoutBtn'); if (hLogout) hLogout.addEventListener('click', handleLogout);
+  const hLogout = $('headerLogoutBtn');
+  if (hLogout) hLogout.addEventListener('click', handleLogout);
+
   await Promise.all([loadPlan(), loadBusinesses(), loadCountries()]);
   await loadAnalytics();
 
-  // === FACEBOOK OAUTH RETURN HANDLER (iframe-safe) ===
+  // === FACEBOOK OAUTH RETURN HANDLER ===
   const urlParams = new URLSearchParams(location.search);
   const fbConnected = urlParams.get('fb_connected');
-  const fbChoose = urlParams.get('fb_choose');
-  const fbError = urlParams.get('fb_error');
-  const fbReturn = urlParams.get('return');
+  const fbChoose    = urlParams.get('fb_choose');
+  const fbError     = urlParams.get('fb_error');
+  const fbReturn    = urlParams.get('return');
 
   if (fbConnected || fbChoose || fbError) {
-    // Clean the URL so refresh doesn't re-trigger
     history.replaceState({}, '', '/app.html');
     state.tab = 'social';
-
-    if (fbConnected) {
-      toast('✅ Facebook Page connected: ' + (urlParams.get('page') || ''), 'success');
-      if (fbReturn) {
-        // We're in the app.html page with a return to Blogspot
-        localStorage.setItem('ate_landing_tab', 'social');
-        setTimeout(() => { window.location.href = fbReturn; }, 2500);
-      }
-    }
-
-    if (fbChoose) {
-      const session = urlParams.get('session');
-      if (session) {
-        openPagePicker(session, fbReturn);
-      }
-    }
-
-    if (fbError) {
-      toast('Facebook: ' + fbError, 'error');
-      if (fbReturn) {
-        setTimeout(() => { window.location.href = fbReturn; }, 4000);
-      }
-    }
   } else {
-    // Check if we need to land on a specific tab (after redirect back from Blogspot)
-    const landingTab = localStorage.getItem('ate_landing_tab');
-    if (landingTab) {
+    const savedTab = localStorage.getItem('ate_landing_tab');
+    if (savedTab) {
+      state.tab = savedTab;
       localStorage.removeItem('ate_landing_tab');
-      if (['home','seo','video','keywords','qa','directories','backlinks','social','campaigns','leads','reviews','analytics','businesses','kb','settings'].includes(landingTab)) {
-        state.tab = landingTab;
-      }
     }
   }
 
-  updateHeader(); renderNav(); renderTab();
+  renderNav();
+  renderTab();
+
+  // Now surface the OAuth result — AFTER the Social tab is visible, so the
+  // inline error card actually appears inside renderSocial().
+  if (fbConnected) {
+    toast('✅ Facebook Page connected: ' + (urlParams.get('page') || ''), 'success');
+    if (fbReturn) {
+      localStorage.setItem('ate_landing_tab', 'social');
+      setTimeout(() => { window.location.href = fbReturn; }, 2500);
+    } else {
+      await loadSocialAccounts();
+    }
+  }
+
+  if (fbChoose) {
+    const session = urlParams.get('session');
+    if (session) openPagePicker(session, fbReturn);
+    else toast('Session missing from Facebook return. Please reconnect.', 'error');
+  }
+
+  if (fbError) {
+    // Render a PERSISTENT error block inside the Social card so users can't miss it.
+    const errBox = $('socialFbError');
+    if (errBox) {
+      errBox.innerHTML = `
+        <div class="status error" style="margin-top:12px;">
+          <strong>Facebook connection failed:</strong><br>
+          ${esc(fbError)}
+          <br><br>
+          <button class="btn small secondary" id="fbRetryBtn">Try again</button>
+        </div>`;
+      const retry = $('fbRetryBtn');
+      if (retry) retry.addEventListener('click', () => $('fbConnectBtn')?.click());
+    } else {
+      // Fallback: user navigated away from Social — still show a toast.
+      toast('Facebook: ' + fbError, 'error');
+    }
+  }
 }
 
+// Expose navigateTo for inline onclick handlers
+window.navigateTo = navigateTo;
+
+// Wire drawer / picker / idle modal / hamburger
+document.addEventListener('DOMContentLoaded', () => {
+  const hb = $('hamburgerBtn'); if (hb) hb.addEventListener('click', openDrawer);
+  const dc = $('drawerClose'); if (dc) dc.addEventListener('click', closeDrawer);
+  const doo = $('drawerOverlay'); if (doo) doo.addEventListener('click', closeDrawer);
+
+  const pc = $('pickerCancel'); if (pc) pc.addEventListener('click', () => $('pickerOverlay').classList.remove('show'));
+  const pcf = $('pickerConfirm'); if (pcf) pcf.addEventListener('click', confirmPickerSelection);
+
+  const st = $('idleStayBtn'); if (st) st.addEventListener('click', () => { touchActivity(); hideWarn(); });
+  const lo = $('idleLogoutBtn'); if (lo) lo.addEventListener('click', () => forceLogout('manual'));
+});
+
+// Kick off
 init();
+
 })();
 </script>
 </body>

@@ -1,6 +1,6 @@
 // ============================================================
 // Auto Traffic Engine — Main Express server
-// v3.8.0 — Facebook iframe-safe OAuth, KB, anti-spam, super-brain
+// v3.8.1 — Facebook OAuth version alignment + debug endpoint
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -78,6 +78,11 @@ const PORT = Number(process.env.PORT) || 10000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const PREMIUM_PRICE_USD = 29;
+
+// Single source of truth for Graph API version — matches socialPoster.js
+const FB_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
+const FB_OAUTH_BASE = `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth`;
+const FB_GRAPH_BASE = `https://graph.facebook.com/${FB_GRAPH_VERSION}`;
 
 const AI_PROVIDER = process.env.AI_PROVIDER || 'openai';
 let aiClient = null;
@@ -195,12 +200,13 @@ function getClientIp(req) {
 // ============================================================
 app.get('/health', (req, res) => {
   res.json({
-    ok: true, version: '3.8.0', env: NODE_ENV,
+    ok: true, version: '3.8.1', env: NODE_ENV,
     uptime: Math.round(process.uptime()), ai: AI_PROVIDER,
     demoMode: process.env.DEMO_MODE === 'true',
     price: { USD: PREMIUM_PRICE_USD },
     flutterwaveConfigured: Boolean(process.env.FLUTTERWAVE_PUBLIC_KEY && process.env.FLUTTERWAVE_SECRET_KEY),
     facebookOAuthConfigured: Boolean(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.env.FACEBOOK_REDIRECT_URI),
+    facebookGraphVersion: FB_GRAPH_VERSION,
     auth: { enabled: true, jwtConfigured: Boolean(process.env.JWT_SECRET), adminConfigured: Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) },
     services: {
       openai: Boolean(process.env.OPENAI_API_KEY),
@@ -485,20 +491,30 @@ app.get('/api/social/facebook/connect', generalLimiter, requireApiKey, (req, res
   // returnUrl = the page to send the user back to after OAuth (e.g., Blogspot URL)
   const returnUrl = req.query.redirect || '';
   const state = Buffer.from(JSON.stringify({ apiKey: req.apiKey, returnUrl })).toString('base64url');
-  const scopes = 'pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata';
+  // pages_manage_metadata is NOT a valid scope — removed. These 3 cover posting.
+  const scopes = 'pages_show_list,pages_read_engagement,pages_manage_posts';
   const authUrl =
-    `https://www.facebook.com/v23.0/dialog/oauth?` +
+    `${FB_OAUTH_BASE}?` +
     `client_id=${appId}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&state=${state}` +
     `&scope=${scopes}` +
     `&response_type=code`;
+  console.log('🔵 Facebook OAuth redirect:', { graphVersion: FB_GRAPH_VERSION, scopes, redirectUri });
   res.redirect(authUrl);
 });
 
 app.get('/api/social/facebook/callback', async (req, res) => {
   const { code, state, error, error_description } = req.query;
   const FRONTEND = process.env.PUBLIC_BASE_URL || 'https://growthbot-aprv.onrender.com';
+
+  console.log('🟢 Facebook OAuth callback hit:', {
+    graphVersion: FB_GRAPH_VERSION,
+    hasCode: !!code,
+    hasState: !!state,
+    error: error || null,
+    errorDescription: error_description || null,
+  });
 
   // Helper: build a redirect to app.html with returnUrl attached
   const buildRedirect = (params) => {
@@ -536,14 +552,14 @@ app.get('/api/social/facebook/callback', async (req, res) => {
     const appSecret = process.env.FACEBOOK_APP_SECRET;
     const redirectUri = process.env.FACEBOOK_REDIRECT_URI;
 
-    const shortRes = await axios.get('https://graph.facebook.com/v23.0/oauth/access_token', {
+    const shortRes = await axios.get(`${FB_GRAPH_BASE}/oauth/access_token`, {
       params: { client_id: appId, client_secret: appSecret, redirect_uri: redirectUri, code },
       timeout: 15000,
     });
     const shortToken = shortRes.data.access_token;
     if (!shortToken) throw new Error('No short token');
 
-    const longRes = await axios.get('https://graph.facebook.com/v23.0/oauth/access_token', {
+    const longRes = await axios.get(`${FB_GRAPH_BASE}/oauth/access_token`, {
       params: { grant_type: 'fb_exchange_token', client_id: appId, client_secret: appSecret, fb_exchange_token: shortToken },
       timeout: 15000,
     });
@@ -552,6 +568,7 @@ app.get('/api/social/facebook/callback', async (req, res) => {
 
     const pagesResult = await listFacebookPages(longToken);
     if (!pagesResult.ok) {
+      console.error('❌ listFacebookPages failed:', pagesResult.error);
       return res.redirect(buildRedirect({ fb_error: pagesResult.error }));
     }
     const pages = pagesResult.pages || [];
@@ -585,7 +602,12 @@ app.get('/api/social/facebook/callback', async (req, res) => {
     const sessionBlob = Buffer.from(JSON.stringify(pickerPayload)).toString('base64url');
     return res.redirect(buildRedirect({ fb_choose: '1', session: sessionBlob }));
   } catch (e) {
-    console.error('Facebook OAuth error:', e.response?.data || e.message);
+    console.error('❌ Facebook OAuth error:', {
+      graphVersion: FB_GRAPH_VERSION,
+      status: e.response?.status,
+      facebookError: e.response?.data?.error,
+      message: e.message,
+    });
     const msg = e.response?.data?.error?.message || e.message || 'oauth_failed';
     return res.redirect(buildRedirect({ fb_error: msg }));
   }
@@ -621,6 +643,39 @@ app.post('/api/social/facebook/select-page', generalLimiter, requireApiKey, asyn
     console.error('Page select error:', e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// === FACEBOOK DIAGNOSTIC (admin only) ===
+// Visit while logged in as admin to see env vars + actual Facebook response.
+app.get('/api/social/facebook/debug', requireAdmin, async (req, res) => {
+  const diagnostics = {
+    graphVersion: FB_GRAPH_VERSION,
+    envConfigured: {
+      FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID || null,
+      FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET ? '(set)' : null,
+      FACEBOOK_REDIRECT_URI: process.env.FACEBOOK_REDIRECT_URI || null,
+      FACEBOOK_GRAPH_VERSION: process.env.FACEBOOK_GRAPH_VERSION || null,
+      TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY ? '(set)' : null,
+      PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || null,
+    },
+    graphProbe: null,
+  };
+
+  try {
+    const r = await axios.get(`${FB_GRAPH_BASE}/me`, {
+      params: { access_token: 'INVALID_TEST_TOKEN_FOR_DIAG' },
+      validateStatus: () => true,
+      timeout: 10000,
+    });
+    diagnostics.graphProbe = {
+      status: r.status,
+      facebookResponse: r.data,
+    };
+  } catch (e) {
+    diagnostics.graphProbe = { error: e.message };
+  }
+
+  res.json(diagnostics);
 });
 
 // ============================================================
@@ -1018,11 +1073,12 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.8.0 on port ${PORT}`);
+      console.log(`🚀 Auto Traffic Engine v3.8.1 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
       console.log(`   Directory generator: ${dirModule ? '✅' : '⚠️ not loaded'}`);
       console.log(`   Facebook OAuth: ${process.env.FACEBOOK_APP_ID ? '✅ configured' : '⚠️ not configured'}`);
+      console.log(`   Facebook Graph API version: ${FB_GRAPH_VERSION}`);
       console.log(`   iframe embedding: ✅ allowed (Blogspot-safe)`);
     });
   } catch (e) {

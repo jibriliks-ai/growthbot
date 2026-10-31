@@ -1,6 +1,6 @@
 // ============================================================
 // GrowthBot — Facebook Page + LinkedIn Company poster
-// v2.1 — iframe-safe OAuth helpers, token diagnostics, LinkedIn fix
+// v2.2 — graph version alignment fix (v23.0), diagnostics
 // ============================================================
 import axios from 'axios';
 import crypto from 'crypto';
@@ -50,9 +50,9 @@ export function decryptToken(payload) {
 }
 
 // ============================================================
-// CONFIG
+// CONFIG — MUST MATCH server.js OAuth version
 // ============================================================
-const FB_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || 'v26.0';
+const FB_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
 const FB_GRAPH = `https://graph.facebook.com/${FB_GRAPH_VERSION}`;
 // Stable LinkedIn version — 202607 does not exist
 const LI_VERSION = process.env.LINKEDIN_API_VERSION || '202501';
@@ -83,6 +83,13 @@ function classifyFacebookError(errorObj) {
     return {
       kind: 'RATE_LIMIT',
       message: 'Facebook rate limit hit. Try again in 15 minutes.',
+      needsReconnect: false,
+    };
+  }
+  if (code === 100) {
+    return {
+      kind: 'BAD_VERSION',
+      message: `Facebook Graph API rejected the request ("${msg}"). Set FACEBOOK_GRAPH_VERSION env var to a valid version like v23.0.`,
       needsReconnect: false,
     };
   }
@@ -165,6 +172,12 @@ export async function listFacebookPages(userToken) {
       })),
     };
   } catch (e) {
+    console.error('❌ listFacebookPages failed:', {
+      graphVersion: FB_GRAPH_VERSION,
+      status: e.response?.status,
+      facebookError: e.response?.data?.error,
+      message: e.message,
+    });
     const classified = classifyFacebookError(e.response?.data?.error);
     return { ok: false, error: classified.message };
   }
