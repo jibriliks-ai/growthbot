@@ -499,7 +499,7 @@ function renderHome(){
   const leads = state.analytics?.leads || 0;
   const questions = state.analytics?.questions_found || 0;
   const hour = new Date().getHours();
-  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening   const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   content.innerHTML = `
     <h1 class="h1">${esc(greet)}, ${esc(state.user?.name || state.user?.email || 'there')}!</h1>
