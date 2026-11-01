@@ -22,6 +22,7 @@ import {
 
 import {
   initSchema, initSocialSchema, initLeadsSchema, initUsersSchema,
+  initDirectoryPostingsSchema,
   getOrCreateBlog, getBlog, upgradeToPremium,
   tryIncrementAudit, tryIncrementVideo,
   logAudit,
@@ -38,6 +39,7 @@ import {
   createUser, findUserByEmail, findUserById, updateUserLastLogin,
   findAdminUser, countUsers, listAllUsers, claimLegacyKey, updateUserRole,
   canPostLink,
+  markDirectoryPosted, listDirectoryPostings, unmarkDirectoryPosted,
   pool,
 } from './db.js';
 
@@ -60,6 +62,7 @@ import {
 } from './leadEngine.js';
 import { findQuestions, listSupportedCountries } from './questionFinder.js';
 import { generateDraft } from './draftGenerator.js';
+import { initTrackedLinksSchema, registerTrackedLinkRoutes } from './trackedLinks.js';
 
 let dirModule = null;
 try {
@@ -150,6 +153,7 @@ const questionLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30, message: 
 const draftLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 40, message: { error: 'Too many draft requests' } });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many auth attempts' } });
 const dirLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Too many directory requests' } });
+const dirTranslateLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 120, message: { error: 'Too many translation requests' } });
 
 // ============================================================
 // MIDDLEWARE
@@ -218,6 +222,7 @@ app.get('/health', (req, res) => {
       whatsapp: isWhatsAppConfigured(),
       indexnow: Boolean(process.env.INDEXNOW_KEY),
       directoryGenerator: Boolean(dirModule),
+            trackedLinks: true,
       tokenEncryption: Boolean(process.env.TOKEN_ENCRYPTION_KEY),
     },
     time: new Date().toISOString(),
@@ -921,7 +926,77 @@ app.post('/api/directories/generate', dirLimiter, requireApiKey, async (req, res
     res.status(500).json({ error: e.message });
   }
 });
+// --- Per-post translator — powers the language control next to every generated listing ---
+app.post('/api/directories/translate', dirTranslateLimiter, requireApiKey, async (req, res) => {
+  if (!dirModule) return res.status(503).json({ error: 'Directory feature not available' });
+  const { postTitle = '', postContent = '', targetLang } = req.body || {};
+  if (!targetLang) return res.status(400).json({ error: 'targetLang required' });
+  if (!postTitle && !postContent) return res.status(400).json({ error: 'postTitle or postContent required' });
 
+  const isAdmin = req.user && req.user.role === 'admin';
+  const blog = await getBlog(req.apiKey);
+  if ((!blog || blog.plan !== 'premium') && !isAdmin) {
+    return res.status(403).json({ error: 'PREMIUM_REQUIRED', message: 'Directory listings are Premium' });
+  }
+
+  try {
+    res.json(await dirModule.translateListing({ postTitle, postContent, targetLang }));
+  } catch (e) {
+    console.error('Directory translate error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Track which directory sites have been posted to ---
+
+app.post('/api/directories/mark-posted', generalLimiter, requireApiKey, async (req, res) => {
+  const { businessId, directoryName, directoryUrl, postedUrl, title } = req.body || {};
+  if (!businessId || !directoryName) {
+    return res.status(400).json({ error: 'businessId and directoryName are required' });
+  }
+  try {
+    const posting = await markDirectoryPosted({
+      apiKey: req.apiKey,
+      businessId: Number(businessId),
+      directoryName,
+      directoryUrl: directoryUrl || null,
+      postedUrl: postedUrl || null,
+      title: title || null,
+    });
+    res.json({ ok: true, posting });
+  } catch (e) {
+    console.error('mark-posted error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/directories/postings', generalLimiter, requireApiKey, async (req, res) => {
+  const businessId = Number(req.query.businessId);
+  if (!businessId) return res.status(400).json({ error: 'businessId query param required' });
+  try {
+    const postings = await listDirectoryPostings(req.apiKey, businessId);
+    res.json({ postings });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/directories/postings', generalLimiter, requireApiKey, async (req, res) => {
+  const { businessId, directoryName } = req.body || {};
+  if (!businessId || !directoryName) {
+    return res.status(400).json({ error: 'businessId and directoryName are required' });
+  }
+  try {
+    await unmarkDirectoryPosted({
+      apiKey: req.apiKey,
+      businessId: Number(businessId),
+      directoryName,
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 // ============================================================
 // PAYMENT
 // ============================================================
@@ -1000,6 +1075,10 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
   try { res.json(await runReviewCron({ hoursAgo: 24, dryRun })); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
+// ============================================================
+// TRACKED LINKS (4-in-1 bot feedback loop)
+// ============================================================
+registerTrackedLinkRoutes(app, requireApiKey);
 
 // ============================================================
 // SMART LINK
@@ -1033,14 +1112,15 @@ app.use((err, req, res, next) => {
 // ============================================================
 async function boot() {
   try {
-    if (process.env.DATABASE_URL) {
+       if (process.env.DATABASE_URL) {
       console.log('🔄 Initializing schemas...');
       await initSchema();
       await initSocialSchema();
       await initLeadsSchema();
       await initUsersSchema();
+      await initDirectoryPostingsSchema();
     }
-
+      await initTrackedLinksSchema();
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
 

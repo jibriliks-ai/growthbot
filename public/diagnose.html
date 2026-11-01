@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auto Traffic Engine — Diagnostics</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:0 auto;padding:20px;background:#0a0a0f;color:#f4f4f5;line-height:1.5}
+h1{font-size:22px;margin-bottom:4px}
+p.intro{color:#a1a1aa;font-size:13px;margin-bottom:24px}
+.card{background:#13131a;border:1px solid #23232e;border-radius:12px;padding:18px;margin-bottom:16px}
+h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#71717a;margin-bottom:12px;font-weight:700}
+.row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #23232e;font-size:13px}
+.row:last-child{border-bottom:none}
+.row span:last-child{font-family:ui-monospace,monospace;text-align:right;word-break:break-all}
+.ok{color:#10b981}.bad{color:#ef4444}.warn{color:#f59e0b}
+pre{background:#0a0a0f;border:1px solid #23232e;border-radius:8px;padding:12px;font-size:11px;overflow:auto;color:#a1a1aa;white-space:pre-wrap;word-break:break-word;margin-top:8px}
+.verdict{margin-top:14px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600}
+.verdict.ok{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3)}
+.verdict.bad{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3)}
+</style>
+</head>
+<body>
+<h1>Auto Traffic Engine — Diagnostics</h1>
+<p class="intro">Open this in your normal browser. No dev tools required. Results appear below.</p>
+
+<div class="card"><h2>1. app.html served by server</h2><div id="html-check">Checking…</div></div>
+<div class="card"><h2>2. Directory &amp; Q&amp;A APIs</h2><div id="api-check">Checking…</div></div>
+<div class="card"><h2>3. Business profile</h2><div id="biz-check">Checking…</div></div>
+<div class="card"><h2>4. Link tracking &amp; leads</h2><div id="link-check">Checking…</div></div>
+
+<script>
+const TOKEN = localStorage.getItem('ate_token');
+const $ = id => document.getElementById(id);
+const row = (label, ok, value) => '<div class="row"><span>' + label + '</span><span class="' + (ok?'ok':'bad') + '">' + value + '</span></div>';
+
+(async () => {
+  try {
+    const html = await (await fetch('/app.html')).text();
+    const hasNew = html.includes('state.dirCountries');
+    const hasTracking = html.includes('/api/links/create');
+    const hasOldUk = html.includes('<option value="uk">United Kingdom</option>');
+    $('html-check').innerHTML =
+      row('New renderDirectories (state.dirCountries)', hasNew, hasNew ? 'YES' : 'NO') +
+      row('Tracked link wiring present', hasTracking, hasTracking ? 'YES' : 'NO') +
+      row('Old hardcoded "uk" option', !hasOldUk, hasOldUk ? 'PRESENT' : 'no') +
+      row('Served size', true, html.length + ' bytes') +
+      (hasNew && !hasOldUk
+        ? '<div class="verdict ok">✅ Server is serving the NEW app.html</div>'
+        : '<div class="verdict bad">❌ Server is still serving the OLD app.html — commit + push + wait for Render</div>');
+  } catch (e) { $('html-check').innerHTML = '<p class="bad">Fetch failed: ' + e.message + '</p>'; }
+
+  let h = '';
+  try {
+    const d = await (await fetch('/api/directories/countries')).json();
+    const n = (d.countries || []).length;
+    h += row('/api/directories/countries', n >= 60, n + ' countries');
+  } catch (e) { h += row('/api/directories/countries', false, 'ERROR'); }
+  try {
+    const q = await (await fetch('/api/questions/sources')).json();
+    const n = (q.countries || []).length;
+    h += row('/api/questions/sources', n >= 60, n + ' countries');
+  } catch (e) { h += row('/api/questions/sources', false, 'ERROR'); }
+  $('api-check').innerHTML = h;
+
+  if (!TOKEN) {
+    $('biz-check').innerHTML = '<p class="warn">Not logged in. Open the main app, log in, then come back.</p>';
+    $('link-check').innerHTML = '<p class="warn">Log in to check tracking endpoints.</p>';
+  } else {
+    try {
+      const r = await fetch('/api/businesses/list', { headers: { Authorization: 'Bearer ' + TOKEN } });
+      const data = await r.json();
+      const list = data.businesses || [];
+      let bh = row('Businesses registered', list.length > 0, list.length);
+      if (list.length) bh += '<pre>' + JSON.stringify(list[0], null, 2) + '</pre>';
+      $('biz-check').innerHTML = bh;
+    } catch (e) { $('biz-check').innerHTML = '<p class="bad">' + e.message + '</p>'; }
+
+    try {
+      const r = await fetch('/api/links/list', { headers: { Authorization: 'Bearer ' + TOKEN } });
+      if (r.status === 404) {
+        $('link-check').innerHTML = '<div class="verdict bad">❌ /api/links/list not found — trackedLinks.js not registered on server (see File 2 additions)</div>';
+      } else {
+        const data = await r.json();
+        $('link-check').innerHTML = row('/api/links/list', true, (data.links || []).length + ' tracked links');
+      }
+    } catch (e) { $('link-check').innerHTML = '<p class="bad">' + e.message + '</p>'; }
+  }
+})();
+</script>
+</body>
+</html>
