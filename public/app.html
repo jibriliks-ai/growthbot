@@ -421,7 +421,7 @@ const NAV_GROUPS = [
   { label: 'Outreach', items: [
     { key: 'qa', icon: '💬', label: 'Q&A Finder', premium: true },
     { key: 'directories', icon: '📇', label: 'Directories', premium: true },
-    { key: 'backlinks', icon: '🔗', label: 'Backlinks', premium: true },
+    { key: 'backlinks', icon: '🔗', label: 'Indexer', premium: true },
     { key: 'social', icon: '📱', label: 'Social', premium: true }
   ]},
   { label: 'Business', items: [
@@ -1261,78 +1261,112 @@ function renderDirectoryListings(listings){
 }
 
 // ============================================================
-// BACKLINKS
+// INDEXER (Backlinks tab)
 // ============================================================
 function renderBacklinks(){
   content.innerHTML =
-    '<h1 class="h1">Backlinks</h1>' +
-    '<p class="subtitle">Find niche-relevant sites where you can drop a high-value backlink.</p>' +
+    '<h1 class="h1">Search Engine Indexer</h1>' +
+    '<p class="subtitle">Submit URLs to Bing, Yandex, Seznam, and Naver via IndexNow. Every URL is also tracked — clicks land in <strong>Leads</strong> for retargeting.</p>' +
     '<div class="card">' +
-      '<label class="label">Niche / Topic</label>' +
-      '<input class="input" id="blNiche" placeholder="e.g. coffee, fitness, real estate Lagos" value="' + esc((state.business && state.business.category) || '') + '" />' +
-      '<label class="label">Country</label>' +
-      '<select class="select" id="blCountry">' +
-        (state.dirCountries.length
-          ? state.dirCountries.map(function(c){ return '<option value="' + esc(c.code) + '">' + esc(c.name) + '</option>'; }).join('')
-          : '<option value="global">Global</option>') +
-      '</select>' +
-      '<button class="btn" id="blBtn">Find Backlink Opportunities</button>' +
+      '<label class="label">URLs to Submit (one per line, or comma-separated)</label>' +
+      '<textarea class="textarea" id="blUrls" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>' +
+      '<button class="btn" id="blSubmitBtn">Submit for Indexing</button>' +
       '<div id="blResult"></div>' +
-    '</div>';
+    '</div>' +
+    '<div id="blJobs"></div>';
 
-  $('blBtn').addEventListener('click', async function(){
-    const niche = $('blNiche').value.trim();
-    if (!niche) return toast('Enter a niche', 'error');
-    $('blBtn').disabled = true;
-    $('blBtn').innerHTML = '<span class="spin"></span>Searching...';
+  loadBacklinkJobs();
+
+  $('blSubmitBtn').addEventListener('click', async function(){
+    const raw = $('blUrls').value.trim();
+    if (!raw) return toast('Paste at least one URL', 'error');
+    const urls = raw
+      .split(/[\n,]+/)
+      .map(function(s){ return s.trim(); })
+      .filter(function(s){ return /^https?:\/\//i.test(s); });
+    if (!urls.length) return toast('No valid URLs found', 'error');
+    if (!state.business) return toast('Add a business first', 'error');
+
+    $('blSubmitBtn').disabled = true;
+    $('blSubmitBtn').innerHTML = '<span class="spin"></span>Submitting...';
+    $('blResult').innerHTML = '';
     try {
-      const r = await api('/api/backlink/listing', {
+      const r = await api('/api/backlink/submit', {
         method: 'POST',
-        body: { niche: niche, country: $('blCountry').value, businessId: state.business && state.business.id }
+        body: { businessId: state.business.id, urls: urls }
       });
-      const items = r.listings || r.results || [];
-      if (!items.length){
-        $('blResult').innerHTML = '<div class="status info" style="margin-top:16px;">No backlink opportunities found. Try a broader niche.</div>';
-        return;
-      }
+      const success = r.indexnow && r.indexnow.ok;
+      const statusCode = (r.indexnow && r.indexnow.statusCode) || '—';
       $('blResult').innerHTML =
-        '<div class="section-title">Opportunities (' + items.length + ')</div>' +
-        items.map(function(b, i){
-          return '<div class="listing-item">' +
-            '<div class="listing-header">' +
-              '<div class="listing-platform">' + esc(b.title || b.site_name || b.domain || 'Site') + '</div>' +
-              (b.da ? '<span class="badge source">DA ' + esc(b.da) + '</span>' : '') +
-            '</div>' +
-            (b.url ? '<div class="listing-field"><div class="listing-field-label">URL</div><div class="listing-field-value"><a href="' + esc(b.url) + '" target="_blank" rel="noopener">' + esc(b.url) + '</a></div></div>' : '') +
-            (b.description ? '<div class="listing-field"><div class="listing-field-label">Why it fits</div><div class="listing-field-value">' + esc(b.description) + '</div></div>' : '') +
-            '<div class="listing-actions" style="margin-top:8px;">' +
-              '<button class="btn small secondary" data-bl-copy="' + i + '">Copy Pitch</button>' +
-              '<button class="btn small secondary" data-bl-open="' + i + '">Open Site</button>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-
-      $('blResult').querySelectorAll('[data-bl-copy]').forEach(function(b){
+        '<div class="status ' + (success ? 'success' : 'warning') + '" style="margin-top:16px;">' +
+          '<strong>' + (success ? '✅ Submitted to IndexNow' : '⚠️ Submission issue') + '</strong><br>' +
+          'Status code: ' + esc(statusCode) + '<br>' +
+          'Engines covered: <strong>Bing, Yandex, Seznam, Naver</strong>' +
+          (r.indexnow && r.indexnow.error ? '<br><span style="color:var(--error);">' + esc(r.indexnow.error) + '</span>' : '') +
+          (r.google && r.google.note ? '<div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.5;"><strong>Google:</strong> ' + esc(r.google.note) + '</div>' : '') +
+        '</div>' +
+        (r.jobs && r.jobs.length ?
+          '<div class="section-title">Submitted URLs (' + r.jobs.length + ')</div>' +
+          r.jobs.map(function(j, i){
+            return '<div class="listing-item">' +
+              '<div class="listing-field"><div class="listing-field-label">URL</div>' +
+                '<div class="listing-field-value"><a href="' + esc(j.url) + '" target="_blank" rel="noopener">' + esc(j.url) + '</a></div></div>' +
+              (j.trackedUrl ?
+                '<div class="listing-field"><div class="listing-field-label">Tracked Link (clicks → Leads)</div>' +
+                  '<div class="listing-field-value"><a href="' + esc(j.trackedUrl) + '" target="_blank" rel="noopener">' + esc(j.trackedUrl) + '</a> ' +
+                  '<button class="btn small secondary" data-copy-tracked="' + i + '" style="width:auto;padding:3px 8px;min-height:0;font-size:11px;margin-left:6px;">Copy</button></div></div>'
+                : '') +
+            '</div>';
+          }).join('') : '');
+      $('blResult').querySelectorAll('[data-copy-tracked]').forEach(function(b){
         b.addEventListener('click', function(){
-          const i = Number(b.getAttribute('data-bl-copy'));
-          const pitch = items[i].pitch || items[i].description || items[i].title || '';
-          copy(pitch, 'Pitch copied!');
+          const idx = Number(b.getAttribute('data-copy-tracked'));
+          copy(r.jobs[idx].trackedUrl, 'Tracked link copied!');
         });
       });
-      $('blResult').querySelectorAll('[data-bl-open]').forEach(function(b){
-        b.addEventListener('click', function(){
-          const i = Number(b.getAttribute('data-bl-open'));
-          const u = items[i].url || items[i].submit_url;
-          if (u) window.open(u, '_blank', 'noopener');
-        });
-      });
+      loadBacklinkJobs();
+      loadAnalytics();
     } catch (e){
       $('blResult').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
     } finally {
-      $('blBtn').disabled = false;
-      $('blBtn').textContent = 'Find Backlink Opportunities';
+      $('blSubmitBtn').disabled = false;
+      $('blSubmitBtn').textContent = 'Submit for Indexing';
     }
   });
+}
+
+async function loadBacklinkJobs(){
+  const el = $('blJobs');
+  if (!el) return;
+  try {
+    const r = await api('/api/backlink/jobs');
+    const jobs = r.jobs || [];
+    if (!jobs.length){
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML =
+      '<div class="section-title">Recent Submissions (' + jobs.length + ')</div>' +
+      jobs.slice(0, 20).map(function(j){
+        const result = j.result || {};
+        const trackedUrl = result.trackedUrl;
+        const badge = j.status === 'success' ? 'success' : j.status === 'failed' ? 'failed' : 'pending';
+        const when = ((j.created_at || '') + '').toString().slice(0, 16);
+        return '<div class="listing-item">' +
+          '<div class="listing-header">' +
+            '<div class="listing-platform" style="word-break:break-all;font-size:12px;">' + esc(j.url) + '</div>' +
+            '<span class="badge ' + badge + '">' + esc(j.status) + '</span>' +
+          '</div>' +
+          '<div style="font-size:11px;color:var(--text-3);margin-top:4px;">Submitted: ' + esc(when) + '</div>' +
+          (trackedUrl ?
+            '<div class="listing-field" style="margin-top:8px;"><div class="listing-field-label">Tracked Link</div>' +
+              '<div class="listing-field-value"><a href="' + esc(trackedUrl) + '" target="_blank" rel="noopener">' + esc(trackedUrl) + '</a></div></div>'
+            : '') +
+        '</div>';
+      }).join('');
+  } catch (e) {
+    console.warn('Jobs load:', e.message);
+  }
 }
 
 // ============================================================
@@ -1634,7 +1668,7 @@ function renderBusinesses(){
 function renderKnowledgeBase(){
   const topics = [
     { q: 'How do tracked links work?', a: [
-      'Every time you submit a directory listing (or any outreach), the app creates a short <code>/r/&lt;code&gt;</code> URL.',
+      'Every time you submit a directory listing or a URL for indexing, the app creates a short <code>/r/&lt;code&gt;</code> URL.',
       'When someone clicks it, we record a click and log a Lead, then redirect to your target page.',
       'Tracked links show up in <strong>Home</strong>, <strong>Leads</strong>, and <strong>Analytics</strong>.'
     ]},
@@ -1642,6 +1676,12 @@ function renderKnowledgeBase(){
       'Open <strong>Directories</strong>, pick a country, click <strong>Show Classified Sites</strong>.',
       'Click <strong>Copy Sales Copy &amp; Open Site</strong> — the site opens in a new tab, the sales copy is copied to your clipboard.',
       'Paste the title + body into the classified ad form, submit it, then paste the live URL back and click <strong>Mark as Posted</strong>.'
+    ]},
+    { q: 'How does the Indexer work?', a: [
+      'Open <strong>Indexer</strong>, paste one URL per line (or comma-separated).',
+      'Click <strong>Submit for Indexing</strong> — we submit to <strong>Bing, Yandex, Seznam, Naver</strong> via IndexNow.',
+      'Each URL also gets a tracked link — clicks land in Leads.',
+      '<strong>Google:</strong> the public ping endpoint was retired in 2023. Upload your <code>sitemap.xml</code> in Google Search Console (free, one-time).'
     ]},
     { q: 'What does the SEO Audit check?', a: [
       'Title tags, meta descriptions, headings, image alt text, links, page speed, mobile friendliness.',
@@ -1658,7 +1698,7 @@ function renderKnowledgeBase(){
     ]},
     { q: 'How does the plan system work?', a: [
       '<strong>Free</strong>: 3 SEO audits/day, 1 business, no directory/video/Q&amp;A access.',
-      '<strong>Premium</strong>: unlimited audits, 30 video ads/month, full directory access, Q&amp;A finder, backlinks, social posting.'
+      '<strong>Premium</strong>: unlimited audits, 30 video ads/month, full directory access, Q&amp;A finder, indexer, social posting.'
     ]}
   ];
 
@@ -1721,7 +1761,7 @@ function renderUpgrade(tabKey){
     keywords: 'Keyword Research',
     qa: 'Q&A Finder',
     directories: 'Directory Submissions',
-    backlinks: 'Backlinks',
+    backlinks: 'Search Engine Indexer',
     social: 'Social Posting'
   };
   content.innerHTML =
@@ -1730,7 +1770,7 @@ function renderUpgrade(tabKey){
     '<div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1));border-color:rgba(139,92,246,0.3);text-align:center;padding:32px 20px;">' +
       '<div style="font-size:48px;margin-bottom:12px;">⭐</div>' +
       '<div style="font-size:18px;font-weight:800;margin-bottom:8px;">Unlock every growth tool</div>' +
-      '<div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto;">Video ads, keyword research, Q&amp;A finder, directory listings, backlinks, social posting, and unlimited SEO audits.</div>' +
+      '<div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto;">Video ads, keyword research, Q&amp;A finder, directory listings, search engine indexer, social posting, and unlimited SEO audits.</div>' +
       '<button class="btn" onclick="location.href=\'/pay.html\'">Upgrade for $' + state.limits.price + '/mo</button>' +
       '<button class="btn ghost small" onclick="window.navigateTo(\'home\')" style="margin-top:8px;">Back to Home</button>' +
     '</div>';
