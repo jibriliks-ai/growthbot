@@ -65,7 +65,8 @@ import { generateDraft } from './draftGenerator.js';
 import { initTrackedLinksSchema, registerTrackedLinkRoutes } from './trackedLinks.js';
 
 let dirModule = null;import { registerDirectoryRoutes } from './directoryData.js';
-try {
+import { registerBacklinkRoutes } from './searchSubmitter.js';
+try {registerBacklinkRoutes(app, requireApiKey);
   dirModule = await import('./directoryGenerator.js');
 } catch (e) {
   console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
@@ -413,11 +414,6 @@ app.get('/api/backlink/sitemap', generalLimiter, requireApiKey, async (req, res)
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/backlink/listing', generalLimiter, requireApiKey, async (req, res) => {
-  if (!req.body.profile?.name) return res.status(400).json({ error: 'profile.name required' });
-  try { res.json(await generateListingPackages({ profile: req.body.profile, openai: aiClient })); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
 
 // ============================================================
 // KEYWORDS

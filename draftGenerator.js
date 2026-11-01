@@ -1,294 +1,192 @@
 // ============================================================
-// GrowthBot — AI Draft Generator (Super Brain v2.0)
+// draftGenerator.js — AI-powered Q&A sales copy generator
+// Produces answers that genuinely help AND drive traffic.
+// Supports: Gemini, OpenAI, Ollama (self-hosted), template fallback
 // ============================================================
-// Produces genuinely helpful, conversion-tuned Q&A answers that
-// never look like spam. Answers first, link second. Always.
-//
-// Strategy:
-//   1. Empathy hook → 2. Direct answer → 3. 2-3 specific insights
-//   → 4. Optional social proof → 5. Soft transition → 6. Link → 7. Source
-//
-// Platform playbooks:
-//   • Reddit   → pure value, no marketing voice, link buried at end
-//   • Quora    → narrative, expert tone, credibility-building opener
-//   • Nairaland→ direct Nigerian English, no fluff
-//   • Generic  → helpful peer, structured
-//
-// Generates 2 internal variants, scores them, returns the better one.
-// ============================================================
-import OpenAI from 'openai';
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : process.env.DEEPSEEK_API_KEY
-  ? new OpenAI({
-      baseURL: 'https://api.deepseek.com',
-      apiKey: process.env.DEEPSEEK_API_KEY,
-    })
-  : null;
+function platformTone(platform) {
+  const p = (platform || '').toLowerCase();
+  if (p.includes('reddit'))        return 'first-person experience, specific and concrete — Reddit distrusts vague promotion, so earn the pitch with real detail first';
+  if (p.includes('quora'))         return 'informative and thorough, business links are expected and welcome';
+  if (p.includes('nairaland'))     return 'warm, direct, respectful; professional Nigerian tone is fine';
+  if (p.includes('stack'))         return 'technical and strictly factual; the business link appears ONLY once, at the very end, framed as "reference"';
+  if (p.includes('lemmy'))         return 'casual, tech-savvy, allergic to marketing speak — lead with substance';
+  if (p.includes('discourse'))     return 'professional, forum-appropriate, deliver value first';
+  if (p.includes('mbin') || p.includes('kbin') || p.includes('piefed')) return 'casual and direct, community-first';
+  return 'conversational, warm, specific';
+}
 
-// Model selection — upgrade quality with env var
-const AI_MODEL =
-  process.env.AI_DRAFT_MODEL ||
-  (process.env.DEEPSEEK_API_KEY && !process.env.OPENAI_API_KEY ? 'deepseek-chat' : 'gpt-4o');
+function buildSystemPrompt(business, platform) {
+  const biz   = business.name || 'our business';
+  const cat   = business.category || 'this topic';
+  const city  = business.city || business.state || business.country || '';
+  const site  = business.website || business.url || '';
+  const phone = business.phone || business.whatsapp || '';
 
-// ============================================================
-// SPAM PHRASES — reject if these slip in
-// ============================================================
-const SPAM_PHRASES = [
-  'click here', 'click now', 'buy now', '100% sure', 'guaranteed',
-  'limited time', 'act fast', "don't miss", 'free money', 'make money fast',
-  'lowest price', 'best price ever', 'unbelievable', 'shocking',
-  'in today\'s fast-paced', 'in this article', "let's dive in",
-  'game-changer', 'revolutionary', 'cutting-edge', 'state-of-the-art',
-];
+  return `You are an experienced ${cat} professional who runs ${biz}${city ? ' in ' + city : ''}. Someone posted a question on ${platform} that your business can genuinely help with. Write a reply that SELLS without feeling like an ad.
 
-// ============================================================
-// PLATFORM PLAYBOOKS — the strategy each platform rewards
-// ============================================================
-const PLATFORM_PLAYBOOKS = {
-  reddit: {
-    tone: 'Casual, peer-to-peer. You are NOT a business — you are a helpful person who happens to know this topic. No marketing language. No "we" — use "I" or passive voice. Reddit users downvote anything that smells like promotion.',
-    structure: 'Open with empathy about the frustration. Answer the question directly in 2-3 sentences with real substance. Then give 2 concrete tips they can act on today. Only THEN, at the very end, casually mention the guide — as if you just remembered it exists.',
-    linkStyle: 'Edit-style addendum: "Edit: for anyone who wants the full breakdown, I put it here: {URL}"',
-    wordCount: 110,
-    maxWords: 150,
-  },
-  quora: {
-    tone: 'Thoughtful expert. Quora rewards long-form, substantive answers. Use "I" and personal experience framing. Share a real lesson or observation, not a sales pitch.',
-    structure: 'Open with a personal observation that reframes the question. Give the direct answer with 2-3 numbered points. Add one specific example or number. Then transition naturally: "I broke down the whole approach in more detail here..."',
-    linkStyle: '"I broke down the full approach here: {URL}"',
-    wordCount: 160,
-    maxWords: 200,
-  },
-  nairaland: {
-    tone: 'Direct Nigerian English. Plain, no-nonsense, no flowery language. Nairaland users respect clarity over cleverness. Use "you" — talk directly.',
-    structure: 'Answer the question head-on in the first sentence. Give 2-3 specific things to check or do. If price matters, name a range. End with the guide link clearly labeled.',
-    linkStyle: '"Full guide here: {URL}"',
-    wordCount: 130,
-    maxWords: 170,
-  },
-  generic: {
-    tone: 'Helpful peer with real expertise. Professional but warm. No hype, no overselling. Assume the reader is smart and busy.',
-    structure: 'Acknowledge the question in 1 sentence. Answer directly with 2-3 specific insights. Add one concrete example. Then link to the full guide.',
-    linkStyle: '"For the full step-by-step, see: {URL}"',
-    wordCount: 130,
-    maxWords: 170,
-  },
-};
+STRUCTURE (3 short paragraphs, 100-200 words):
+1. OPENER (2-3 sentences): Answer the question with real, specific substance — a number, a named method, a concrete scenario. This is what earns the right to pitch.
+2. VALUE (2-3 sentences): Introduce ${biz} naturally as "the business I work with" or "our team at ${biz}" — ONE mention, mid-answer, not at the start. Then name one SPECIFIC thing your business does well that maps to their problem.
+3. CLOSER (2-3 sentences): Make a clear, specific offer of what they'll find at ${site} (e.g. "we've laid out the exact 5-step process we use for X" or "there's a template that walks you through this"). Then end with a soft but unmistakable CTA to ${site}.${phone ? ' Optionally include ' + phone + ' for direct contact.' : ''}
 
-function detectPlatform(url) {
-  const lower = String(url || '').toLowerCase();
-  if (lower.includes('reddit.com')) return 'reddit';
-  if (lower.includes('quora.com')) return 'quora';
-  if (lower.includes('nairaland.com')) return 'nairaland';
-  return 'generic';
+HARD RULES:
+- No emojis. No bullet points. No bold. No markdown headers.
+- Banned words: "unlock", "revolutionize", "game-changer", "supercharge", "in today's fast-paced world", "dive into", "leverage".
+- Never say "I hope this helps" or "good luck" — it kills the CTA.
+- The website URL must appear literally in the text (plain URL, not markdown link, except on Quora).
+- Platform tone: ${platformTone(platform)}
+
+Return ONLY the answer text. No quotes, no intro, no explanation.`;
 }
 
 // ============================================================
-// PROMPT BUILDER — the "brain"
+// AI providers
 // ============================================================
-function buildPrompt({ questionTitle, questionUrl, blogTitle, blogUrl, platform, businessName, businessCategory, playbook }) {
-  const linkStyle = playbook.linkStyle.replace('{URL}', blogUrl);
-  const context = businessName
-    ? `You can reference this casually ONCE (only if natural): you run ${businessName}${businessCategory ? `, a ${businessCategory}` : ''}. Do NOT pitch it.`
-    : 'Do not claim to own any business.';
-
-  return `You are a senior copywriter who has personally written on ${platform} for 5+ years. You know that this platform has ONE rule: value first, promotion never. Your answer must be so useful that it stands alone even if the link is stripped.
-
-QUESTION: "${questionTitle}"
-PLATFORM: ${platform}
-${context}
-
-You have a full guide on this topic: "${blogTitle}"
-Guide URL: ${blogUrl}
-
-YOUR PLAYBOOK:
-Tone: ${playbook.tone}
-Structure: ${playbook.structure}
-Link format: ${linkStyle}
-Target length: ${playbook.wordCount} words (max ${playbook.maxWords})
-
-MANDATORY RULES:
-1. Answer the actual question with REAL substance in the first 2-3 sentences. Not a teaser. Not "it depends". Real, specific, actionable.
-2. Give 2-3 concrete tips, numbers, or steps the reader can use TODAY.
-3. Do NOT open with "Great question" or "In today's world" or "Let's dive in" or any cliché.
-4. Do NOT use emojis, exclamation marks, ALL CAPS, or markdown headers.
-5. Do NOT use: ${SPAM_PHRASES.join(', ')}.
-6. Do NOT overpromise ("best", "guaranteed", "fastest", "100%").
-7. Do NOT write in first person as the author of the guide — write as a helpful reader.
-8. Do NOT put the link anywhere except the very last 2 lines.
-9. End with exactly this structure on two lines:
-   [last helpful sentence]
-   ${linkStyle}
-   Source: ${blogTitle}
-10. Plain text only. No quotes around the answer. No labels.
-
-Return the answer as plain text. Start immediately — no preamble.`;
-}
-
-// ============================================================
-// QUALITY SCORER — picks the better of two variants
-// ============================================================
-function scoreDraft(draft, { blogUrl, platform, maxWords }) {
-  const lower = draft.toLowerCase();
-  const words = draft.split(/\s+/).filter(Boolean).length;
-  const score = { total: 100, issues: [] };
-
-  // Spam check
-  const spamHits = SPAM_PHRASES.filter((p) => lower.includes(p));
-  if (spamHits.length) {
-    score.total -= 40 * spamHits.length;
-    score.issues.push(`spam: ${spamHits.join(', ')}`);
-  }
-
-  // Word count
-  if (words > maxWords + 15) {
-    score.total -= 20;
-    score.issues.push(`too long (${words} > ${maxWords})`);
-  } else if (words < 60) {
-    score.total -= 15;
-    score.issues.push(`too short (${words})`);
-  }
-
-  // Link must be near the end
-  const linkIdx = draft.indexOf(blogUrl);
-  if (linkIdx === -1) {
-    score.total -= 30;
-    score.issues.push('link missing');
-  } else {
-    const tailLen = draft.length - linkIdx;
-    if (tailLen > 400) {
-      score.total -= 15;
-      score.issues.push('link too early');
+async function tryGemini({ question, business, blogUrl, platform }) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  const userMsg =
+    `Question (${platform}): "${question.title}"\n` +
+    (question.snippet ? `Context: ${question.snippet}\n` : '') +
+    `Business: ${business.name}${business.description ? ' — ' + business.description : ''}\n` +
+    `Website: ${blogUrl || business.website || ''}\n` +
+    `Phone: ${business.phone || business.whatsapp || '(none)'}\n\n` +
+    `Write the reply now.`;
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: buildSystemPrompt(business, platform) }] },
+        contents: [{ parts: [{ text: userMsg }] }],
+        generationConfig: { temperature: 0.9, maxOutputTokens: 500 },
+      }),
     }
-  }
+  );
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Gemini returned no text');
+  return text.trim();
+}
 
-  // Cliché check
-  const cliches = ['great question', "in today's", "let's dive", "hope this helps"];
-  const clicheHits = cliches.filter((c) => lower.includes(c));
-  if (clicheHits.length) {
-    score.total -= 10 * clicheHits.length;
-    score.issues.push(`cliches: ${clicheHits.join(', ')}`);
-  }
+async function tryOpenAI({ question, business, blogUrl, platform }) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
+  const userMsg =
+    `Question (${platform}): "${question.title}"\n` +
+    (question.snippet ? `Context: ${question.snippet}\n` : '') +
+    `Business: ${business.name}${business.description ? ' — ' + business.description : ''}\n` +
+    `Website: ${blogUrl || business.website || ''}\n` +
+    `Phone: ${business.phone || business.whatsapp || '(none)'}\n\nWrite the reply now.`;
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: buildSystemPrompt(business, platform) },
+        { role: 'user', content: userMsg },
+      ],
+      temperature: 0.9,
+      max_tokens: 500,
+    }),
+  });
+  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error('OpenAI returned no text');
+  return text.trim();
+}
 
-  // Emojis / caps
-  if (/[\u{1F300}-\u{1FAFF}]/u.test(draft)) {
-    score.total -= 20;
-    score.issues.push('emojis');
-  }
-  if (/\b[A-Z]{5,}\b/.test(draft)) {
-    score.total -= 10;
-    score.issues.push('ALL CAPS');
-  }
-
-  // Reddit-specific: link in first 100 chars is a downvote magnet
-  if (platform === 'reddit' && linkIdx !== -1 && linkIdx < 100) {
-    score.total -= 25;
-    score.issues.push('reddit: link too early');
-  }
-
-  return score;
+async function tryOllama({ question, business, blogUrl, platform }) {
+  const url = process.env.OLLAMA_URL;           // e.g. http://localhost:11434
+  if (!url) return null;
+  const model = process.env.OLLAMA_MODEL || 'llama3.1';
+  const fullPrompt = buildSystemPrompt(business, platform) +
+    `\n\nQuestion (${platform}): "${question.title}"` +
+    (question.snippet ? `\nContext: ${question.snippet}` : '') +
+    `\nBusiness: ${business.name}\nWebsite: ${blogUrl || business.website || ''}\n\nWrite the reply now.`;
+  const res = await fetch(`${url.replace(/\/+$/, '')}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, prompt: fullPrompt, stream: false, options: { temperature: 0.9 } }),
+  });
+  if (!res.ok) throw new Error(`Ollama ${res.status}`);
+  const data = await res.json();
+  return (data.response || '').trim() || null;
 }
 
 // ============================================================
-// SINGLE AI CALL
+// Fallback templates — these ARE sales copy (not just help)
 // ============================================================
-async function callAI(prompt, temp) {
-  const res = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      {
-        role: 'system',
-        content:
-          'You are a senior forum copywriter with 10 years of experience writing high-value answers on Reddit, Quora, and Nigerian forums. You never sound like a marketer. You answer with real substance. You never use clichés, emojis, or hype. You follow every instruction exactly.',
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: temp,
-  });
-  return (res.choices[0].message.content || '').trim();
+function tryTemplate({ question, business, blogUrl }) {
+  const site  = blogUrl || business.website || '';
+  const biz   = business.name || 'our team';
+  const cat   = business.category || 'this';
+  const phone = business.phone ? ` (${business.phone})` : '';
+  const city  = business.city || '';
+
+  const variants = [
+    // Variant 1 — problem/solution/framework
+    `The honest answer is that most people skip the fundamentals and jump straight to tactics. In my experience with ${cat}, the biggest wins come from doing three things well: understanding what your audience actually needs, committing to one channel long enough to see results, and measuring weekly instead of guessing.\n\nWe run ${biz}${city ? ' in ' + city : ''}${phone}, and I've watched this pattern play out across hundreds of clients. The single biggest mistake is trying to fix everything at once — you end up fixing nothing. Pick the one bottleneck costing you the most and give it 30 days.\n\nI put the exact 3-step process we use into a walkthrough at ${site} — no email gate, just the guide. If you want the shortcut, it's there.`,
+
+    // Variant 2 — direct answer + specific offer
+    `${question.title.replace(/[?.]+$/, '')} — the short answer is that it depends on what you're optimising for, but 90% of people get it wrong for the same reason: they focus on the surface instead of the fundamentals.\n\nHere's what actually works. Audit what you have now. Identify the one weak link. Fix only that for the next month. Everything else is noise. At ${biz}${city ? ' (' + city + ')' : ''}, this is literally the first thing we do with every client, and it's what separates the ones who see results from the ones who don't.\n\nThe full playbook — the exact checklist, the order of operations, the metrics to watch — is at ${site}. It's the same framework we use internally.`,
+
+    // Variant 3 — story/credibility/CTA
+    `I've been on both sides of this question — first as someone trying to figure it out alone, then as someone who had to build a system that worked repeatably. The thing nobody tells you: the answer isn't a tactic, it's a sequence.\n\nAt ${biz}${phone}, we've built the sequence into something we can run in ~30 days for almost any ${cat} situation. Start with fundamentals audit → pick the highest-leverage change → commit for 30 days → measure weekly. That's it. Everything else is decoration.\n\nWe documented the exact process — including the checklist we use and the numbers we track — at ${site}. Take the framework, run it, and you'll see why it works.`,
+  ];
+
+  const idx = ((question.title || '').length + (business.id || 0)) % variants.length;
+  return variants[idx];
 }
 
 // ============================================================
-// MAIN — generateDraft
+// Public API — flexible signature
 // ============================================================
-export async function generateDraft({
-  questionTitle,
-  questionUrl,
-  blogTitle,
-  blogUrl,
-  businessName = '',
-  businessCategory = '',
-}) {
-  if (!openai) {
-    throw new Error('No AI API key configured (OPENAI_API_KEY or DEEPSEEK_API_KEY)');
-  }
-  if (!questionTitle || !blogUrl) {
-    throw new Error('questionTitle and blogUrl are required');
-  }
-
-  const platform = detectPlatform(questionUrl);
-  const playbook = PLATFORM_PLAYBOOKS[platform];
-  const prompt = buildPrompt({
-    questionTitle,
-    questionUrl,
-    blogTitle: blogTitle || 'Full guide',
-    blogUrl,
-    platform,
-    businessName,
-    businessCategory,
-    playbook,
-  });
-
-  // Generate 2 variants in parallel for A/B
-  let variants = [];
-  try {
-    const [v1, v2] = await Promise.all([
-      callAI(prompt, 0.65),
-      callAI(prompt, 0.85),
-    ]);
-    variants = [v1, v2].filter(Boolean);
-  } catch (e) {
-    throw new Error('AI generation failed: ' + e.message);
-  }
-
-  if (variants.length === 0) {
-    throw new Error('AI returned no usable output');
-  }
-
-  // Score and pick the better one
-  const scored = variants.map((draft) => ({
-    draft,
-    score: scoreDraft(draft, { blogUrl, platform, maxWords: playbook.maxWords }),
-  }));
-  scored.sort((a, b) => b.score.total - a.score.total);
-  const winner = scored[0];
-
-  // If the best is still spam / broken, reject
-  if (winner.score.total < 60) {
-    return {
-      ok: false,
-      platform,
-      reason: `Draft rejected: ${winner.score.issues.join('; ')}`,
-      draft: winner.draft,
-      variants: scored.map((s) => ({ draft: s.draft, score: s.score.total })),
+export async function generateDraft(arg1, arg2, arg3) {
+  // Normalize inputs
+  let ctx;
+  if (arg1 && typeof arg1 === 'object' && (arg1.question || arg1.business)) {
+    ctx = {
+      question: arg1.question || {},
+      business: arg1.business || {},
+      blogUrl:  arg1.blogUrl || arg1.blog_url || (arg1.business && arg1.business.website) || '',
+      platform: arg1.platform || (arg1.question && arg1.question.source) || 'generic',
+    };
+  } else if (arg1 && typeof arg1 === 'object' && arg1.title) {
+    ctx = {
+      question: arg1,
+      business: arg2 || {},
+      blogUrl:  arg3 || (arg2 && arg2.website) || '',
+      platform: arg1.source || 'generic',
+    };
+  } else {
+    ctx = {
+      question: { title: String(arg1 || ''), snippet: '', source: 'generic' },
+      business: { name: String(arg2 || ''), website: String(arg3 || ''), category: '', description: '', phone: '' },
+      blogUrl:  String(arg3 || ''),
+      platform: 'generic',
     };
   }
 
-  const wordCount = winner.draft.split(/\s+/).filter(Boolean).length;
-  return {
-    ok: true,
-    platform,
-    draft: winner.draft,
-    wordCount,
-    containsLink: winner.draft.includes(blogUrl),
-    quality: winner.score.total,
-    issues: winner.score.issues,
-    // Bonus: alternative so the UI can show "Try another version"
-    variants: scored.map((s) => ({ draft: s.draft, score: s.score.total })),
-    reviewedAt: new Date().toISOString(),
-  };
-}
+  // Try providers in order: Gemini → OpenAI → Ollama → template
+  const providers = [tryGemini, tryOpenAI, tryOllama];
+  for (const provider of providers) {
+    try {
+      const text = await provider(ctx);
+      if (text && text.length > 60) {
+        console.log(`✅ Draft via ${provider.name} (${text.split(/\s+/).length} words)`);
+        return text;
+      }
+    } catch (e) {
+      console.warn(`⚠️  ${provider.name} failed: ${e.message}`);
+    }
+  }
 
-export default { generateDraft, detectPlatform };
+  console.log('ℹ️  Using template fallback');
+  return tryTemplate(ctx);
+}
