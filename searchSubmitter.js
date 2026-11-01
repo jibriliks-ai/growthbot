@@ -1,7 +1,5 @@
 // ============================================================
-// searchSubmitter.js — Submit URLs to search engines for indexing
-// Uses IndexNow (Bing/Yandex/Seznam/Naver) + creates tracked links
-// for retargeting. Google is reported honestly (requires Search Console).
+// searchSubmitter.js — IndexNow submitter (bulletproof key file)
 // ============================================================
 import { pool } from './db.js';
 import { createTrackedLink } from './trackedLinks.js';
@@ -9,126 +7,148 @@ import { createTrackedLink } from './trackedLinks.js';
 const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow';
 
 // ------------------------------------------------------------
-// IndexNow submission (batch — one call handles all URLs)
+// Resolve the app's public base URL
+// Priority: PUBLIC_BASE_URL env → X-Forwarded headers → req.protocol+host
 // ------------------------------------------------------------
-async function submitToIndexNow({ urls, host, key }) {
-  if (!key) {
-    return { engine: 'indexnow', ok: false, error: 'INDEXNOW_KEY not configured' };
+function publicBase(req) {
+  const env = process.env.PUBLIC_BASE_URL || process.env.APP_URL || process.env.RENDER_EXTERNAL_URL;
+  if (env) return env.replace(/\/+$/, '');
+  const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+  const host  = req.get('x-forwarded-host') || req.get('host') || '';
+  return `${proto}://${host}`;
+}
+
+// ------------------------------------------------------------
+// Preflight — verify the key file is publicly reachable
+// ------------------------------------------------------------
+async function verifyKeyFile(base, key) {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const res = await fetch(`${base}/${key}.txt`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) return { ok: false, reason: `HTTP ${res.status}`, url: `${base}/${key}.txt` };
+    const body = (await res.text()).trim();
+    if (body !== key) return { ok: false, reason: `Body mismatch (got "${body.slice(0, 20)}...", expected key)`, url: `${base}/${key}.txt` };
+    return { ok: true, url: `${base}/${key}.txt` };
+  } catch (e) {
+    return { ok: false, reason: e.message, url: `${base}/${key}.txt` };
   }
+}
+
+// ------------------------------------------------------------
+// Submit URLs to IndexNow (batch)
+// ------------------------------------------------------------
+async function submitToIndexNow({ urls, keyLocation, host, key }) {
   try {
     const res = await fetch(INDEXNOW_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        host: host,
-        key: key,
-        keyLocation: `https://${host}/${key}.txt`,
-        urlList: urls,
-      }),
+      body: JSON.stringify({ host, key, keyLocation, urlList: urls }),
     });
     const body = await res.text().catch(() => '');
+    // Parse IndexNow error messages from body (they return plain text like "Forbidden" or "InvalidKey")
+    let reason = '';
+    if (!res.ok) {
+      if (res.status === 403) reason = 'Key file not reachable or key mismatch. Visit /api/indexnow/verify to diagnose.';
+      else if (res.status === 422) reason = 'URLs must belong to the same host as the key file.';
+      else if (res.status === 429) reason = 'Rate limited — wait and retry.';
+      else if (body) reason = body.slice(0, 300);
+    }
     return {
-      engine: 'indexnow',
       statusCode: res.status,
       ok: res.status === 200 || res.status === 202,
-      body: body.slice(0, 500),
+      reason: reason || null,
+      rawBody: body.slice(0, 500),
     };
   } catch (e) {
-    return { engine: 'indexnow', ok: false, error: e.message };
+    return { statusCode: 0, ok: false, reason: e.message, rawBody: '' };
   }
 }
 
 // ------------------------------------------------------------
-// Google — report honest status (no free API for general URLs)
+// Main submit
 // ------------------------------------------------------------
-function submitToGoogle() {
-  return {
-    engine: 'google',
-    ok: false,
-    skipped: true,
-    note: 'Google retired the public ping endpoint in 2023. Upload your sitemap.xml in Google Search Console (free, one-time). Indexing API only supports job postings and livestreams.',
-  };
-}
-
-// ------------------------------------------------------------
-// Main entry
-// ------------------------------------------------------------
-export async function submitUrlsForIndexing({ apiKey, businessId, urls, host }) {
-  if (!Array.isArray(urls) || urls.length === 0) {
-    throw new Error('No URLs provided');
-  }
+export async function submitUrlsForIndexing({ req, apiKey, businessId, urls }) {
+  if (!Array.isArray(urls) || urls.length === 0) throw new Error('No URLs provided');
   const validUrls = urls.filter(u => /^https?:\/\//i.test(u));
-  if (validUrls.length === 0) {
-    throw new Error('No valid http/https URLs found');
-  }
+  if (validUrls.length === 0) throw new Error('No valid http/https URLs');
 
-  const baseHost = host.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  const base = publicBase(req);
+  const host = base.replace(/^https?:\/\//, '');
   const key = process.env.INDEXNOW_KEY;
 
-  // 1. Create tracked link + job row for each URL
+  if (!key) {
+    return {
+      ok: false,
+      error: 'INDEXNOW_KEY not set in environment. Add it in Render → Environment and redeploy.',
+      setup: {
+        step1: 'Generate key: node -e "console.log(require(\'crypto\').randomBytes(16).toString(\'hex\'))"',
+        step2: 'Render → Environment → add INDEXNOW_KEY = <output>',
+        step3: 'Redeploy, then POST /api/indexnow/verify',
+      },
+    };
+  }
+
+  // Preflight — verify key file is reachable BEFORE submitting
+  const keyCheck = await verifyKeyFile(base, key);
+  if (!keyCheck.ok) {
+    return {
+      ok: false,
+      error: `Key file not reachable at ${keyCheck.url} — ${keyCheck.reason}. IndexNow will reject every submission until this works.`,
+      keyCheck,
+    };
+  }
+
+  // Create tracked link + job row per URL
   const jobs = [];
   for (const url of validUrls) {
-    let trackedUrl = null;
-    let trackingCode = null;
+    let trackedUrl = null, trackingCode = null;
     if (businessId) {
       try {
         const link = await createTrackedLink({
-          apiKey: apiKey,
-          businessId: Number(businessId),
-          channel: 'backlink',
-          platform: 'indexnow',
-          targetUrl: url,
+          apiKey, businessId: Number(businessId),
+          channel: 'backlink', platform: 'indexnow', targetUrl: url,
         });
         trackingCode = link.code;
-        trackedUrl = `https://${baseHost}/r/${link.code}`;
+        trackedUrl = `${base}/r/${link.code}`;
       } catch (e) {
-        console.warn('[indexing] tracked link failed for', url, ':', e.message);
+        console.warn('[indexing] tracked link failed:', e.message);
       }
     }
-
     const { rows } = await pool.query(
       `INSERT INTO backlink_jobs (api_key, url, type, status, payload, result)
-       VALUES ($1, $2, 'indexnow', 'pending', $3, $4)
-       RETURNING *`,
-      [
-        apiKey,
-        url,
-        JSON.stringify({ host: baseHost, engines: ['indexnow', 'google'] }),
-        JSON.stringify({ trackedUrl: trackedUrl, trackingCode: trackingCode }),
-      ]
+       VALUES ($1, $2, 'indexnow', 'pending', $3, $4) RETURNING *`,
+      [apiKey, url,
+       JSON.stringify({ host, engines: ['indexnow'] }),
+       JSON.stringify({ trackedUrl, trackingCode })]
     );
-    jobs.push({ job: rows[0], url: url, trackedUrl: trackedUrl, trackingCode: trackingCode });
+    jobs.push({ job: rows[0], url, trackedUrl, trackingCode });
   }
 
-  // 2. Submit to IndexNow (batch)
-  const indexNowResult = await submitToIndexNow({ urls: validUrls, host: baseHost, key: key });
+  // Submit
+  const result = await submitToIndexNow({ urls: validUrls, keyLocation: `${base}/${key}.txt`, host, key });
 
-  // 3. Google status
-  const googleResult = submitToGoogle();
-
-  // 4. Update all job rows with results
-  const finalStatus = indexNowResult.ok ? 'success' : 'failed';
+  // Update rows
+  const finalStatus = result.ok ? 'success' : 'failed';
   for (const j of jobs) {
-    const merged = Object.assign(
-      { indexnow: indexNowResult, google: googleResult },
-      { trackedUrl: j.trackedUrl, trackingCode: j.trackingCode }
-    );
     await pool.query(
       `UPDATE backlink_jobs SET status = $1, result = $2, updated_at = NOW() WHERE id = $3`,
-      [finalStatus, JSON.stringify(merged), j.job.id]
+      [finalStatus, JSON.stringify({ ...result, trackedUrl: j.trackedUrl }), j.job.id]
     );
   }
 
   return {
+    ok: result.ok,
     submitted: jobs.length,
-    indexnow: indexNowResult,
-    google: googleResult,
+    indexnow: result,
+    keyLocation: `${base}/${key}.txt`,
+    google: {
+      note: 'Google retired the public ping endpoint in 2023. Upload your sitemap.xml in Google Search Console (free, one-time).',
+    },
     jobs: jobs.map(j => ({
-      id: j.job.id,
-      url: j.url,
-      status: finalStatus,
-      trackedUrl: j.trackedUrl,
-      trackingCode: j.trackingCode,
+      id: j.job.id, url: j.url, status: finalStatus,
+      trackedUrl: j.trackedUrl, trackingCode: j.trackingCode,
     })),
   };
 }
@@ -137,47 +157,67 @@ export async function submitUrlsForIndexing({ apiKey, businessId, urls, host }) 
 // Route registration
 // ------------------------------------------------------------
 export function registerBacklinkRoutes(app, requireApiKey) {
-  // Serve /<KEY>.txt (required by IndexNow to verify domain ownership)
-  // Narrow regex: only matches /[hex].txt — won't shadow /api/* routes
-  app.get(/^\/([a-f0-9]{8,64})\.txt$/, (req, res, next) => {
+  // ============================================================
+  // KEY FILE SERVING — MUST come before all other routes
+  // Uses app.use (middleware) which works in Express 4 AND 5.
+  // Serves the key at /<key>.txt, /indexnow.txt, /indexnow-key.txt
+  // ============================================================
+  app.use((req, res, next) => {
     const key = process.env.INDEXNOW_KEY;
     if (!key) return next();
-    const requested = req.params[0];
-    if (requested !== key) return next();
-    res.type('text/plain').send(key);
+    const filename = req.path.replace(/^\//, '');
+    if (filename === `${key}.txt` || filename === 'indexnow.txt' || filename === 'indexnow-key.txt') {
+      return res.type('text/plain; charset=utf-8').send(key);
+    }
+    next();
   });
 
-  // Submit URLs
+  // Diagnostics
+  app.get('/api/indexnow/verify', async (req, res) => {
+    const key = process.env.INDEXNOW_KEY;
+    if (!key) {
+      return res.status(400).json({
+        ok: false,
+        error: 'INDEXNOW_KEY not set in environment.',
+        setup: 'Render → Environment → add INDEXNOW_KEY = <32-hex-chars>. Redeploy.',
+      });
+    }
+    const base = publicBase(req);
+    const keyCheck = await verifyKeyFile(base, key);
+    res.json({
+      ok: keyCheck.ok,
+      keyConfigured: true,
+      keyLocation: `${base}/${key}.txt`,
+      keyLength: key.length,
+      keyPreview: key.slice(0, 4) + '...' + key.slice(-4),
+      keyCheck,
+      hint: keyCheck.ok
+        ? 'Key file is publicly reachable. Submissions should work.'
+        : 'Key file is NOT reachable. Check: 1) server restart after env var set, 2) reverse proxy not blocking .txt files, 3) PUBLIC_BASE_URL env var matches your real domain.',
+    });
+  });
+
+  // Submit
   app.post('/api/backlink/submit', requireApiKey, async (req, res) => {
     try {
-      const body = req.body || {};
-      const urls = body.urls;
-      if (!Array.isArray(urls) || urls.length === 0) {
-        return res.status(400).json({ error: 'urls array required' });
-      }
-      const host = req.get('host') || '';
+      const { businessId, urls } = req.body || {};
       const result = await submitUrlsForIndexing({
-        apiKey: req.apiKey,
-        businessId: body.businessId,
-        urls: urls,
-        host: host,
+        req, apiKey: req.apiKey, businessId, urls,
       });
-      res.json(result);
+      res.status(result.ok ? 200 : 500).json(result);
     } catch (e) {
       console.error('[backlink/submit]', e);
       res.status(500).json({ error: e.message });
     }
   });
 
-  // List recent jobs
+  // Job list
   app.get('/api/backlink/jobs', requireApiKey, async (req, res) => {
     try {
       const { rows } = await pool.query(
         `SELECT id, url, type, status, result, created_at, updated_at
-         FROM backlink_jobs
-         WHERE api_key = $1
-         ORDER BY created_at DESC
-         LIMIT 100`,
+         FROM backlink_jobs WHERE api_key = $1
+         ORDER BY created_at DESC LIMIT 100`,
         [req.apiKey]
       );
       res.json({ jobs: rows });

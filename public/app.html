@@ -711,25 +711,36 @@ async function loadDirCountries(){
 // Tab router
 // ============================================================
 function renderTab(){
-  content.scrollTop = 0;
-  switch (state.tab){
-    case 'home': return renderHome();
-    case 'seo': return renderSEO();
-    case 'video': return renderVideo();
-    case 'keywords': return renderKeywords();
-    case 'qa': return renderQA();
-    case 'directories': return renderDirectories();
-    case 'backlinks': return renderBacklinks();
-    case 'social': return renderSocial();
-    case 'campaigns': return renderCampaigns();
-    case 'leads': return renderLeads();
-    case 'reviews': return renderReviews();
-    case 'analytics': return renderAnalytics();
-    case 'businesses': return renderBusinesses();
-    case 'kb': return renderKnowledgeBase();
-    case 'settings': return renderSettings();
-    default: return renderHome();
-  }
+    const defaultUrl = (state.business && (state.business.website || state.business.url)) || '';
+  content.innerHTML =
+    '<h1 class="h1">SEO Audit</h1>' +
+    '<p class="subtitle">25+ professional checks across Technical, On-Page, Content, and Social — with prioritized fixes.</p>' +
+    '<div class="card">' +
+      '<label class="label">Website URL</label>' +
+      '<input class="input" id="auditUrl" type="url" placeholder="https://example.com" value="' + esc(defaultUrl) + '" />' +
+      '<label class="label">Target Keyword (optional)</label>' +
+      '<input class="input" id="auditKeyword" placeholder="best coffee shop near me" />' +
+      '<button class="btn" id="auditBtn">Run SEO Audit</button>' +
+      '<div id="auditResult"></div>' +
+    '</div>';
+
+  $('auditBtn').addEventListener('click', async function(){
+    const url = $('auditUrl').value.trim();
+    const keyword = $('auditKeyword').value.trim();
+    if (!url) return toast('Enter a URL', 'error');
+    $('auditBtn').disabled = true;
+    $('auditBtn').innerHTML = '<span class="spin"></span>Auditing (25+ checks)...';
+    $('auditResult').innerHTML = '<div class="skeleton skeleton-line" style="height:80px;margin-top:16px;"></div><div class="skeleton skeleton-line" style="height:80px;"></div><div class="skeleton skeleton-line" style="height:80px;"></div>';
+    try {
+      const r = await api('/api/seo/audit', { method: 'POST', body: { url: url, keyword: keyword } });
+      renderAuditResult(r);
+    } catch (e){
+      $('auditResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+    } finally {
+      $('auditBtn').disabled = false;
+      $('auditBtn').textContent = 'Run SEO Audit';
+    }
+  });
 }
 
 // ============================================================
@@ -810,17 +821,118 @@ function renderSEO(){
     try {
       const r = await api('/api/audit', { method: 'POST', body: { url: url, keyword: keyword } });
       renderAuditResult(r);
-    } catch (e){
-      if (e.data && e.data.error === 'FREE_LIMIT'){
-        $('auditResult').innerHTML = '<div class="status warning">Daily free limit reached. Upgrade for unlimited audits.</div>';
-      } else {
-        $('auditResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
-      }
-    } finally {
-      $('auditBtn').disabled = false;
-      $('auditBtn').textContent = 'Run SEO Audit';
-    }
-  });
+    }  const score = r.score || 0;
+  const afterScore = r.afterScore || score;
+  const grade = r.grade || 'F';
+  const afterGrade = r.afterGrade || grade;
+  const gradeColor = function(g){
+    return g === 'A' ? 'good' : g === 'B' ? 'good' : g === 'C' ? '' : 'bad';
+  };
+
+  // Category cards
+  const catLabels = { technical: 'Technical', onpage: 'On-Page', content: 'Content', social: 'Social' };
+  const catBars = Object.keys(r.categories || {}).map(function(k){
+    const c = r.categories[k];
+    if (!c || c.max === 0) return '';
+    const color = c.score >= 80 ? 'var(--success)' : c.score >= 50 ? 'var(--warning)' : 'var(--error)';
+    return '<div style="flex:1;min-width:120px;">' +
+      '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px;">' +
+        '<span>' + esc(catLabels[k] || k) + '</span><span style="color:var(--text);">' + c.score + '</span>' +
+      '</div>' +
+      '<div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;">' +
+        '<div style="height:100%;width:' + c.score + '%;background:' + color + ';transition:width .4s;"></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Metrics grid
+  const m = r.metrics || {};
+  const metricCells = [
+    { label: 'TTFB', value: (m.ttfb || 0) + 'ms' },
+    { label: 'Page Size', value: (m.pageSizeKb || 0) + ' KB' },
+    { label: 'Word Count', value: m.wordCount || 0 },
+    { label: 'Images', value: m.imagesCount || 0 },
+    { label: 'H1 / H2', value: (m.h1Count || 0) + ' / ' + (m.h2Count || 0) },
+    { label: 'Links', value: m.linkCount || 0 }
+  ].map(function(x){
+    return '<div style="padding:10px 8px;text-align:center;">' +
+      '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:3px;">' + x.label + '</div>' +
+      '<div style="font-size:15px;font-weight:800;color:var(--text);">' + esc(String(x.value)) + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Issues grouped by severity
+  const issues = r.issues || [];
+  const critical = issues.filter(function(i){ return i.severity === 'critical'; });
+  const warnings = issues.filter(function(i){ return i.severity === 'warning'; });
+  const info = issues.filter(function(i){ return i.severity === 'info'; });
+
+  const renderIssue = function(i){
+    const sevColor = i.severity === 'critical' ? 'var(--error)' : i.severity === 'warning' ? 'var(--warning)' : 'var(--info)';
+    return '<div class="listing-item" style="border-left:3px solid ' + sevColor + ';margin-bottom:10px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">' +
+        '<div style="font-weight:700;font-size:13px;color:var(--text);">' + esc(i.title) + '</div>' +
+        '<span class="badge ' + (i.severity === 'critical' ? 'failed' : i.severity === 'warning' ? 'pending' : 'source') + '">' + esc(i.severity) + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text-2);line-height:1.5;margin-bottom:8px;">' + esc(i.description) + '</div>' +
+      (i.fix ?
+        '<div style="padding:8px 10px;background:rgba(16,185,129,0.08);border-left:2px solid var(--success);border-radius:4px;font-size:12px;color:#6ee7b7;line-height:1.5;"><strong>Fix:</strong> ' + esc(i.fix) + '</div>'
+        : '') +
+    '</div>';
+  };
+
+  let html =
+    // Score row
+    '<div class="score-row" style="padding:28px 20px;gap:32px;">' +
+      '<div class="score-block">' +
+        '<div class="score-num ' + gradeColor(grade) + '">' + score + '</div>' +
+        '<div class="score-label">Grade ' + grade + '</div>' +
+      '</div>' +
+      '<div class="score-arrow">→</div>' +
+      '<div class="score-block">' +
+        '<div class="score-num good">' + afterScore + '</div>' +
+        '<div class="score-label">After Fixes (' + afterGrade + ')</div>' +
+      '</div>' +
+    '</div>' +
+
+    // Category bars
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;padding:16px;background:rgba(10,10,15,0.4);border-radius:12px;border:1px solid var(--border);">' +
+      catBars +
+    '</div>' +
+
+    // Metrics
+    '<div class="section-title" style="margin-top:0;">Live Metrics</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;">' +
+      metricCells +
+    '</div>' +
+
+    // Critical / Warnings / Info
+    (critical.length ?
+      '<div class="section-title" style="color:#fca5a5;">🚨 Critical Issues (' + critical.length + ')</div>' +
+      critical.map(renderIssue).join('')
+      : '') +
+    (warnings.length ?
+      '<div class="section-title" style="color:#fcd34d;">⚠️ Warnings (' + warnings.length + ')</div>' +
+      warnings.map(renderIssue).join('')
+      : '') +
+    (info.length ?
+      '<details style="margin-top:20px;">' +
+        '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);padding:8px 0;">ℹ️ Suggestions (' + info.length + ') — click to expand</summary>' +
+        '<div style="margin-top:10px;">' + info.map(renderIssue).join('') + '</div>' +
+      '</details>'
+      : '') +
+
+    // Passed checks
+    (r.passes && r.passes.length ?
+      '<details style="margin-top:16px;">' +
+        '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6ee7b7;padding:8px 0;">✅ Passed Checks (' + r.passes.length + ') — click to expand</summary>' +
+        '<ul class="list" style="margin-top:10px;">' +
+          r.passes.map(function(p){ return '<li class="list-item success"><strong>' + esc(p.title) + '</strong> — ' + esc(p.detail) + '</li>'; }).join('') +
+        '</ul>' +
+      '</details>'
+      : '');
+
+  $('auditResult').innerHTML = html;
 }
 
 function renderAuditResult(r){
@@ -1270,8 +1382,8 @@ function renderBacklinks(){
     '<div class="card">' +
       '<label class="label">URLs to Submit (one per line, or comma-separated)</label>' +
       '<textarea class="textarea" id="blUrls" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>' +
-      '<button class="btn" id="blSubmitBtn">Submit for Indexing</button>' +
-      '<div id="blResult"></div>' +
+'<button class="btn" id="blSubmitBtn">Submit for Indexing</button>' +
+'<button class="btn secondary small" id="blTestBtn" style="margin-top:8px;">🔍 Test Indexer (verify key file)</button>' +      '<div id="blResult"></div>' +
     '</div>' +
     '<div id="blJobs"></div>';
 
@@ -1294,7 +1406,26 @@ function renderBacklinks(){
       const r = await api('/api/backlink/submit', {
         method: 'POST',
         body: { businessId: state.business.id, urls: urls }
-      });
+      });  $('blTestBtn').addEventListener('click', async function(){
+    $('blTestBtn').disabled = true;
+    $('blTestBtn').innerHTML = '<span class="spin"></span>Testing...';
+    try {
+      const r = await api('/api/indexnow/verify');
+      $('blResult').innerHTML =
+        '<div class="status ' + (r.ok ? 'success' : 'error') + '" style="margin-top:16px;">' +
+          '<strong>' + (r.ok ? '✅ IndexNow is ready' : '❌ IndexNow setup issue') + '</strong><br>' +
+          'Key file: <code>' + esc(r.keyLocation || '—') + '</code><br>' +
+          (r.keyCheck && r.keyCheck.reason ? '<span style="color:#fca5a5;">Reason: ' + esc(r.keyCheck.reason) + '</span><br>' : '') +
+          '<div style="margin-top:8px;font-size:12px;color:var(--text-2);line-height:1.5;">' + esc(r.hint || '') + '</div>' +
+          (r.setup ? '<div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.5;">' + esc(r.setup) + '</div>' : '') +
+        '</div>';
+    } catch (e){
+      $('blResult').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
+    } finally {
+      $('blTestBtn').disabled = false;
+      $('blTestBtn').innerHTML = '🔍 Test Indexer (verify key file)';
+    }
+  });
       const success = r.indexnow && r.indexnow.ok;
       const statusCode = (r.indexnow && r.indexnow.statusCode) || '—';
       $('blResult').innerHTML =

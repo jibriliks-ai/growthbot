@@ -71,7 +71,8 @@ try {registerBacklinkRoutes(app, requireApiKey);
 } catch (e) {
   console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
 }
-
+registerSeoRoutes(app, requireApiKey);
+import { registerSeoRoutes } from './seoAuditor.js';
 // ============================================================
 // CONFIG
 // ============================================================
