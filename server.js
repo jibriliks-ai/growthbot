@@ -1,6 +1,6 @@
-// ============================================================
-// Auto Traffic Engine — Main Express server
-// v3.8.1 — Facebook OAuth version alignment + debug endpoint
+﻿// ============================================================
+// Auto Traffic Engine â€” Main Express server
+// v3.8.1 â€” Facebook OAuth version alignment + debug endpoint
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -68,7 +68,7 @@ let dirModule = null;import { registerDirectoryRoutes } from './directoryData.js
 try {
   dirModule = await import('./directoryGenerator.js');
 } catch (e) {
-  console.warn('⚠️  directoryGenerator.js not available — directory feature disabled');
+  console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
 }
 
 // ============================================================
@@ -82,7 +82,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const PREMIUM_PRICE_USD = 29;
 
-// Single source of truth for Graph API version — matches socialPoster.js
+// Single source of truth for Graph API version â€” matches socialPoster.js
 const FB_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
 const FB_OAUTH_BASE = `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth`;
 const FB_GRAPH_BASE = `https://graph.facebook.com/${FB_GRAPH_VERSION}`;
@@ -496,7 +496,7 @@ app.get('/api/social/facebook/connect', generalLimiter, requireApiKey, (req, res
   // returnUrl = the page to send the user back to after OAuth (e.g., Blogspot URL)
   const returnUrl = req.query.redirect || '';
   const state = Buffer.from(JSON.stringify({ apiKey: req.apiKey, returnUrl })).toString('base64url');
-  // pages_manage_metadata is NOT a valid scope — removed. These 3 cover posting.
+  // pages_manage_metadata is NOT a valid scope â€” removed. These 3 cover posting.
   const scopes = 'pages_show_list,pages_read_engagement,pages_manage_posts';
   const authUrl =
     `${FB_OAUTH_BASE}?` +
@@ -505,7 +505,7 @@ app.get('/api/social/facebook/connect', generalLimiter, requireApiKey, (req, res
     `&state=${state}` +
     `&scope=${scopes}` +
     `&response_type=code`;
-  console.log('🔵 Facebook OAuth redirect:', { graphVersion: FB_GRAPH_VERSION, scopes, redirectUri });
+  console.log('ðŸ”µ Facebook OAuth redirect:', { graphVersion: FB_GRAPH_VERSION, scopes, redirectUri });
   res.redirect(authUrl);
 });
 
@@ -513,7 +513,7 @@ app.get('/api/social/facebook/callback', async (req, res) => {
   const { code, state, error, error_description } = req.query;
   const FRONTEND = process.env.PUBLIC_BASE_URL || 'https://growthbot-aprv.onrender.com';
 
-  console.log('🟢 Facebook OAuth callback hit:', {
+  console.log('ðŸŸ¢ Facebook OAuth callback hit:', {
     graphVersion: FB_GRAPH_VERSION,
     hasCode: !!code,
     hasState: !!state,
@@ -573,7 +573,7 @@ app.get('/api/social/facebook/callback', async (req, res) => {
 
     const pagesResult = await listFacebookPages(longToken);
     if (!pagesResult.ok) {
-      console.error('❌ listFacebookPages failed:', pagesResult.error);
+      console.error('âŒ listFacebookPages failed:', pagesResult.error);
       return res.redirect(buildRedirect({ fb_error: pagesResult.error }));
     }
     const pages = pagesResult.pages || [];
@@ -594,7 +594,7 @@ app.get('/api/social/facebook/callback', async (req, res) => {
       return res.redirect(buildRedirect({ fb_connected: '1', page: page.name }));
     }
 
-    // Multiple pages — send picker blob
+    // Multiple pages â€” send picker blob
     const pickerPayload = {
       apiKey,
       pages: pages.map((p) => ({
@@ -607,7 +607,7 @@ app.get('/api/social/facebook/callback', async (req, res) => {
     const sessionBlob = Buffer.from(JSON.stringify(pickerPayload)).toString('base64url');
     return res.redirect(buildRedirect({ fb_choose: '1', session: sessionBlob }));
   } catch (e) {
-    console.error('❌ Facebook OAuth error:', {
+    console.error('âŒ Facebook OAuth error:', {
       graphVersion: FB_GRAPH_VERSION,
       status: e.response?.status,
       facebookError: e.response?.data?.error,
@@ -897,36 +897,7 @@ app.get('/api/directories/countries', (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/directories/:country', (req, res) => {
-  if (!dirModule) return res.status(503).json({ error: 'Directory feature not available' });
-  try {
-    const result = dirModule.listDirectories(req.params.country);
-    if (!result) return res.status(404).json({ error: 'Country not supported' });
-    res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/directories/generate', dirLimiter, requireApiKey, async (req, res) => {
-  if (!dirModule) return res.status(503).json({ error: 'Directory feature not available' });
-  const { profile, country = 'ng', limit = 30, language = null } = req.body;
-  if (!profile?.name) return res.status(400).json({ error: 'profile.name required' });
-
-  const isAdmin = req.user && req.user.role === 'admin';
-  const blog = await getBlog(req.apiKey);
-  if ((!blog || blog.plan !== 'premium') && !isAdmin) {
-    return res.status(403).json({ error: 'PREMIUM_REQUIRED', message: 'Directory listings are Premium' });
-  }
-
-  try {
-    const lang = language && language.trim() ? language.trim() : null;
-    const result = await dirModule.generateListingsForCountry({ profile, country, limit, language: lang });
-    res.json(result);
-  } catch (e) {
-    console.error('Directory error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
-});
-// --- Per-post translator — powers the language control next to every generated listing ---
+// --- Per-post translator â€” powers the language control next to every generated listing ---
 app.post('/api/directories/translate', dirTranslateLimiter, requireApiKey, async (req, res) => {
   if (!dirModule) return res.status(503).json({ error: 'Directory feature not available' });
   const { postTitle = '', postContent = '', targetLang } = req.body || {};
@@ -1113,7 +1084,7 @@ app.use((err, req, res, next) => {
 async function boot() {
   try {
        if (process.env.DATABASE_URL) {
-      console.log('🔄 Initializing schemas...');
+      console.log('ðŸ”„ Initializing schemas...');
       await initSchema();
       await initSocialSchema();
       await initLeadsSchema();
@@ -1131,20 +1102,20 @@ async function boot() {
           const apiKey = generateApiKey(adminEmail);
           await getOrCreateBlog(apiKey, 'unknown');
           await createUser({ email: adminEmail, passwordHash: hashPassword(adminPassword), name: 'Admin', apiKey, role: 'admin' });
-          console.log(`✅ Admin created: ${adminEmail}`);
+          console.log(`âœ… Admin created: ${adminEmail}`);
         } else {
           const emailMatch = existingAdmin.email.toLowerCase() === adminEmail.toLowerCase();
           const passwordMatch = verifyPassword(adminPassword, existingAdmin.password_hash);
           if (!emailMatch || !passwordMatch) {
             try {
               await pool.query(`UPDATE users SET email = LOWER($1), password_hash = $2, role = 'admin', updated_at = NOW() WHERE id = $3`, [adminEmail, hashPassword(adminPassword), existingAdmin.id]);
-              console.log(`✅ Admin synced: ${adminEmail}`);
+              console.log(`âœ… Admin synced: ${adminEmail}`);
             } catch (syncErr) {
-              if (syncErr.code === '23505') console.warn(`⚠️  Cannot sync admin: email in use`);
+              if (syncErr.code === '23505') console.warn(`âš ï¸  Cannot sync admin: email in use`);
               else throw syncErr;
             }
           } else {
-            console.log(`ℹ️  Admin in sync: ${existingAdmin.email}`);
+            console.log(`â„¹ï¸  Admin in sync: ${existingAdmin.email}`);
           }
         }
       } catch (e) { console.warn('Admin setup failed:', e.message); }
@@ -1153,16 +1124,16 @@ async function boot() {
     startScheduler();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Auto Traffic Engine v3.8.1 on port ${PORT}`);
+      console.log(`ðŸš€ Auto Traffic Engine v3.8.1 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
-      console.log(`   Directory generator: ${dirModule ? '✅' : '⚠️ not loaded'}`);
-      console.log(`   Facebook OAuth: ${process.env.FACEBOOK_APP_ID ? '✅ configured' : '⚠️ not configured'}`);
+      console.log(`   Directory generator: ${dirModule ? 'âœ…' : 'âš ï¸ not loaded'}`);
+      console.log(`   Facebook OAuth: ${process.env.FACEBOOK_APP_ID ? 'âœ… configured' : 'âš ï¸ not configured'}`);
       console.log(`   Facebook Graph API version: ${FB_GRAPH_VERSION}`);
-      console.log(`   iframe embedding: ✅ allowed (Blogspot-safe)`);
+      console.log(`   iframe embedding: âœ… allowed (Blogspot-safe)`);
     });
   } catch (e) {
-    console.error('❌ Boot failed:', e.message);
+    console.error('âŒ Boot failed:', e.message);
     process.exit(1);
   }
 }
