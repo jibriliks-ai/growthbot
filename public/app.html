@@ -140,10 +140,6 @@ a:hover{color:var(--accent)}
 .empty-icon{font-size:52px;margin-bottom:16px;opacity:.6;display:inline-block}
 .empty-title{font-size:16px;font-weight:700;margin-bottom:8px}
 .empty-desc{font-size:13px;color:var(--text-2);line-height:1.6;max-width:340px;margin:0 auto 16px}
-.subtabs{display:flex;gap:4px;margin-bottom:16px;background:var(--bg);padding:4px;border-radius:var(--r-md);border:1px solid var(--border)}
-.subtab{flex:1;padding:9px;border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--text-2);transition:all .15s}
-.subtab:hover:not(.active){color:var(--text);background:var(--surface-2)}
-.subtab.active{background:var(--accent-grad);color:#fff;box-shadow:0 2px 8px var(--accent-glow)}
 .q-card{background:rgba(19,19,26,0.5);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-bottom:10px;transition:border-color .15s}
 .q-card:hover{border-color:var(--border-h)}
 .q-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
@@ -155,7 +151,6 @@ a:hover{color:var(--accent)}
 .q-badge.stackexchange{background:rgba(244,128,36,.15);color:#f48024}
 .q-badge.default{background:var(--accent-glow);color:var(--accent-l)}
 .q-title{font-size:13px;font-weight:600;line-height:1.4;flex:1}
-.q-snippet{font-size:12px;color:var(--text-2);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .q-actions{display:flex;gap:6px;flex-wrap:wrap}
 .draft-preview{background:rgba(10,10,15,.7);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;margin-top:12px;font-size:12.5px;line-height:1.6;color:var(--text-2);white-space:pre-wrap;word-break:break-word}
 .biz-switcher{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:5px 8px;font-size:11px;color:var(--text);cursor:pointer;max-width:120px;flex-shrink:0}
@@ -202,23 +197,6 @@ a:hover{color:var(--accent)}
 .kb-list li{margin-bottom:6px}
 .kb-list li strong{color:var(--text);font-weight:600}
 .kb-list code{background:var(--surface-3);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent-l)}
-.picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
-.picker-overlay.show{display:flex}
-.picker-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);max-width:520px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
-.picker-header{padding:20px 24px 16px;border-bottom:1px solid var(--border)}
-.picker-title{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
-.picker-desc{font-size:13px;color:var(--text-2);line-height:1.5}
-.picker-list{padding:12px}
-.picker-item{padding:14px;border-radius:var(--r-md);border:1px solid var(--border);margin-bottom:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px}
-.picker-item:hover{border-color:var(--accent);background:rgba(139,92,246,.06)}
-.picker-item.selected{border-color:var(--accent);background:rgba(139,92,246,.12)}
-.picker-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--border-h);flex-shrink:0;position:relative;transition:all .15s}
-.picker-item.selected .picker-radio{border-color:var(--accent);background:var(--accent)}
-.picker-item.selected .picker-radio::after{content:'';position:absolute;inset:4px;background:#fff;border-radius:50%}
-.picker-info{flex:1;min-width:0}
-.picker-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.3}
-.picker-category{font-size:11px;color:var(--text-3);margin-top:2px}
-.picker-actions{padding:12px 24px 20px;display:flex;gap:8px;border-top:1px solid var(--border)}
 @media(min-width:1024px){.sidebar{display:flex}.main-wrap{margin-left:260px}.mobile-header{display:none}.bottom-nav{display:none}.content{padding:32px 32px 40px}.h1{font-size:28px}}
 @media(max-width:480px){.stats{gap:8px}.stat{padding:12px 8px}.stat-num{font-size:20px}.quick-icon{font-size:24px}.quick-label{font-size:11px}.quick-sub{font-size:10px}}
 .hidden{display:none !important}
@@ -276,20 +254,6 @@ a:hover{color:var(--accent)}
   <div class="sidebar-footer" id="drawerFooter"></div>
 </aside>
 
-<div class="picker-overlay" id="pickerOverlay">
-  <div class="picker-modal">
-    <div class="picker-header">
-      <div class="picker-title">Choose a Facebook Page</div>
-      <div class="picker-desc">You manage multiple Pages. Select the one you want to connect to Auto Traffic Engine.</div>
-    </div>
-    <div class="picker-list" id="pickerList"></div>
-    <div class="picker-actions">
-      <button class="btn secondary" id="pickerCancel" style="margin-top:0;">Cancel</button>
-      <button class="btn" id="pickerConfirm" style="margin-top:0;">Connect Selected</button>
-    </div>
-  </div>
-</div>
-
 <div id="pwaBanner">
   <div class="text">📱 Install Auto Traffic Engine on your home screen</div>
   <button id="pwaInstallBtn">Install</button>
@@ -330,7 +294,11 @@ if (!AUTH_TOKEN) {
 let deferredPrompt;
 const pwaBanner = document.getElementById('pwaBanner');
 const pwaInstallBtn = document.getElementById('pwaInstallBtn');
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; if (pwaBanner) pwaBanner.classList.add('show'); });
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (pwaBanner) pwaBanner.classList.add('show');
+});
 if (pwaInstallBtn) pwaInstallBtn.addEventListener('click', async () => {
   if (!deferredPrompt) return;
   deferredPrompt.prompt();
@@ -338,7 +306,10 @@ if (pwaInstallBtn) pwaInstallBtn.addEventListener('click', async () => {
   deferredPrompt = null;
   if (pwaBanner) pwaBanner.classList.remove('show');
 });
-window.addEventListener('appinstalled', () => { if (pwaBanner) pwaBanner.classList.remove('show'); deferredPrompt = null; });
+window.addEventListener('appinstalled', () => {
+  if (pwaBanner) pwaBanner.classList.remove('show');
+  deferredPrompt = null;
+});
 
 // ============================================================
 // Idle timeout
@@ -352,67 +323,220 @@ let warnShown = false;
 let countdownInterval = null;
 let remainingSec = 60;
 
-function touchActivity() { try { localStorage.setItem(ACTIVITY_KEY, String(Date.now())); } catch {} if (warnShown) hideWarn(); }
-function getLastActivity() { try { return parseInt(localStorage.getItem(ACTIVITY_KEY) || '0', 10) || Date.now(); } catch { return Date.now(); } }
-function handleLogout() { if (confirm('Sign out of Auto Traffic Engine?')) { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('ate_user'); location.replace('/login.html'); } }
-function forceLogout(reason) { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('ate_user'); location.replace('/login.html?expired=1&redirect=' + encodeURIComponent(location.pathname)); }
-function showWarn() { if (warnShown) return; warnShown = true; const o = document.getElementById('idleOverlay'); if (!o) return; o.classList.add('show'); remainingSec = 60; updateCountdown(); clearInterval(countdownInterval); countdownInterval = setInterval(() => { remainingSec -= 1; if (remainingSec <= 0) { clearInterval(countdownInterval); return; } updateCountdown(); }, 1000); }
-function hideWarn() { warnShown = false; const o = document.getElementById('idleOverlay'); if (o) o.classList.remove('show'); clearInterval(countdownInterval); }
-function updateCountdown() { const el = document.getElementById('idleCountdown'); if (el) el.textContent = String(remainingSec); }
-function checkIdle() { if (!localStorage.getItem(TOKEN_KEY)) return; const idleMs = Date.now() - getLastActivity(); if (idleMs >= IDLE_TIMEOUT_MS) { forceLogout('idle'); return; } if (idleMs >= IDLE_TIMEOUT_MS - IDLE_WARN_MS) { if (!warnShown) showWarn(); const s = Math.ceil((IDLE_TIMEOUT_MS - idleMs) / 1000); if (s < remainingSec) { remainingSec = s; updateCountdown(); } } }
-function startIdleWatcher() { ['mousemove','mousedown','keydown','touchstart','scroll','click','focus'].forEach((ev) => document.addEventListener(ev, touchActivity, { passive: true })); if (!localStorage.getItem(ACTIVITY_KEY)) touchActivity(); idleCheckInterval = setInterval(checkIdle, CHECK_INTERVAL_MS); }
-window.addEventListener('storage', (e) => { if (e.key === TOKEN_KEY && !e.newValue) location.replace('/login.html'); if (e.key === ACTIVITY_KEY && warnShown) hideWarn(); });
+function touchActivity() {
+  try { localStorage.setItem(ACTIVITY_KEY, String(Date.now())); } catch (e) {}
+  if (warnShown) hideWarn();
+}
+function getLastActivity() {
+  try { return parseInt(localStorage.getItem(ACTIVITY_KEY) || '0', 10) || Date.now(); }
+  catch (e) { return Date.now(); }
+}
+function handleLogout() {
+  if (confirm('Sign out of Auto Traffic Engine?')) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('ate_user');
+    location.replace('/login.html');
+  }
+}
+function forceLogout(reason) {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('ate_user');
+  location.replace('/login.html?expired=1&redirect=' + encodeURIComponent(location.pathname));
+}
+function showWarn() {
+  if (warnShown) return;
+  warnShown = true;
+  const o = document.getElementById('idleOverlay');
+  if (!o) return;
+  o.classList.add('show');
+  remainingSec = 60;
+  updateCountdown();
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => {
+    remainingSec -= 1;
+    if (remainingSec <= 0) { clearInterval(countdownInterval); return; }
+    updateCountdown();
+  }, 1000);
+}
+function hideWarn() {
+  warnShown = false;
+  const o = document.getElementById('idleOverlay');
+  if (o) o.classList.remove('show');
+  clearInterval(countdownInterval);
+}
+function updateCountdown() {
+  const el = document.getElementById('idleCountdown');
+  if (el) el.textContent = String(remainingSec);
+}
+function checkIdle() {
+  if (!localStorage.getItem(TOKEN_KEY)) return;
+  const idleMs = Date.now() - getLastActivity();
+  if (idleMs >= IDLE_TIMEOUT_MS) { forceLogout('idle'); return; }
+  if (idleMs >= IDLE_TIMEOUT_MS - IDLE_WARN_MS) {
+    if (!warnShown) showWarn();
+    const s = Math.ceil((IDLE_TIMEOUT_MS - idleMs) / 1000);
+    if (s < remainingSec) { remainingSec = s; updateCountdown(); }
+  }
+}
+function startIdleWatcher() {
+  ['mousemove','mousedown','keydown','touchstart','scroll','click','focus'].forEach((ev) =>
+    document.addEventListener(ev, touchActivity, { passive: true })
+  );
+  if (!localStorage.getItem(ACTIVITY_KEY)) touchActivity();
+  idleCheckInterval = setInterval(checkIdle, CHECK_INTERVAL_MS);
+}
+window.addEventListener('storage', (e) => {
+  if (e.key === TOKEN_KEY && !e.newValue) location.replace('/login.html');
+  if (e.key === ACTIVITY_KEY && warnShown) hideWarn();
+});
 
 // ============================================================
 // Global state
 // ============================================================
 const BACKEND = location.origin;
-const state = { user: null, apiKey: '', plan: 'free', usage: {}, limits: { freeAudits: 3, premiumVideos: 30, backlinks: 10, businesses: 1, price: 29 }, business: null, businesses: [], analytics: null, countries: [], dirCountries: [], tab: 'home', isAdmin: false };
+const state = {
+  user: null,
+  apiKey: '',
+  plan: 'free',
+  usage: {},
+  limits: { freeAudits: 3, premiumVideos: 30, backlinks: 10, businesses: 1, price: 29 },
+  business: null,
+  businesses: [],
+  analytics: null,
+  countries: [],
+  dirCountries: [],
+  tab: 'home',
+  isAdmin: false
+};
 const $ = (id) => document.getElementById(id);
 const content = $('content');
 
 const NAV_GROUPS = [
   { label: 'Main', items: [ { key: 'home', icon: '🏠', label: 'Home' } ]},
-  { label: 'Content', items: [ { key: 'seo', icon: '🔍', label: 'SEO Audit' }, { key: 'video', icon: '🎬', label: 'Video Ads', premium: true }, { key: 'keywords', icon: '🔑', label: 'Keywords', premium: true } ]},
-  { label: 'Outreach', items: [ { key: 'qa', icon: '💬', label: 'Q&A Finder', premium: true }, { key: 'directories', icon: '📇', label: 'Directories', premium: true }, { key: 'backlinks', icon: '🔗', label: 'Backlinks', premium: true }, { key: 'social', icon: '📱', label: 'Social', premium: true } ]},
-  { label: 'Business', items: [ { key: 'campaigns', icon: '📣', label: 'Campaigns' }, { key: 'leads', icon: '👥', label: 'Leads' }, { key: 'reviews', icon: '⭐', label: 'Reviews' }, { key: 'analytics', icon: '📊', label: 'Analytics' } ]},
-  { label: 'Account', items: [ { key: 'businesses', icon: '🏢', label: 'Businesses' }, { key: 'kb', icon: '📖', label: 'Knowledge Base' }, { key: 'settings', icon: '⚙️', label: 'Settings' } ]}
+  { label: 'Content', items: [
+    { key: 'seo', icon: '🔍', label: 'SEO Audit' },
+    { key: 'video', icon: '🎬', label: 'Video Ads', premium: true },
+    { key: 'keywords', icon: '🔑', label: 'Keywords', premium: true }
+  ]},
+  { label: 'Outreach', items: [
+    { key: 'qa', icon: '💬', label: 'Q&A Finder', premium: true },
+    { key: 'directories', icon: '📇', label: 'Directories', premium: true },
+    { key: 'backlinks', icon: '🔗', label: 'Backlinks', premium: true },
+    { key: 'social', icon: '📱', label: 'Social', premium: true }
+  ]},
+  { label: 'Business', items: [
+    { key: 'campaigns', icon: '📣', label: 'Campaigns' },
+    { key: 'leads', icon: '👥', label: 'Leads' },
+    { key: 'reviews', icon: '⭐', label: 'Reviews' },
+    { key: 'analytics', icon: '📊', label: 'Analytics' }
+  ]},
+  { label: 'Account', items: [
+    { key: 'businesses', icon: '🏢', label: 'Businesses' },
+    { key: 'kb', icon: '📖', label: 'Knowledge Base' },
+    { key: 'settings', icon: '⚙️', label: 'Settings' }
+  ]}
 ];
-const BOTTOM_NAV = [ { key: 'home', icon: '🏠', label: 'Home' }, { key: 'seo', icon: '🔍', label: 'SEO' }, { key: 'video', icon: '🎬', label: 'Video', premium: true }, { key: 'qa', icon: '💬', label: 'Q&A', premium: true }, { key: 'menu', icon: '☰', label: 'Menu', action: 'drawer' } ];
+const BOTTOM_NAV = [
+  { key: 'home', icon: '🏠', label: 'Home' },
+  { key: 'seo', icon: '🔍', label: 'SEO' },
+  { key: 'video', icon: '🎬', label: 'Video', premium: true },
+  { key: 'qa', icon: '💬', label: 'Q&A', premium: true },
+  { key: 'menu', icon: '☰', label: 'Menu', action: 'drawer' }
+];
 
-function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function toast(msg, type='success'){ const el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg; $('toasts').appendChild(el); setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translate(-50%,12px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(), 300); }, 3000); }
-async function copy(text, label){ try { await navigator.clipboard.writeText(text); toast(label || 'Copied!'); } catch { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='absolute'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast(label || 'Copied!'); } catch { toast('Copy failed','error'); } finally { ta.remove(); } } }
+// ============================================================
+// Helpers
+// ============================================================
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function toast(msg, type){
+  type = type || 'success';
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  $('toasts').appendChild(el);
+  setTimeout(function(){
+    el.style.opacity = '0';
+    el.style.transform = 'translate(-50%,12px)';
+    el.style.transition = 'all .3s';
+    setTimeout(function(){ el.remove(); }, 300);
+  }, 3000);
+}
+
+async function copy(text, label){
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(label || 'Copied!');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'absolute';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast(label || 'Copied!'); }
+    catch (e2) { toast('Copy failed', 'error'); }
+    finally { ta.remove(); }
+  }
+}
+
 async function api(path, opts){
-  const options = Object.assign({method:'GET'}, opts || {});
-  if (options.body && typeof options.body !== 'string'){ options.body = JSON.stringify(options.body); options.headers = Object.assign({'Content-Type':'application/json'}, options.headers || {}); }
-  options.headers = Object.assign({'Authorization':'Bearer ' + (localStorage.getItem(TOKEN_KEY) || '')}, options.headers || {});
+  const options = Object.assign({ method: 'GET' }, opts || {});
+  if (options.body && typeof options.body !== 'string'){
+    options.body = JSON.stringify(options.body);
+    options.headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+  }
+  options.headers = Object.assign(
+    { 'Authorization': 'Bearer ' + (localStorage.getItem(TOKEN_KEY) || '') },
+    options.headers || {}
+  );
   const res = await fetch(BACKEND + path, options);
-  if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('ate_user'); location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH) + '&expired=1'); throw new Error('Session expired'); }
-  const data = await res.json().catch(()=>({}));
-  if (!res.ok){ const err = new Error(data.error || data.message || 'HTTP ' + res.status); err.status = res.status; err.data = data; throw err; }
+  if (res.status === 401){
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('ate_user');
+    location.replace('/login.html?redirect=' + encodeURIComponent(CURRENT_PATH) + '&expired=1');
+    throw new Error('Session expired');
+  }
+  const data = await res.json().catch(function(){ return {}; });
+  if (!res.ok){
+    const err = new Error(data.error || data.message || ('HTTP ' + res.status));
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
 
 // ============================================================
-// Nav
+// Navigation
 // ============================================================
 function buildNavHTML(activeKey){
   const isFree = state.plan === 'free';
   const isAdmin = state.isAdmin;
-  let html = NAV_GROUPS.map(group => `
-    <div class="nav-group">
-      <div class="nav-group-label">${esc(group.label)}</div>
-      ${group.items.map(item => `
-        <button class="nav-link ${activeKey === item.key ? 'active' : ''}" data-tab="${item.key}">
-          <span class="nav-link-icon">${item.icon}</span>
-          <span>${esc(item.label)}</span>
-          ${item.premium && isFree && !isAdmin ? '<span class="nav-link-lock">🔒</span>' : ''}
-        </button>
-      `).join('')}
-    </div>
-  `).join('');
-  if (isAdmin) html += `<div class="nav-group"><div class="nav-group-label" style="color:#f59e0b;">🛡️ Admin</div><a href="/admin.html" class="nav-link" style="text-decoration:none;color:#fcd34d;"><span class="nav-link-icon">🛡️</span><span>Admin Panel</span><span class="nav-link-lock">↗</span></a></div>`;
+  let html = NAV_GROUPS.map(function(group){
+    return '<div class="nav-group">' +
+      '<div class="nav-group-label">' + esc(group.label) + '</div>' +
+      group.items.map(function(item){
+        return '<button class="nav-link ' + (activeKey === item.key ? 'active' : '') + '" data-tab="' + item.key + '">' +
+          '<span class="nav-link-icon">' + item.icon + '</span>' +
+          '<span>' + esc(item.label) + '</span>' +
+          (item.premium && isFree && !isAdmin ? '<span class="nav-link-lock">🔒</span>' : '') +
+        '</button>';
+      }).join('') +
+    '</div>';
+  }).join('');
+  if (isAdmin){
+    html += '<div class="nav-group"><div class="nav-group-label" style="color:#f59e0b;">🛡️ Admin</div>' +
+      '<a href="/admin.html" class="nav-link" style="text-decoration:none;color:#fcd34d;">' +
+      '<span class="nav-link-icon">🛡️</span><span>Admin Panel</span><span class="nav-link-lock">↗</span></a></div>';
+  }
   return html;
 }
 
@@ -422,68 +546,173 @@ function renderNav(){
   const navHtml = buildNavHTML(state.tab);
   $('sidebarNav').innerHTML = navHtml;
   $('drawerNav').innerHTML = navHtml;
-  ['sidebarNav','drawerNav'].forEach(id => { $(id).querySelectorAll('[data-tab]').forEach(btn => { btn.addEventListener('click', ()=>{ const target = btn.getAttribute('data-tab'); closeDrawer(); navigateTo(target); }); }); });
-  const footerHTML = `<div class="sidebar-plan ${state.plan === 'premium' ? 'premium' : ''}"><div class="sidebar-plan-label">${state.plan === 'premium' ? '⭐ Premium' : 'Free Plan'}</div><div class="sidebar-plan-name">${state.plan === 'premium' ? 'Active' : 'Upgrade available'}</div></div><button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button><div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.8.1</div>`;
-  const sFooter = $('sidebarFooter'); const dFooter = $('drawerFooter');
+  ['sidebarNav','drawerNav'].forEach(function(id){
+    $(id).querySelectorAll('[data-tab]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const target = btn.getAttribute('data-tab');
+        closeDrawer();
+        navigateTo(target);
+      });
+    });
+  });
+
+  const footerHTML =
+    '<div class="sidebar-plan ' + (state.plan === 'premium' ? 'premium' : '') + '">' +
+      '<div class="sidebar-plan-label">' + (state.plan === 'premium' ? '⭐ Premium' : 'Free Plan') + '</div>' +
+      '<div class="sidebar-plan-name">' + (state.plan === 'premium' ? 'Active' : 'Upgrade available') + '</div>' +
+    '</div>' +
+    '<button class="btn ghost small" data-logout-btn style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3); margin-bottom:8px;">⏻ Sign Out</button>' +
+    '<div style="font-size:10px;color:var(--text-3);">Auto Traffic Engine v3.8.1</div>';
+
+  const sFooter = $('sidebarFooter');
+  const dFooter = $('drawerFooter');
   if (sFooter) sFooter.innerHTML = footerHTML;
   if (dFooter) dFooter.innerHTML = footerHTML;
-  document.querySelectorAll('[data-logout-btn]').forEach(btn => btn.addEventListener('click', handleLogout));
-  $('bottomNav').innerHTML = BOTTOM_NAV.map(item => { const isActive = item.action !== 'drawer' && state.tab === item.key; return `<button class="bnav-item ${isActive ? 'active' : ''}" data-bnav="${item.key}"><span class="bn-icon">${item.icon}</span><span>${esc(item.label)}</span>${item.premium && isFree && !isAdmin ? '<span class="bn-lock">🔒</span>' : ''}</button>`; }).join('');
-  $('bottomNav').querySelectorAll('[data-bnav]').forEach(btn => { btn.addEventListener('click', ()=>{ const key = btn.getAttribute('data-bnav'); if (key === 'menu') { openDrawer(); return; } navigateTo(key); }); });
+  document.querySelectorAll('[data-logout-btn]').forEach(function(btn){
+    btn.addEventListener('click', handleLogout);
+  });
+
+  $('bottomNav').innerHTML = BOTTOM_NAV.map(function(item){
+    const isActive = item.action !== 'drawer' && state.tab === item.key;
+    return '<button class="bnav-item ' + (isActive ? 'active' : '') + '" data-bnav="' + item.key + '">' +
+      '<span class="bn-icon">' + item.icon + '</span>' +
+      '<span>' + esc(item.label) + '</span>' +
+      (item.premium && isFree && !isAdmin ? '<span class="bn-lock">🔒</span>' : '') +
+    '</button>';
+  }).join('');
+  $('bottomNav').querySelectorAll('[data-bnav]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const key = btn.getAttribute('data-bnav');
+      if (key === 'menu') { openDrawer(); return; }
+      navigateTo(key);
+    });
+  });
 }
 
 function navigateTo(target){
   if (target === state.tab) return;
   let tabDef = null;
-  NAV_GROUPS.forEach(g => g.items.forEach(i => { if (i.key === target) tabDef = i; }));
-  if (tabDef && tabDef.premium && state.plan === 'free' && !state.isAdmin) { renderUpgrade(target); return; }
+  NAV_GROUPS.forEach(function(g){
+    g.items.forEach(function(i){ if (i.key === target) tabDef = i; });
+  });
+  if (tabDef && tabDef.premium && state.plan === 'free' && !state.isAdmin){
+    renderUpgrade(target);
+    return;
+  }
   state.tab = target;
   renderNav();
   renderTab();
   window.scrollTo(0, 0);
 }
 
-function openDrawer(){ $('drawer').classList.add('open'); $('drawerOverlay').classList.add('open'); document.body.style.overflow = 'hidden'; }
-function closeDrawer(){ $('drawer').classList.remove('open'); $('drawerOverlay').classList.remove('open'); document.body.style.overflow = ''; }
+function openDrawer(){
+  $('drawer').classList.add('open');
+  $('drawerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDrawer(){
+  $('drawer').classList.remove('open');
+  $('drawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
 
 function updateHeader(){
-  $('mobileBrandTitle').textContent = state.business?.name || 'Auto Traffic Engine';
-  $('mobileBrandSub').textContent = state.business?.category || 'Business growth tools';
+  $('mobileBrandTitle').textContent = (state.business && state.business.name) || 'Auto Traffic Engine';
+  $('mobileBrandSub').textContent = (state.business && state.business.category) || 'Business growth tools';
   const pill = $('planPill');
-  if (state.isAdmin) { pill.textContent = '🛡️ Admin'; pill.classList.add('premium'); }
-  else if (state.plan === 'premium') { pill.textContent = '⭐ Premium'; pill.classList.add('premium'); }
-  else { pill.textContent = 'Free'; pill.classList.remove('premium'); }
+  if (state.isAdmin){
+    pill.textContent = '🛡️ Admin';
+    pill.classList.add('premium');
+  } else if (state.plan === 'premium'){
+    pill.textContent = '⭐ Premium';
+    pill.classList.add('premium');
+  } else {
+    pill.textContent = 'Free';
+    pill.classList.remove('premium');
+  }
   const sw = $('bizSwitcher');
-  if (state.businesses.length <= 1) sw.classList.add('hidden');
-  else {
+  if (state.businesses.length <= 1){
+    sw.classList.add('hidden');
+  } else {
     sw.classList.remove('hidden');
-    sw.innerHTML = state.businesses.map(b => `<option value="${b.id}" ${state.business?.id===b.id?'selected':''}>${esc(b.name)}</option>`).join('');
-    sw.onchange = e => { const id = Number(e.target.value); const biz = state.businesses.find(b => b.id === id); if (biz) { state.business = biz; updateHeader(); loadAnalytics().then(() => renderTab()); } };
+    sw.innerHTML = state.businesses.map(function(b){
+      return '<option value="' + b.id + '" ' + (state.business && state.business.id === b.id ? 'selected' : '') + '>' + esc(b.name) + '</option>';
+    }).join('');
+    sw.onchange = function(e){
+      const id = Number(e.target.value);
+      const biz = state.businesses.find(function(b){ return b.id === id; });
+      if (biz){
+        state.business = biz;
+        updateHeader();
+        loadAnalytics().then(function(){ renderTab(); });
+      }
+    };
   }
 }
 
 // ============================================================
 // Data loaders
 // ============================================================
-async function loadPlan(){ try { const d = await api('/api/check-plan?key=' + encodeURIComponent(state.apiKey) + '&url=' + encodeURIComponent(location.href)); state.plan = d.plan || 'free'; state.usage = d.usage || {}; state.limits = Object.assign(state.limits, d.limits || {}); state.isAdmin = d.isAdmin === true; } catch(e){ console.warn('Plan:', e.message); } }
-async function loadBusinesses(){ try { const r = await api('/api/businesses/list'); state.businesses = r.businesses || []; state.business = state.businesses[0] || null; state.limits.businesses = r.limit || state.limits.businesses; } catch { state.businesses = []; state.business = null; } }
-async function loadAnalytics(){
-  if (!state.business) { state.analytics = null; return; }
-  let base = {};
-  try { const r = await api('/api/businesses/' + state.business.id + '/analytics'); base = r.analytics || {}; } catch {}
-  let linkStats = { links: 0, clicks: 0 };
-  try { const r = await api('/api/businesses/' + state.business.id + '/link-stats'); linkStats = r || linkStats; } catch {}
-  state.analytics = Object.assign({}, base, { links: linkStats.links || 0, clicks: linkStats.clicks || 0 });
+async function loadPlan(){
+  try {
+    const d = await api('/api/check-plan?key=' + encodeURIComponent(state.apiKey) + '&url=' + encodeURIComponent(location.href));
+    state.plan = d.plan || 'free';
+    state.usage = d.usage || {};
+    state.limits = Object.assign(state.limits, d.limits || {});
+    state.isAdmin = d.isAdmin === true;
+  } catch (e){ console.warn('Plan:', e.message); }
 }
-async function loadCountries(){ try { const r = await api('/api/questions/sources'); state.countries = r.countries || []; } catch { state.countries = []; } }
-async function loadDirCountries(){ try { const r = await api('/api/directories/countries'); state.dirCountries = r.countries || []; } catch { state.dirCountries = []; } }
+
+async function loadBusinesses(){
+  try {
+    const r = await api('/api/businesses/list');
+    state.businesses = r.businesses || [];
+    state.business = state.businesses[0] || null;
+    state.limits.businesses = r.limit || state.limits.businesses;
+  } catch (e){
+    state.businesses = [];
+    state.business = null;
+  }
+}
+
+async function loadAnalytics(){
+  if (!state.business){ state.analytics = null; return; }
+  let base = {};
+  try {
+    const r = await api('/api/businesses/' + state.business.id + '/analytics');
+    base = r.analytics || {};
+  } catch (e) {}
+  let linkStats = { links: 0, clicks: 0 };
+  try {
+    const r = await api('/api/businesses/' + state.business.id + '/link-stats');
+    linkStats = r || linkStats;
+  } catch (e) {}
+  state.analytics = Object.assign({}, base, {
+    links: linkStats.links || 0,
+    clicks: linkStats.clicks || 0
+  });
+}
+
+async function loadCountries(){
+  try {
+    const r = await api('/api/questions/sources');
+    state.countries = r.countries || [];
+  } catch (e){ state.countries = []; }
+}
+
+async function loadDirCountries(){
+  try {
+    const r = await api('/api/directories/countries');
+    state.dirCountries = r.countries || [];
+  } catch (e){ state.dirCountries = []; }
+}
 
 // ============================================================
 // Tab router
 // ============================================================
 function renderTab(){
   content.scrollTop = 0;
-  switch(state.tab){
+  switch (state.tab){
     case 'home': return renderHome();
     case 'seo': return renderSEO();
     case 'video': return renderVideo();
@@ -509,83 +738,69 @@ function renderTab(){
 function renderHome(){
   const audits = state.usage.auditsToday || 0;
   const videos = state.usage.videosMonth || 0;
-  const leads = state.analytics?.leads || 0;
-  const clicks = state.analytics?.clicks || 0;
-  const links = state.analytics?.links || 0;
+  const leads = (state.analytics && state.analytics.leads) || 0;
+  const clicks = (state.analytics && state.analytics.clicks) || 0;
+  const links = (state.analytics && state.analytics.links) || 0;
   const hour = new Date().getHours();
   const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const name = (state.user && (state.user.name || state.user.email)) || 'there';
 
-  content.innerHTML = `
-    <h1 class="h1">${esc(greet)}, ${esc(state.user?.name || state.user?.email || 'there')}!</h1>
-    <p class="subtitle">Here's your growth overview${state.business ? ' for ' + esc(state.business.name) : ''}.</p>
-
-    ${state.plan === 'free' && !state.isAdmin ? `
-      <div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1));border-color:rgba(139,92,246,0.3);">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent-l);margin-bottom:8px;">Upgrade to Premium</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Unlock every growth tool</div>
-        <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.5;">Video ads, keyword research, Q&A finder, social posting, directory listings, and unlimited audits.</div>
-        <button class="btn" onclick="location.href='/pay.html'">Upgrade for $${state.limits.price}/mo</button>
-      </div>
-    ` : ''}
-
-    <div class="stats">
-      <div class="stat"><div class="stat-num">${links}</div><div class="stat-label">Tracked Links</div></div>
-      <div class="stat"><div class="stat-num">${clicks}</div><div class="stat-label">Clicks</div></div>
-      <div class="stat"><div class="stat-num">${leads}</div><div class="stat-label">Leads</div></div>
-    </div>
-
-    ${!state.business ? `
-      <div class="card">
-        <div class="empty">
-          <div class="empty-icon">🏢</div>
-          <div class="empty-title">Add your first business</div>
-          <div class="empty-desc">Set up your business profile to unlock campaigns, leads, reviews, and analytics.</div>
-          <button class="btn" onclick="window.navigateTo('businesses')">Add Business</button>
-        </div>
-      </div>
-    ` : `
-      <div class="section-title">Quick Actions</div>
-      <div class="quick-grid">
-        <button class="quick" onclick="window.navigateTo('seo')">
-          <span class="quick-icon">🔍</span><span class="quick-label">SEO Audit</span>
-        </button>
-        <button class="quick" onclick="window.navigateTo('directories')" ${state.plan === 'free' && !state.isAdmin ? 'disabled' : ''}>
-          <span class="quick-icon">📇</span><span class="quick-label">Directories</span>
-          <span class="quick-sub">${state.plan === 'free' && !state.isAdmin ? '🔒 Premium' : ''}</span>
-        </button>
-        <button class="quick" onclick="window.navigateTo('leads')">
-          <span class="quick-icon">👥</span><span class="quick-label">View Leads</span>
-        </button>
-      </div>
-
-      <div class="section-title">Business Snapshot</div>
-      <div class="card">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:4px;">Audits Today</div><div style="font-size:22px;font-weight:800;">${audits}</div></div>
-          <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:4px;">Videos This Month</div><div style="font-size:22px;font-weight:800;">${videos}</div></div>
-        </div>
-      </div>
-    `}
-  `;
+  content.innerHTML =
+    '<h1 class="h1">' + esc(greet) + ', ' + esc(name) + '!</h1>' +
+    '<p class="subtitle">Here\'s your growth overview' + (state.business ? ' for ' + esc(state.business.name) : '') + '.</p>' +
+    (state.plan === 'free' && !state.isAdmin ?
+      '<div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1));border-color:rgba(139,92,246,0.3);">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent-l);margin-bottom:8px;">Upgrade to Premium</div>' +
+        '<div style="font-size:16px;font-weight:700;margin-bottom:6px;">Unlock every growth tool</div>' +
+        '<div style="font-size:13px;color:var(--text-2);margin-bottom:12px;line-height:1.5;">Video ads, keyword research, Q&A finder, social posting, directory listings, and unlimited audits.</div>' +
+        '<button class="btn" onclick="location.href=\'/pay.html\'">Upgrade for $' + state.limits.price + '/mo</button>' +
+      '</div>'
+      : '') +
+    '<div class="stats">' +
+      '<div class="stat"><div class="stat-num">' + links + '</div><div class="stat-label">Tracked Links</div></div>' +
+      '<div class="stat"><div class="stat-num">' + clicks + '</div><div class="stat-label">Clicks</div></div>' +
+      '<div class="stat"><div class="stat-num">' + leads + '</div><div class="stat-label">Leads</div></div>' +
+    '</div>' +
+    (!state.business ?
+      '<div class="card"><div class="empty">' +
+        '<div class="empty-icon">🏢</div>' +
+        '<div class="empty-title">Add your first business</div>' +
+        '<div class="empty-desc">Set up your business profile to unlock campaigns, leads, reviews, and analytics.</div>' +
+        '<button class="btn" onclick="window.navigateTo(\'businesses\')">Add Business</button>' +
+      '</div></div>'
+      :
+      '<div class="section-title">Quick Actions</div>' +
+      '<div class="quick-grid">' +
+        '<button class="quick" onclick="window.navigateTo(\'seo\')"><span class="quick-icon">🔍</span><span class="quick-label">SEO Audit</span></button>' +
+        '<button class="quick" onclick="window.navigateTo(\'directories\')" ' + (state.plan === 'free' && !state.isAdmin ? 'disabled' : '') + '><span class="quick-icon">📇</span><span class="quick-label">Directories</span>' + (state.plan === 'free' && !state.isAdmin ? '<span class="quick-sub">🔒 Premium</span>' : '') + '</button>' +
+        '<button class="quick" onclick="window.navigateTo(\'leads\')"><span class="quick-icon">👥</span><span class="quick-label">View Leads</span></button>' +
+      '</div>' +
+      '<div class="section-title">Business Snapshot</div>' +
+      '<div class="card"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:4px;">Audits Today</div><div style="font-size:22px;font-weight:800;">' + audits + '</div></div>' +
+        '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:4px;">Videos This Month</div><div style="font-size:22px;font-weight:800;">' + videos + '</div></div>' +
+      '</div></div>'
+    );
 }
 
 // ============================================================
 // SEO
 // ============================================================
 function renderSEO(){
-  content.innerHTML = `
-    <h1 class="h1">SEO Audit</h1>
-    <p class="subtitle">Scan your site for SEO issues and get AI-powered fixes.</p>
-    <div class="card">
-      <label class="label">Website URL</label>
-      <input class="input" id="auditUrl" type="url" placeholder="https://example.com" value="${esc(state.business?.website || state.business?.url || '')}" />
-      <label class="label">Target Keyword (optional)</label>
-      <input class="input" id="auditKeyword" placeholder="best coffee shop near me" />
-      <button class="btn" id="auditBtn">Run SEO Audit</button>
-      <div id="auditResult"></div>
-    </div>
-  `;
-  $('auditBtn').addEventListener('click', async () => {
+  const defaultUrl = (state.business && (state.business.website || state.business.url)) || '';
+  content.innerHTML =
+    '<h1 class="h1">SEO Audit</h1>' +
+    '<p class="subtitle">Scan your site for SEO issues and get AI-powered fixes.</p>' +
+    '<div class="card">' +
+      '<label class="label">Website URL</label>' +
+      '<input class="input" id="auditUrl" type="url" placeholder="https://example.com" value="' + esc(defaultUrl) + '" />' +
+      '<label class="label">Target Keyword (optional)</label>' +
+      '<input class="input" id="auditKeyword" placeholder="best coffee shop near me" />' +
+      '<button class="btn" id="auditBtn">Run SEO Audit</button>' +
+      '<div id="auditResult"></div>' +
+    '</div>';
+
+  $('auditBtn').addEventListener('click', async function(){
     const url = $('auditUrl').value.trim();
     const keyword = $('auditKeyword').value.trim();
     if (!url) return toast('Enter a URL', 'error');
@@ -593,13 +808,13 @@ function renderSEO(){
     $('auditBtn').innerHTML = '<span class="spin"></span>Running audit...';
     $('auditResult').innerHTML = '';
     try {
-      const r = await api('/api/audit', { method: 'POST', body: { url, keyword } });
+      const r = await api('/api/audit', { method: 'POST', body: { url: url, keyword: keyword } });
       renderAuditResult(r);
-    } catch (e) {
-      if (e.data?.error === 'FREE_LIMIT') {
+    } catch (e){
+      if (e.data && e.data.error === 'FREE_LIMIT'){
         $('auditResult').innerHTML = '<div class="status warning">Daily free limit reached. Upgrade for unlimited audits.</div>';
       } else {
-        $('auditResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+        $('auditResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
       }
     } finally {
       $('auditBtn').disabled = false;
@@ -609,26 +824,25 @@ function renderSEO(){
 }
 
 function renderAuditResult(r){
-  const before = r.before?.score ?? 0;
-  const after = r.after?.score ?? null;
-  const issues = r.before?.issues || [];
+  const before = (r.before && r.before.score) != null ? r.before.score : 0;
+  const after = (r.after && r.after.score) != null ? r.after.score : null;
+  const issues = (r.before && r.before.issues) || [];
   const fixes = r.fixes || [];
-  let html = `
-    <div class="score-row">
-      <div class="score-block"><div class="score-num ${before >= 70 ? 'good' : ''}">${before}</div><div class="score-label">Current</div></div>
-      ${after !== null ? `<div class="score-arrow">→</div><div class="score-block"><div class="score-num good">${after}</div><div class="score-label">After Fix</div></div>` : ''}
-    </div>`;
-  if (issues.length) {
-    html += `<div class="section-title">Issues Found (${issues.length})</div><ul class="list">`;
-    issues.slice(0, 20).forEach(i => {
-      html += `<li class="list-item ${i.severity || 'warning'}"><strong>${esc(i.type || 'Issue')}:</strong> ${esc(i.description || i.detail || '')}</li>`;
+  let html = '<div class="score-row">' +
+    '<div class="score-block"><div class="score-num ' + (before >= 70 ? 'good' : '') + '">' + before + '</div><div class="score-label">Current</div></div>' +
+    (after !== null ? '<div class="score-arrow">→</div><div class="score-block"><div class="score-num good">' + after + '</div><div class="score-label">After Fix</div></div>' : '') +
+    '</div>';
+  if (issues.length){
+    html += '<div class="section-title">Issues Found (' + issues.length + ')</div><ul class="list">';
+    issues.slice(0, 20).forEach(function(i){
+      html += '<li class="list-item ' + (i.severity || 'warning') + '"><strong>' + esc(i.type || 'Issue') + ':</strong> ' + esc(i.description || i.detail || '') + '</li>';
     });
     html += '</ul>';
   }
-  if (fixes.length) {
-    html += `<div class="section-title">Recommended Fixes</div><ul class="list">`;
-    fixes.slice(0, 15).forEach(f => {
-      html += `<li class="list-item success"><strong>${esc(f.title || 'Fix')}:</strong> ${esc(f.description || f.detail || '')}</li>`;
+  if (fixes.length){
+    html += '<div class="section-title">Recommended Fixes</div><ul class="list">';
+    fixes.slice(0, 15).forEach(function(f){
+      html += '<li class="list-item success"><strong>' + esc(f.title || 'Fix') + ':</strong> ' + esc(f.description || f.detail || '') + '</li>';
     });
     html += '</ul>';
   }
@@ -639,29 +853,27 @@ function renderAuditResult(r){
 // VIDEO
 // ============================================================
 function renderVideo(){
-  content.innerHTML = `
-    <h1 class="h1">Video Ads</h1>
-    <p class="subtitle">Turn any topic into a short video ad.</p>
-    <div class="card">
-      <label class="label">Topic</label>
-      <input class="input" id="videoTopic" placeholder="e.g. Why our coffee is the best in Lagos" />
-      <label class="label">Business Name</label>
-      <input class="input" id="videoBizName" value="${esc(state.business?.name || '')}" />
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
-        <div>
-          <label class="label">Duration</label>
-          <select class="select" id="videoDuration"><option value="15">15s</option><option value="30">30s</option><option value="60">60s</option></select>
-        </div>
-        <div>
-          <label class="label">Style</label>
-          <select class="select" id="videoStyle"><option value="documentary">Documentary</option><option value="energetic">Energetic</option><option value="minimal">Minimal</option></select>
-        </div>
-      </div>
-      <button class="btn" id="videoBtn">Create Video Ad</button>
-      <div id="videoResult"></div>
-    </div>
-  `;
-  $('videoBtn').addEventListener('click', async () => {
+  content.innerHTML =
+    '<h1 class="h1">Video Ads</h1>' +
+    '<p class="subtitle">Turn any topic into a short video ad.</p>' +
+    '<div class="card">' +
+      '<label class="label">Topic</label>' +
+      '<input class="input" id="videoTopic" placeholder="e.g. Why our coffee is the best in Lagos" />' +
+      '<label class="label">Business Name</label>' +
+      '<input class="input" id="videoBizName" value="' + esc((state.business && state.business.name) || '') + '" />' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">' +
+        '<div><label class="label">Duration</label>' +
+          '<select class="select" id="videoDuration"><option value="15">15s</option><option value="30">30s</option><option value="60">60s</option></select>' +
+        '</div>' +
+        '<div><label class="label">Style</label>' +
+          '<select class="select" id="videoStyle"><option value="documentary">Documentary</option><option value="energetic">Energetic</option><option value="minimal">Minimal</option></select>' +
+        '</div>' +
+      '</div>' +
+      '<button class="btn" id="videoBtn">Create Video Ad</button>' +
+      '<div id="videoResult"></div>' +
+    '</div>';
+
+  $('videoBtn').addEventListener('click', async function(){
     const topic = $('videoTopic').value.trim();
     const businessName = $('videoBizName').value.trim();
     const durationSeconds = Number($('videoDuration').value);
@@ -670,27 +882,30 @@ function renderVideo(){
     $('videoBtn').disabled = true;
     $('videoBtn').innerHTML = '<span class="spin"></span>Creating video...';
     try {
-      const r = await api('/api/create-video', { method: 'POST', body: { topic, businessName, durationSeconds, style } });
-      $('videoResult').innerHTML = `
-        <div class="status info" style="margin-top:16px;">
-          <strong>Video is rendering</strong><br>
-          Render ID: <code>${esc(r.renderId || '')}</code>
-          <div style="margin-top:8px;font-size:12px;color:var(--text-2);">Usually ready in 2–5 minutes.</div>
-          <button class="btn small secondary" id="videoCheckBtn" style="margin-top:8px;">Check Status</button>
-        </div>
-        <div id="videoStatus"></div>`;
-      $('videoCheckBtn').addEventListener('click', async () => {
+      const r = await api('/api/create-video', {
+        method: 'POST',
+        body: { topic: topic, businessName: businessName, durationSeconds: durationSeconds, style: style }
+      });
+      $('videoResult').innerHTML =
+        '<div class="status info" style="margin-top:16px;">' +
+          '<strong>Video is rendering</strong><br>' +
+          'Render ID: <code>' + esc(r.renderId || '') + '</code>' +
+          '<div style="margin-top:8px;font-size:12px;color:var(--text-2);">Usually ready in 2–5 minutes.</div>' +
+          '<button class="btn small secondary" id="videoCheckBtn" style="margin-top:8px;">Check Status</button>' +
+        '</div>' +
+        '<div id="videoStatus"></div>';
+      $('videoCheckBtn').addEventListener('click', async function(){
         try {
           const s = await api('/api/video-status/' + encodeURIComponent(r.renderId));
-          if (s?.status === 'done' && s.url) {
-            $('videoStatus').innerHTML = `<div class="status success">Ready! <a href="${esc(s.url)}" target="_blank" rel="noopener">Download video</a></div>`;
+          if (s && s.status === 'done' && s.url){
+            $('videoStatus').innerHTML = '<div class="status success">Ready! <a href="' + esc(s.url) + '" target="_blank" rel="noopener">Download video</a></div>';
           } else {
-            $('videoStatus').innerHTML = `<div class="status info">Status: ${esc(s?.status || 'processing')}</div>`;
+            $('videoStatus').innerHTML = '<div class="status info">Status: ' + esc((s && s.status) || 'processing') + '</div>';
           }
-        } catch (e) { toast(e.message, 'error'); }
+        } catch (e){ toast(e.message, 'error'); }
       });
-    } catch (e) {
-      $('videoResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+    } catch (e){
+      $('videoResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
     } finally {
       $('videoBtn').disabled = false;
       $('videoBtn').textContent = 'Create Video Ad';
@@ -702,45 +917,45 @@ function renderVideo(){
 // KEYWORDS
 // ============================================================
 function renderKeywords(){
-  content.innerHTML = `
-    <h1 class="h1">Keyword Research</h1>
-    <p class="subtitle">Discover high-intent keywords and search volume.</p>
-    <div class="card">
-      <label class="label">Seed Keywords (comma separated)</label>
-      <input class="input" id="kwSeeds" placeholder="coffee shop, latte, espresso" />
-      <label class="label">Country</label>
-      <select class="select" id="kwCountry">
-        <option value="ng">Nigeria</option>
-        <option value="us">United States</option>
-        <option value="gb">United Kingdom</option>
-        <option value="ca">Canada</option>
-      </select>
-      <button class="btn" id="kwBtn">Analyze Keywords</button>
-      <div id="kwResult"></div>
-    </div>
-  `;
-  $('kwBtn').addEventListener('click', async () => {
-    const seeds = $('kwSeeds').value.split(',').map(s => s.trim()).filter(Boolean);
+  content.innerHTML =
+    '<h1 class="h1">Keyword Research</h1>' +
+    '<p class="subtitle">Discover high-intent keywords and search volume.</p>' +
+    '<div class="card">' +
+      '<label class="label">Seed Keywords (comma separated)</label>' +
+      '<input class="input" id="kwSeeds" placeholder="coffee shop, latte, espresso" />' +
+      '<label class="label">Country</label>' +
+      '<select class="select" id="kwCountry">' +
+        '<option value="ng">Nigeria</option>' +
+        '<option value="us">United States</option>' +
+        '<option value="gb">United Kingdom</option>' +
+        '<option value="ca">Canada</option>' +
+      '</select>' +
+      '<button class="btn" id="kwBtn">Analyze Keywords</button>' +
+      '<div id="kwResult"></div>' +
+    '</div>';
+
+  $('kwBtn').addEventListener('click', async function(){
+    const seeds = $('kwSeeds').value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     if (!seeds.length) return toast('Enter at least 1 keyword', 'error');
     $('kwBtn').disabled = true;
     $('kwBtn').innerHTML = '<span class="spin"></span>Analyzing...';
     try {
-      const r = await api('/api/keywords', { method: 'POST', body: { seeds, country: $('kwCountry').value } });
+      const r = await api('/api/keywords', { method: 'POST', body: { seeds: seeds, country: $('kwCountry').value } });
       const rows = r.keywords || [];
-      if (!rows.length) {
+      if (!rows.length){
         $('kwResult').innerHTML = '<div class="status info" style="margin-top:16px;">No keywords returned. Try broader seeds.</div>';
       } else {
-        $('kwResult').innerHTML = `
-          <div class="section-title">Results (${rows.length})</div>
-          <table class="data-table">
-            <thead><tr><th>Keyword</th><th>Volume</th><th>Difficulty</th></tr></thead>
-            <tbody>
-              ${rows.map(k => `<tr><td>${esc(k.keyword)}</td><td>${esc(k.volume || '—')}</td><td>${esc(k.difficulty || '—')}</td></tr>`).join('')}
-            </tbody>
-          </table>`;
+        $('kwResult').innerHTML =
+          '<div class="section-title">Results (' + rows.length + ')</div>' +
+          '<table class="data-table">' +
+            '<thead><tr><th>Keyword</th><th>Volume</th><th>Difficulty</th></tr></thead>' +
+            '<tbody>' + rows.map(function(k){
+              return '<tr><td>' + esc(k.keyword) + '</td><td>' + esc(k.volume || '—') + '</td><td>' + esc(k.difficulty || '—') + '</td></tr>';
+            }).join('') + '</tbody>' +
+          '</table>';
       }
-    } catch (e) {
-      $('kwResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+    } catch (e){
+      $('kwResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
     } finally {
       $('kwBtn').disabled = false;
       $('kwBtn').textContent = 'Analyze Keywords';
@@ -752,82 +967,98 @@ function renderKeywords(){
 // Q&A
 // ============================================================
 function renderQA(){
-  content.innerHTML = `
-    <h1 class="h1">Q&A Finder</h1>
-    <p class="subtitle">Find questions people are asking across Reddit, Quora, Nairaland, and more.</p>
-    <div class="card">
-      <label class="label">Topic / Keyword</label>
-      <input class="input" id="qaKeyword" placeholder="e.g. best coffee shop Lagos" />
-      <label class="label">Country</label>
-      <select class="select" id="qaCountry">
-        ${state.countries.length
-          ? state.countries.map(c => `<option value="${esc(c.code)}">${esc(c.name)}</option>`).join('')
-          : `<option value="">Loading countries…</option>`}
-      </select>
-      <button class="btn" id="qaBtn">Find Questions</button>
-      <div id="qaResult"></div>
-    </div>
-  `;
-  $('qaBtn').addEventListener('click', async () => {
+  content.innerHTML =
+    '<h1 class="h1">Q&A Finder</h1>' +
+    '<p class="subtitle">Find questions people are asking across Reddit, Quora, Nairaland, and more.</p>' +
+    '<div class="card">' +
+      '<label class="label">Topic / Keyword</label>' +
+      '<input class="input" id="qaKeyword" placeholder="e.g. best coffee shop Lagos" />' +
+      '<label class="label">Country</label>' +
+      '<select class="select" id="qaCountry">' +
+        (state.countries.length
+          ? state.countries.map(function(c){ return '<option value="' + esc(c.code) + '">' + esc(c.name) + '</option>'; }).join('')
+          : '<option value="">Loading countries…</option>') +
+      '</select>' +
+      '<button class="btn" id="qaBtn">Find Questions</button>' +
+      '<div id="qaResult"></div>' +
+    '</div>';
+
+  $('qaBtn').addEventListener('click', async function(){
     const keyword = $('qaKeyword').value.trim();
     const country = $('qaCountry').value;
     if (!keyword) return toast('Enter a topic', 'error');
-    if (!state.business?.id) return toast('Register a business first', 'error');
+    if (!state.business || !state.business.id) return toast('Register a business first', 'error');
     $('qaBtn').disabled = true;
     $('qaBtn').innerHTML = '<span class="spin"></span>Searching...';
     $('qaResult').innerHTML = '';
     try {
-      const r = await api('/api/questions/find', { method: 'POST', body: { businessId: state.business.id, keyword, country } });
+      const r = await api('/api/questions/find', {
+        method: 'POST',
+        body: { businessId: state.business.id, keyword: keyword, country: country }
+      });
       const questions = r.questions || [];
-      if (!questions.length) {
+      if (!questions.length){
         $('qaResult').innerHTML = '<div class="status info" style="margin-top:16px;">No questions found. Try a different keyword.</div>';
         return;
       }
-      $('qaResult').innerHTML = `
-        <div class="section-title">Found ${questions.length} questions</div>
-        ${questions.map((q, i) => `
-          <div class="q-card">
-            <div class="q-head">
-              <span class="q-badge ${esc((q.platform || 'default').toLowerCase())}">${esc(q.platform || 'web')}</span>
-              <div class="q-title">${esc(q.title || '')}</div>
-            </div>
-            <div class="q-actions">
-              <button class="btn small secondary" data-open-url="${esc(q.question_url || '')}">Open</button>
-              <button class="btn small secondary" data-draft-q="${i}">Draft Answer</button>
-            </div>
-            <div id="draft-${i}"></div>
-          </div>
-        `).join('')}
-      `;
-      $('qaResult').querySelectorAll('[data-open-url]').forEach(b => b.addEventListener('click', () => {
-        const u = b.getAttribute('data-open-url'); if (u) window.open(u, '_blank', 'noopener');
-      }));
-      $('qaResult').querySelectorAll('[data-draft-q]').forEach(b => b.addEventListener('click', async () => {
-        const i = Number(b.getAttribute('data-draft-q'));
-        const q = questions[i];
-        const slot = $('draft-' + i);
-        b.disabled = true; b.innerHTML = '<span class="spin"></span>Drafting...';
-        try {
-          const blogUrl = state.business?.website || state.business?.url || '';
-          if (!blogUrl) {
-            slot.innerHTML = '<div class="status warning" style="margin-top:8px;">Add a website to your business profile before drafting answers.</div>';
-            return;
+      $('qaResult').innerHTML =
+        '<div class="section-title">Found ' + questions.length + ' questions</div>' +
+        questions.map(function(q, i){
+          return '<div class="q-card">' +
+            '<div class="q-head">' +
+              '<span class="q-badge ' + esc((q.platform || 'default').toLowerCase()) + '">' + esc(q.platform || 'web') + '</span>' +
+              '<div class="q-title">' + esc(q.title || '') + '</div>' +
+            '</div>' +
+            '<div class="q-actions">' +
+              '<button class="btn small secondary" data-open-url="' + esc(q.question_url || '') + '">Open</button>' +
+              '<button class="btn small secondary" data-draft-q="' + i + '">Draft Answer</button>' +
+            '</div>' +
+            '<div id="draft-' + i + '"></div>' +
+          '</div>';
+        }).join('');
+
+      $('qaResult').querySelectorAll('[data-open-url]').forEach(function(b){
+        b.addEventListener('click', function(){
+          const u = b.getAttribute('data-open-url');
+          if (u) window.open(u, '_blank', 'noopener');
+        });
+      });
+
+      $('qaResult').querySelectorAll('[data-draft-q]').forEach(function(b){
+        b.addEventListener('click', async function(){
+          const i = Number(b.getAttribute('data-draft-q'));
+          const q = questions[i];
+          const slot = $('draft-' + i);
+          b.disabled = true;
+          b.innerHTML = '<span class="spin"></span>Drafting...';
+          try {
+            const blogUrl = (state.business && (state.business.website || state.business.url)) || '';
+            if (!blogUrl){
+              slot.innerHTML = '<div class="status warning" style="margin-top:8px;">Add a website to your business profile before drafting answers.</div>';
+              return;
+            }
+            const d = await api('/api/questions/' + q.id + '/draft', {
+              method: 'POST',
+              body: { blogUrl: blogUrl, blogTitle: (state.business && state.business.name) || 'Full guide' }
+            });
+            const draftText =
+              (d.draft && (d.draft.draft_text || d.draft.draftText || d.draft.text || d.draft.content)) || '';
+            slot.innerHTML =
+              '<div class="draft-preview">' + esc(draftText || 'Draft generated.') + '</div>' +
+              '<button class="btn small" data-copy-draft="' + i + '">Copy Answer</button>';
+            slot.querySelector('[data-copy-draft]').addEventListener('click', function(){
+              copy(draftText, 'Answer copied!');
+            });
+          } catch (e){
+            slot.innerHTML = '<div class="status error" style="margin-top:8px;">' + esc(e.message) + '</div>';
+          } finally {
+            b.disabled = false;
+            b.textContent = 'Draft Answer';
           }
-          const d = await api('/api/questions/' + q.id + '/draft', { method: 'POST', body: { blogUrl, blogTitle: state.business?.name || 'Full guide' } });
-          const draftText = d.draft?.draft_text || d.draft?.draftText || d.draft?.text || d.draft?.content || '';
-          slot.innerHTML = `
-            <div class="draft-preview">${esc(draftText || 'Draft generated.')}</div>
-            <button class="btn small" data-copy-draft="${i}">Copy Answer</button>`;
-          slot.querySelector('[data-copy-draft]').addEventListener('click', () => copy(draftText, 'Answer copied!'));
-        } catch (e) {
-          slot.innerHTML = `<div class="status error" style="margin-top:8px;">${esc(e.message)}</div>`;
-        } finally {
-          b.disabled = false; b.textContent = 'Draft Answer';
-        }
-      }));
-    } catch (e) {
-      $('    } catch (e) {
-      $('qaResult').innerHTML = `<div class="status error">${esc(e.message)}</div>`;
+        });
+      });
+    } catch (e){
+      $('qaResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
     } finally {
       $('qaBtn').disabled = false;
       $('qaBtn').textContent = 'Find Questions';
@@ -840,55 +1071,52 @@ function renderQA(){
 // ============================================================
 function renderDirectories(){
   const countries = state.dirCountries || [];
-  const totalSites = countries.reduce((n, c) => n + (c.total || 0), 0);
-  content.innerHTML = `
-    <h1 class="h1">Directory Submissions</h1>
-    <p class="subtitle">Get listed on ${totalSites || 'hundreds of'} directories worldwide to build authority and drive referral traffic.</p>
-    ${!state.business ? `
-      <div class="card"><div class="status warning">Register a business first before generating directory listings.</div></div>
-    ` : `
-      <div class="card">
-        <label class="label">Country</label>
-        <select class="select" id="dirCountry">
-          ${countries.length
-            ? countries.map(c => `<option value="${esc(c.code)}">${esc(c.name)} — ${c.total || 0} sites</option>`).join('')
-            : `<option value="">Loading countries…</option>`}
-        </select>
-        <button class="btn" id="dirFindBtn">Find Directories</button>
-        <div id="dirResults"></div>
-      </div>
-      <div id="dirPostings"></div>
-    `}
-  `;
+  const totalSites = countries.reduce(function(n, c){ return n + (c.total || 0); }, 0);
+
+  content.innerHTML =
+    '<h1 class="h1">Directory Submissions</h1>' +
+    '<p class="subtitle">Get listed on ' + (totalSites || 'hundreds of') + ' directories worldwide to build authority and drive referral traffic.</p>' +
+    (!state.business ?
+      '<div class="card"><div class="status warning">Register a business first before generating directory listings.</div></div>'
+      :
+      '<div class="card">' +
+        '<label class="label">Country</label>' +
+        '<select class="select" id="dirCountry">' +
+          (countries.length
+            ? countries.map(function(c){ return '<option value="' + esc(c.code) + '">' + esc(c.name) + ' — ' + (c.total || 0) + ' sites</option>'; }).join('')
+            : '<option value="">Loading countries…</option>') +
+        '</select>' +
+        '<button class="btn" id="dirFindBtn">Find Directories</button>' +
+        '<div id="dirResults"></div>' +
+      '</div>' +
+      '<div id="dirPostings"></div>');
+
   if (!state.business) return;
 
-  // Load already-posted listings for this business
-  (async () => {
+  (async function loadPostings(){
     try {
       const r = await api('/api/directories/postings?businessId=' + state.business.id);
       const postings = r.postings || r.listings || [];
-      if (postings.length) {
-        $('dirPostings').innerHTML = `
-          <div class="section-title">Already Submitted (${postings.length})</div>
-          ${postings.map(p => `
-            <div class="listing-item">
-              <div class="listing-header">
-                <div class="listing-platform">${esc(p.platform || p.site_name || 'Directory')}</div>
-                <span class="badge ${(p.status === 'posted' || p.status === 'submitted') ? 'posted' : 'pending'}">${esc(p.status || 'posted')}</span>
-              </div>
-              ${(p.listing_url || p.listingUrl) ? `<div class="listing-field"><div class="listing-field-label">Live URL</div><div class="listing-field-value"><a href="${esc(p.listing_url || p.listingUrl)}" target="_blank" rel="noopener">${esc(p.listing_url || p.listingUrl)}</a></div></div>` : ''}
-              ${(p.tracked_url || p.trackedUrl) ? `<div class="listing-field"><div class="listing-field-label">Tracked Link</div><div class="listing-field-value"><a href="${esc(p.tracked_url || p.trackedUrl)}" target="_blank" rel="noopener">${esc(p.tracked_url || p.trackedUrl)}</a> <button class="btn small secondary" data-copy-url="${esc(p.tracked_url || p.trackedUrl)}" style="width:auto;padding:3px 8px;min-height:0;font-size:11px;margin-left:6px;">Copy</button></div></div>` : ''}
-            </div>
-          `).join('')}
-        `;
-        $('dirPostings').querySelectorAll('[data-copy-url]').forEach(b => {
-          b.addEventListener('click', () => copy(b.getAttribute('data-copy-url'), 'Link copied!'));
-        });
+      if (postings.length){
+        $('dirPostings').innerHTML =
+          '<div class="section-title">Already Submitted (' + postings.length + ')</div>' +
+          postings.map(function(p){
+            const liveUrl = p.listing_url || p.listingUrl || p.posted_url;
+            const tracked = p.tracked_url || p.trackedUrl;
+            return '<div class="listing-item">' +
+              '<div class="listing-header">' +
+                '<div class="listing-platform">' + esc(p.platform || p.site_name || p.directory_name || 'Directory') + '</div>' +
+                '<span class="badge ' + ((p.status === 'posted' || p.status === 'submitted') ? 'posted' : 'pending') + '">' + esc(p.status || 'posted') + '</span>' +
+              '</div>' +
+              (liveUrl ? '<div class="listing-field"><div class="listing-field-label">Live URL</div><div class="listing-field-value"><a href="' + esc(liveUrl) + '" target="_blank" rel="noopener">' + esc(liveUrl) + '</a></div></div>' : '') +
+              (tracked ? '<div class="listing-field"><div class="listing-field-label">Tracked Link</div><div class="listing-field-value"><a href="' + esc(tracked) + '" target="_blank" rel="noopener">' + esc(tracked) + '</a></div></div>' : '') +
+            '</div>';
+          }).join('');
       }
-    } catch {}
+    } catch (e) {}
   })();
 
-  $('dirFindBtn').addEventListener('click', async () => {
+  $('dirFindBtn').addEventListener('click', async function(){
     const country = $('dirCountry').value;
     if (!country) return toast('Select a country', 'error');
     $('dirFindBtn').disabled = true;
@@ -896,13 +1124,13 @@ function renderDirectories(){
     try {
       const r = await api('/api/directories/browse?country=' + encodeURIComponent(country));
       const listings = r.listings || r.directories || [];
-      if (!listings.length) {
+      if (!listings.length){
         $('dirResults').innerHTML = '<div class="status info" style="margin-top:16px;">No directories found for that country.</div>';
         return;
       }
       renderDirectoryListings(listings);
-    } catch (e) {
-      $('dirResults').innerHTML = `<div class="status error" style="margin-top:16px;">${esc(e.message)}</div>`;
+    } catch (e){
+      $('dirResults').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
     } finally {
       $('dirFindBtn').disabled = false;
       $('dirFindBtn').textContent = 'Find Directories';
@@ -911,25 +1139,25 @@ function renderDirectories(){
 }
 
 function renderDirectoryListings(listings){
-  $('dirResults').innerHTML = `
-    <div class="section-title">Available Directories (${listings.length})</div>
-    ${listings.map((l, i) => `
-      <div class="listing-item">
-        <div class="listing-header">
-          <div class="listing-platform">${esc(l.name || l.site_name || 'Directory')}</div>
-          ${l.da ? `<span class="badge source">DA ${esc(l.da)}</span>` : ''}
-        </div>
-        ${(l.url || l.site_url) ? `<div class="listing-field"><div class="listing-field-label">Website</div><div class="listing-field-value"><a href="${esc(l.url || l.site_url)}" target="_blank" rel="noopener">${esc(l.url || l.site_url)}</a></div></div>` : ''}
-        <div class="listing-actions" style="margin-top:8px;">
-          <button class="btn small" data-gen-idx="${i}">Generate Listing</button>
-        </div>
-        <div id="dir-gen-${i}"></div>
-      </div>
-    `).join('')}
-  `;
+  $('dirResults').innerHTML =
+    '<div class="section-title">Available Directories (' + listings.length + ')</div>' +
+    listings.map(function(l, i){
+      const site = l.url || l.site_url;
+      return '<div class="listing-item">' +
+        '<div class="listing-header">' +
+          '<div class="listing-platform">' + esc(l.name || l.site_name || 'Directory') + '</div>' +
+          (l.da ? '<span class="badge source">DA ' + esc(l.da) + '</span>' : '') +
+        '</div>' +
+        (site ? '<div class="listing-field"><div class="listing-field-label">Website</div><div class="listing-field-value"><a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(site) + '</a></div></div>' : '') +
+        '<div class="listing-actions" style="margin-top:8px;">' +
+          '<button class="btn small" data-gen-idx="' + i + '">Generate Listing</button>' +
+        '</div>' +
+        '<div id="dir-gen-' + i + '"></div>' +
+      '</div>';
+    }).join('');
 
-  $('dirResults').querySelectorAll('[data-gen-idx]').forEach(btn => {
-    btn.addEventListener('click', async () => {
+  $('dirResults').querySelectorAll('[data-gen-idx]').forEach(function(btn){
+    btn.addEventListener('click', async function(){
       const i = Number(btn.getAttribute('data-gen-idx'));
       const l = listings[i];
       const slot = $('dir-gen-' + i);
@@ -942,38 +1170,41 @@ function renderDirectoryListings(listings){
         });
         const title = r.title || (r.listing && r.listing.title) || '';
         const description = r.description || (r.listing && r.listing.description) || '';
-        slot.innerHTML = `
-          <div class="listing-field">
-            <div class="listing-field-label">Title</div>
-            <div class="listing-field-value">${esc(title)}</div>
-          </div>
-          <div class="listing-field">
-            <div class="listing-field-label">Description</div>
-            <div class="listing-field-value">${esc(description)}</div>
-          </div>
-          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-            <button class="btn small secondary" data-copy-title="${i}">Copy Title</button>
-            <button class="btn small secondary" data-copy-desc="${i}">Copy Description</button>
-            <button class="btn small secondary" data-open-submit="${i}">Open Submission Page</button>
-          </div>
-          <div style="margin-top:10px;">
-            <label class="label">Paste Live URL after submitting</label>
-            <input class="input" id="dir-url-${i}" placeholder="https://directory.com/your-listing" />
-            <button class="btn small" data-mark-posted="${i}" style="margin-top:8px;">Mark as Posted</button>
-          </div>
-          <div id="dir-posted-${i}"></div>
-        `;
-        const qt = (s) => slot.querySelector(s);
-        qt(`[data-copy-title="${i}"]`).addEventListener('click', () => copy(title, 'Title copied!'));
-        qt(`[data-copy-desc="${i}"]`).addEventListener('click', () => copy(description, 'Description copied!'));
-        qt(`[data-open-submit="${i}"]`).addEventListener('click', () => {
+        slot.innerHTML =
+          '<div class="listing-field">' +
+            '<div class="listing-field-label">Title</div>' +
+            '<div class="listing-field-value">' + esc(title) + '</div>' +
+          '</div>' +
+          '<div class="listing-field">' +
+            '<div class="listing-field-label">Description</div>' +
+            '<div class="listing-field-value">' + esc(description) + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
+            '<button class="btn small secondary" data-copy-title="' + i + '">Copy Title</button>' +
+            '<button class="btn small secondary" data-copy-desc="' + i + '">Copy Description</button>' +
+            '<button class="btn small secondary" data-open-submit="' + i + '">Open Submission Page</button>' +
+          '</div>' +
+          '<div style="margin-top:10px;">' +
+            '<label class="label">Paste Live URL after submitting</label>' +
+            '<input class="input" id="dir-url-' + i + '" placeholder="https://directory.com/your-listing" />' +
+            '<button class="btn small" data-mark-posted="' + i + '" style="margin-top:8px;">Mark as Posted</button>' +
+          '</div>' +
+          '<div id="dir-posted-' + i + '"></div>';
+
+        slot.querySelector('[data-copy-title="' + i + '"]').addEventListener('click', function(){
+          copy(title, 'Title copied!');
+        });
+        slot.querySelector('[data-copy-desc="' + i + '"]').addEventListener('click', function(){
+          copy(description, 'Description copied!');
+        });
+        slot.querySelector('[data-open-submit="' + i + '"]').addEventListener('click', function(){
           const u = l.submit_url || l.submitUrl || l.url || l.site_url;
           if (u) window.open(u, '_blank', 'noopener');
         });
-        qt(`[data-mark-posted="${i}"]`).addEventListener('click', async () => {
+        slot.querySelector('[data-mark-posted="' + i + '"]').addEventListener('click', async function(){
           const url = $('dir-url-' + i).value.trim();
           if (!url) return toast('Paste the live URL first', 'error');
-          const markBtn = qt(`[data-mark-posted="${i}"]`);
+          const markBtn = slot.querySelector('[data-mark-posted="' + i + '"]');
           markBtn.disabled = true;
           markBtn.innerHTML = '<span class="spin"></span>Saving...';
           try {
@@ -986,7 +1217,7 @@ function renderDirectoryListings(listings){
               }
             });
             let trackedUrl = p.trackedUrl || p.tracked_url;
-            if (!trackedUrl) {
+            if (!trackedUrl){
               try {
                 const tl = await api('/api/links/create', {
                   method: 'POST',
@@ -998,25 +1229,24 @@ function renderDirectoryListings(listings){
                   }
                 });
                 trackedUrl = tl.trackedUrl;
-              } catch {}
+              } catch (e2) {}
             }
-            $('dir-posted-' + i).innerHTML = `
-              <div class="status success" style="margin-top:8px;">
-                <strong>Saved!</strong>${trackedUrl ? `<br>Tracked link: <a href="${esc(trackedUrl)}" target="_blank" rel="noopener">${esc(trackedUrl)}</a> <button class="btn small secondary" data-copy-tracked="${i}" style="width:auto;padding:3px 8px;min-height:0;font-size:11px;">Copy</button>` : ''}
-              </div>
-            `;
+            $('dir-posted-' + i).innerHTML =
+              '<div class="status success" style="margin-top:8px;"><strong>Saved!</strong>' +
+                (trackedUrl ? '<br>Tracked link: <a href="' + esc(trackedUrl) + '" target="_blank" rel="noopener">' + esc(trackedUrl) + '</a> <button class="btn small secondary" data-copy-tracked="' + i + '" style="width:auto;padding:3px 8px;min-height:0;font-size:11px;">Copy</button>' : '') +
+              '</div>';
             const cb = $('dir-posted-' + i).querySelector('[data-copy-tracked]');
-            if (cb) cb.addEventListener('click', () => copy(trackedUrl, 'Tracked link copied!'));
+            if (cb) cb.addEventListener('click', function(){ copy(trackedUrl, 'Tracked link copied!'); });
             markBtn.textContent = 'Posted ✓';
             loadAnalytics();
-          } catch (e) {
-            $('dir-posted-' + i).innerHTML = `<div class="status error" style="margin-top:8px;">${esc(e.message)}</div>`;
+          } catch (e){
+            $('dir-posted-' + i).innerHTML = '<div class="status error" style="margin-top:8px;">' + esc(e.message) + '</div>';
             markBtn.disabled = false;
             markBtn.textContent = 'Mark as Posted';
           }
         });
-      } catch (e) {
-        slot.innerHTML = `<div class="status error" style="margin-top:8px;">${esc(e.message)}</div>`;
+      } catch (e){
+        slot.innerHTML = '<div class="status error" style="margin-top:8px;">' + esc(e.message) + '</div>';
       } finally {
         btn.disabled = false;
         btn.textContent = 'Generate Listing';
@@ -1029,23 +1259,23 @@ function renderDirectoryListings(listings){
 // BACKLINKS
 // ============================================================
 function renderBacklinks(){
-  content.innerHTML = `
-    <h1 class="h1">Backlinks</h1>
-    <p class="subtitle">Find niche-relevant sites where you can drop a high-value backlink.</p>
-    <div class="card">
-      <label class="label">Niche / Topic</label>
-      <input class="input" id="blNiche" placeholder="e.g. coffee, fitness, real estate Lagos" value="${esc(state.business?.category || '')}" />
-      <label class="label">Country</label>
-      <select class="select" id="blCountry">
-        ${state.dirCountries.length
-          ? state.dirCountries.map(c => `<option value="${esc(c.code)}">${esc(c.name)}</option>`).join('')
-          : `<option value="global">Global</option>`}
-      </select>
-      <button class="btn" id="blBtn">Find Backlink Opportunities</button>
-      <div id="blResult"></div>
-    </div>
-  `;
-  $('blBtn').addEventListener('click', async () => {
+  content.innerHTML =
+    '<h1 class="h1">Backlinks</h1>' +
+    '<p class="subtitle">Find niche-relevant sites where you can drop a high-value backlink.</p>' +
+    '<div class="card">' +
+      '<label class="label">Niche / Topic</label>' +
+      '<input class="input" id="blNiche" placeholder="e.g. coffee, fitness, real estate Lagos" value="' + esc((state.business && state.business.category) || '') + '" />' +
+      '<label class="label">Country</label>' +
+      '<select class="select" id="blCountry">' +
+        (state.dirCountries.length
+          ? state.dirCountries.map(function(c){ return '<option value="' + esc(c.code) + '">' + esc(c.name) + '</option>'; }).join('')
+          : '<option value="global">Global</option>') +
+      '</select>' +
+      '<button class="btn" id="blBtn">Find Backlink Opportunities</button>' +
+      '<div id="blResult"></div>' +
+    '</div>';
+
+  $('blBtn').addEventListener('click', async function(){
     const niche = $('blNiche').value.trim();
     if (!niche) return toast('Enter a niche', 'error');
     $('blBtn').disabled = true;
@@ -1053,46 +1283,46 @@ function renderBacklinks(){
     try {
       const r = await api('/api/backlink/listing', {
         method: 'POST',
-        body: { niche, country: $('blCountry').value, businessId: state.business?.id }
+        body: { niche: niche, country: $('blCountry').value, businessId: state.business && state.business.id }
       });
       const items = r.listings || r.results || [];
-      if (!items.length) {
+      if (!items.length){
         $('blResult').innerHTML = '<div class="status info" style="margin-top:16px;">No backlink opportunities found. Try a broader niche.</div>';
         return;
       }
-      $('blResult').innerHTML = `
-        <div class="section-title">Opportunities (${items.length})</div>
-        ${items.map((b, i) => `
-          <div class="listing-item">
-            <div class="listing-header">
-              <div class="listing-platform">${esc(b.title || b.site_name || b.domain || 'Site')}</div>
-              ${b.da ? `<span class="badge source">DA ${esc(b.da)}</span>` : ''}
-            </div>
-            ${b.url ? `<div class="listing-field"><div class="listing-field-label">URL</div><div class="listing-field-value"><a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.url)}</a></div></div>` : ''}
-            ${b.description ? `<div class="listing-field"><div class="listing-field-label">Why it fits</div><div class="listing-field-value">${esc(b.description)}</div></div>` : ''}
-            <div class="listing-actions" style="margin-top:8px;">
-              <button class="btn small secondary" data-bl-copy="${i}">Copy Pitch</button>
-              <button class="btn small secondary" data-bl-open="${i}">Open Site</button>
-            </div>
-          </div>
-        `).join('')}
-      `;
-      $('blResult').querySelectorAll('[data-bl-copy]').forEach(b => {
-        b.addEventListener('click', () => {
+      $('blResult').innerHTML =
+        '<div class="section-title">Opportunities (' + items.length + ')</div>' +
+        items.map(function(b, i){
+          return '<div class="listing-item">' +
+            '<div class="listing-header">' +
+              '<div class="listing-platform">' + esc(b.title || b.site_name || b.domain || 'Site') + '</div>' +
+              (b.da ? '<span class="badge source">DA ' + esc(b.da) + '</span>' : '') +
+            '</div>' +
+            (b.url ? '<div class="listing-field"><div class="listing-field-label">URL</div><div class="listing-field-value"><a href="' + esc(b.url) + '" target="_blank" rel="noopener">' + esc(b.url) + '</a></div></div>' : '') +
+            (b.description ? '<div class="listing-field"><div class="listing-field-label">Why it fits</div><div class="listing-field-value">' + esc(b.description) + '</div></div>' : '') +
+            '<div class="listing-actions" style="margin-top:8px;">' +
+              '<button class="btn small secondary" data-bl-copy="' + i + '">Copy Pitch</button>' +
+              '<button class="btn small secondary" data-bl-open="' + i + '">Open Site</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+      $('blResult').querySelectorAll('[data-bl-copy]').forEach(function(b){
+        b.addEventListener('click', function(){
           const i = Number(b.getAttribute('data-bl-copy'));
           const pitch = items[i].pitch || items[i].description || items[i].title || '';
           copy(pitch, 'Pitch copied!');
         });
       });
-      $('blResult').querySelectorAll('[data-bl-open]').forEach(b => {
-        b.addEventListener('click', () => {
+      $('blResult').querySelectorAll('[data-bl-open]').forEach(function(b){
+        b.addEventListener('click', function(){
           const i = Number(b.getAttribute('data-bl-open'));
           const u = items[i].url || items[i].submit_url;
           if (u) window.open(u, '_blank', 'noopener');
         });
       });
-    } catch (e) {
-      $('blResult').innerHTML = `<div class="status error" style="margin-top:16px;">${esc(e.message)}</div>`;
+    } catch (e){
+      $('blResult').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
     } finally {
       $('blBtn').disabled = false;
       $('blBtn').textContent = 'Find Backlink Opportunities';
@@ -1104,34 +1334,34 @@ function renderBacklinks(){
 // SOCIAL
 // ============================================================
 function renderSocial(){
-  content.innerHTML = `
-    <h1 class="h1">Social Posting</h1>
-    <p class="subtitle">Draft and post to your connected social accounts.</p>
-    <div class="card">
-      <label class="label">Platform</label>
-      <select class="select" id="socialPlatform">
-        <option value="facebook">Facebook</option>
-        <option value="instagram">Instagram</option>
-        <option value="linkedin">LinkedIn</option>
-        <option value="twitter">Twitter / X</option>
-      </select>
-      <label class="label">Message</label>
-      <textarea class="textarea" id="socialMessage" placeholder="Write something…">${esc(state.business ? 'Check out ' + state.business.name + ' — quality you can trust.' : '')}</textarea>
-      <button class="btn" id="socialPostBtn">Post Now</button>
-      <div id="socialResult"></div>
-    </div>
-  `;
-  $('socialPostBtn').addEventListener('click', async () => {
+  content.innerHTML =
+    '<h1 class="h1">Social Posting</h1>' +
+    '<p class="subtitle">Draft and post to your connected social accounts.</p>' +
+    '<div class="card">' +
+      '<label class="label">Platform</label>' +
+      '<select class="select" id="socialPlatform">' +
+        '<option value="facebook">Facebook</option>' +
+        '<option value="instagram">Instagram</option>' +
+        '<option value="linkedin">LinkedIn</option>' +
+        '<option value="twitter">Twitter / X</option>' +
+      '</select>' +
+      '<label class="label">Message</label>' +
+      '<textarea class="textarea" id="socialMessage" placeholder="Write something…">' + esc(state.business ? 'Check out ' + state.business.name + ' — quality you can trust.' : '') + '</textarea>' +
+      '<button class="btn" id="socialPostBtn">Post Now</button>' +
+      '<div id="socialResult"></div>' +
+    '</div>';
+
+  $('socialPostBtn').addEventListener('click', async function(){
     const platform = $('socialPlatform').value;
     const message = $('socialMessage').value.trim();
     if (!message) return toast('Write a message first', 'error');
     $('socialPostBtn').disabled = true;
     $('socialPostBtn').innerHTML = '<span class="spin"></span>Posting...';
     try {
-      const r = await api('/api/social/post-now', { method: 'POST', body: { platform, message } });
-      $('socialResult').innerHTML = `<div class="status success" style="margin-top:16px;">Posted${r.postUrl ? ` — <a href="${esc(r.postUrl)}" target="_blank" rel="noopener">View post</a>` : ''}.</div>`;
-    } catch (e) {
-      $('socialResult').innerHTML = `<div class="status error" style="margin-top:16px;">${esc(e.message)}</div>`;
+      const r = await api('/api/social/post-now', { method: 'POST', body: { platform: platform, message: message } });
+      $('socialResult').innerHTML = '<div class="status success" style="margin-top:16px;">Posted' + (r && r.postUrl ? ' — <a href="' + esc(r.postUrl) + '" target="_blank" rel="noopener">View post</a>' : '') + '.</div>';
+    } catch (e){
+      $('socialResult').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
     } finally {
       $('socialPostBtn').disabled = false;
       $('socialPostBtn').textContent = 'Post Now';
@@ -1143,70 +1373,73 @@ function renderSocial(){
 // CAMPAIGNS
 // ============================================================
 function renderCampaigns(){
-  content.innerHTML = `
-    <h1 class="h1">Campaigns</h1>
-    <p class="subtitle">Group your outreach and track performance per campaign.</p>
-    <div class="card">
-      <div class="empty">
-        <div class="empty-icon">📣</div>
-        <div class="empty-title">No campaigns yet</div>
-        <div class="empty-desc">Leads and clicks from your tracked links are already captured automatically under your current business. Campaign grouping is coming next.</div>
-        <button class="btn" onclick="window.navigateTo('leads')">View Leads Instead</button>
-      </div>
-    </div>
-  `;
+  content.innerHTML =
+    '<h1 class="h1">Campaigns</h1>' +
+    '<p class="subtitle">Group your outreach and track performance per campaign.</p>' +
+    '<div class="card">' +
+      '<div class="empty">' +
+        '<div class="empty-icon">📣</div>' +
+        '<div class="empty-title">No campaigns yet</div>' +
+        '<div class="empty-desc">Leads and clicks from your tracked links are captured automatically under your current business. Campaign grouping is coming next.</div>' +
+        '<button class="btn" onclick="window.navigateTo(\'leads\')">View Leads Instead</button>' +
+      '</div>' +
+    '</div>';
 }
 
 // ============================================================
 // LEADS
 // ============================================================
 async function renderLeads(){
-  content.innerHTML = `
-    <h1 class="h1">Leads</h1>
-    <p class="subtitle">Every click and captured contact from your outreach.</p>
-    <div id="leadStats"></div>
-    <div id="leadList"></div>
-  `;
-  if (!state.business) {
+  content.innerHTML =
+    '<h1 class="h1">Leads</h1>' +
+    '<p class="subtitle">Every click and captured contact from your outreach.</p>' +
+    '<div id="leadStats"></div>' +
+    '<div id="leadList"></div>';
+
+  if (!state.business){
     $('leadList').innerHTML = '<div class="card"><div class="status warning">Add a business to start capturing leads.</div></div>';
     return;
   }
   try {
-    const [listR, statsR] = await Promise.all([
-      api('/api/businesses/' + state.business.id + '/leads').catch(() => ({ leads: [] })),
-      api('/api/businesses/' + state.business.id + '/link-stats').catch(() => ({ links: 0, clicks: 0 }))
+    const results = await Promise.all([
+      api('/api/businesses/' + state.business.id + '/leads').catch(function(){ return { leads: [] }; }),
+      api('/api/businesses/' + state.business.id + '/link-stats').catch(function(){ return { links: 0, clicks: 0 }; })
     ]);
+    const listR = results[0];
+    const statsR = results[1];
     const leads = listR.leads || [];
-    $('leadStats').innerHTML = `
-      <div class="stats">
-        <div class="stat"><div class="stat-num">${statsR.links || 0}</div><div class="stat-label">Tracked Links</div></div>
-        <div class="stat"><div class="stat-num">${statsR.clicks || 0}</div><div class="stat-label">Clicks</div></div>
-        <div class="stat"><div class="stat-num">${leads.length}</div><div class="stat-label">Leads</div></div>
-      </div>
-    `;
-    if (!leads.length) {
-      $('leadList').innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">👥</div><div class="empty-title">No leads yet</div><div class="empty-desc">Share your tracked links on social, directories, or Q&amp;A sites — clicks land here automatically.</div><button class="btn" onclick="window.navigateTo('directories')">Create Tracked Links</button></div></div>`;
+    $('leadStats').innerHTML =
+      '<div class="stats">' +
+        '<div class="stat"><div class="stat-num">' + (statsR.links || 0) + '</div><div class="stat-label">Tracked Links</div></div>' +
+        '<div class="stat"><div class="stat-num">' + (statsR.clicks || 0) + '</div><div class="stat-label">Clicks</div></div>' +
+        '<div class="stat"><div class="stat-num">' + leads.length + '</div><div class="stat-label">Leads</div></div>' +
+      '</div>';
+    if (!leads.length){
+      $('leadList').innerHTML = '<div class="card"><div class="empty">' +
+        '<div class="empty-icon">👥</div>' +
+        '<div class="empty-title">No leads yet</div>' +
+        '<div class="empty-desc">Share your tracked links on social, directories, or Q&A sites — clicks land here automatically.</div>' +
+        '<button class="btn" onclick="window.navigateTo(\'directories\')">Create Tracked Links</button>' +
+      '</div></div>';
       return;
     }
-    $('leadList').innerHTML = `
-      <div class="card card-tight">
-        <table class="data-table">
-          <thead><tr><th>Source</th><th>Intent</th><th>Contact</th><th>When</th></tr></thead>
-          <tbody>
-            ${leads.slice(0, 100).map(l => `
-              <tr>
-                <td><span class="badge source">${esc(l.source_platform || l.sourcePlatform || 'web')}</span></td>
-                <td>${esc(l.intent || l.status || 'click')}</td>
-                <td>${esc(l.name || l.email || l.phone || l.notes || '—')}</td>
-                <td>${esc((l.created_at || l.createdAt || '').toString().slice(0, 16))}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  } catch (e) {
-    $('leadList').innerHTML = `<div class="card"><div class="status error">${esc(e.message)}</div></div>`;
+    $('leadList').innerHTML =
+      '<div class="card card-tight">' +
+        '<table class="data-table">' +
+          '<thead><tr><th>Source</th><th>Intent</th><th>Contact</th><th>When</th></tr></thead>' +
+          '<tbody>' + leads.slice(0, 100).map(function(l){
+            const when = ((l.created_at || l.createdAt || '') + '').toString().slice(0, 16);
+            return '<tr>' +
+              '<td><span class="badge source">' + esc(l.source_platform || l.sourcePlatform || 'web') + '</span></td>' +
+              '<td>' + esc(l.intent || l.status || 'click') + '</td>' +
+              '<td>' + esc(l.name || l.email || l.phone || l.notes || '—') + '</td>' +
+              '<td>' + esc(when) + '</td>' +
+            '</tr>';
+          }).join('') + '</tbody>' +
+        '</table>' +
+      '</div>';
+  } catch (e){
+    $('leadList').innerHTML = '<div class="card"><div class="status error">' + esc(e.message) + '</div></div>';
   }
 }
 
@@ -1214,34 +1447,40 @@ async function renderLeads(){
 // REVIEWS
 // ============================================================
 async function renderReviews(){
-  content.innerHTML = `
-    <h1 class="h1">Reviews</h1>
-    <p class="subtitle">What customers are saying about your business.</p>
-    <div id="reviewList"></div>
-  `;
-  if (!state.business) {
+  content.innerHTML =
+    '<h1 class="h1">Reviews</h1>' +
+    '<p class="subtitle">What customers are saying about your business.</p>' +
+    '<div id="reviewList"></div>';
+
+  if (!state.business){
     $('reviewList').innerHTML = '<div class="card"><div class="status warning">Add a business to track reviews.</div></div>';
     return;
   }
   try {
-    const r = await api('/api/businesses/' + state.business.id + '/reviews').catch(() => ({ reviews: [] }));
+    const r = await api('/api/businesses/' + state.business.id + '/reviews').catch(function(){ return { reviews: [] }; });
     const reviews = r.reviews || [];
-    if (!reviews.length) {
-      $('reviewList').innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">⭐</div><div class="empty-title">No reviews yet</div><div class="empty-desc">Once customers review your business on connected platforms, they'll appear here.</div></div></div>`;
+    if (!reviews.length){
+      $('reviewList').innerHTML = '<div class="card"><div class="empty">' +
+        '<div class="empty-icon">⭐</div>' +
+        '<div class="empty-title">No reviews yet</div>' +
+        '<div class="empty-desc">Once customers review your business on connected platforms, they\'ll appear here.</div>' +
+      '</div></div>';
       return;
     }
-    $('reviewList').innerHTML = reviews.map(v => `
-      <div class="card card-tight">
-        <div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;">
-          <div style="font-weight:700;font-size:13px;">${esc(v.author || v.reviewer_name || 'Anonymous')}</div>
-          <div style="color:var(--warning);font-weight:700;">${'★'.repeat(Number(v.rating || 5)).slice(0, 5)}</div>
-        </div>
-        <div style="font-size:13px;color:var(--text-2);line-height:1.6;">${esc(v.text || v.review_text || '')}</div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:6px;">${esc((v.created_at || v.createdAt || '').toString().slice(0, 16))}</div>
-      </div>
-    `).join('');
-  } catch (e) {
-    $('reviewList').innerHTML = `<div class="card"><div class="status error">${esc(e.message)}</div></div>`;
+    $('reviewList').innerHTML = reviews.map(function(v){
+      const stars = '★'.repeat(Math.min(5, Number(v.rating || 5)));
+      const when = ((v.created_at || v.createdAt || '') + '').toString().slice(0, 16);
+      return '<div class="card card-tight">' +
+        '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;">' +
+          '<div style="font-weight:700;font-size:13px;">' + esc(v.author || v.reviewer_name || 'Anonymous') + '</div>' +
+          '<div style="color:var(--warning);font-weight:700;">' + stars + '</div>' +
+        '</div>' +
+        '<div style="font-size:13px;color:var(--text-2);line-height:1.6;">' + esc(v.text || v.review_text || '') + '</div>' +
+        '<div style="font-size:11px;color:var(--text-3);margin-top:6px;">' + esc(when) + '</div>' +
+      '</div>';
+    }).join('');
+  } catch (e){
+    $('reviewList').innerHTML = '<div class="card"><div class="status error">' + esc(e.message) + '</div></div>';
   }
 }
 
@@ -1249,12 +1488,12 @@ async function renderReviews(){
 // ANALYTICS
 // ============================================================
 async function renderAnalytics(){
-  content.innerHTML = `
-    <h1 class="h1">Analytics</h1>
-    <p class="subtitle">Traffic and leads generated by your outreach.</p>
-    <div id="anContent"><div class="skeleton skeleton-line" style="height:60px;"></div><div class="skeleton skeleton-line" style="height:60px;"></div></div>
-  `;
-  if (!state.business) {
+  content.innerHTML =
+    '<h1 class="h1">Analytics</h1>' +
+    '<p class="subtitle">Traffic and leads generated by your outreach.</p>' +
+    '<div id="anContent"><div class="skeleton skeleton-line" style="height:60px;"></div><div class="skeleton skeleton-line" style="height:60px;"></div></div>';
+
+  if (!state.business){
     $('anContent').innerHTML = '<div class="card"><div class="status warning">Add a business to see analytics.</div></div>';
     return;
   }
@@ -1263,31 +1502,30 @@ async function renderAnalytics(){
   const links = a.links || 0;
   const clicks = a.clicks || 0;
   const leads = a.leads || 0;
-  const reviews = a.reviews || 0;
+  const reviews = a.reviews_requested || a.reviews || 0;
   const ctr = links > 0 ? Math.round((clicks / links) * 1000) / 10 : 0;
-  $('anContent').innerHTML = `
-    <div class="stats">
-      <div class="stat"><div class="stat-num">${links}</div><div class="stat-label">Tracked Links</div></div>
-      <div class="stat"><div class="stat-num">${clicks}</div><div class="stat-label">Clicks</div></div>
-      <div class="stat"><div class="stat-num">${leads}</div><div class="stat-label">Leads</div></div>
-    </div>
-    <div class="card">
-      <div class="section-title" style="margin-top:0;">Performance</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div><div class="label" style="margin:0 0 4px;">Click Rate</div><div style="font-size:22px;font-weight:800;">${ctr}%</div></div>
-        <div><div class="label" style="margin:0 0 4px;">Reviews</div><div style="font-size:22px;font-weight:800;">${reviews}</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="section-title" style="margin-top:0;">What to do next</div>
-      <ul class="list">
-        ${links === 0 ? '<li class="list-item warning">Create your first tracked link from the Directories tab.</li>' : ''}
-        ${clicks === 0 && links > 0 ? '<li class="list-item info">You have links but no clicks yet — share them on social and Q&amp;A sites.</li>' : ''}
-        ${clicks > 0 && leads < clicks ? '<li class="list-item success">Clicks are working — keep posting to convert more into leads.</li>' : ''}
-        <li class="list-item">Target high-DA directories first for compounding SEO value.</li>
-      </ul>
-    </div>
-  `;
+  $('anContent').innerHTML =
+    '<div class="stats">' +
+      '<div class="stat"><div class="stat-num">' + links + '</div><div class="stat-label">Tracked Links</div></div>' +
+      '<div class="stat"><div class="stat-num">' + clicks + '</div><div class="stat-label">Clicks</div></div>' +
+      '<div class="stat"><div class="stat-num">' + leads + '</div><div class="stat-label">Leads</div></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="section-title" style="margin-top:0;">Performance</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+        '<div><div class="label" style="margin:0 0 4px;">Click Rate</div><div style="font-size:22px;font-weight:800;">' + ctr + '%</div></div>' +
+        '<div><div class="label" style="margin:0 0 4px;">Reviews</div><div style="font-size:22px;font-weight:800;">' + reviews + '</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="section-title" style="margin-top:0;">What to do next</div>' +
+      '<ul class="list">' +
+        (links === 0 ? '<li class="list-item warning">Create your first tracked link from the Directories tab.</li>' : '') +
+        (clicks === 0 && links > 0 ? '<li class="list-item info">You have links but no clicks yet — share them on social and Q&A sites.</li>' : '') +
+        (clicks > 0 && leads < clicks ? '<li class="list-item success">Clicks are working — keep posting to convert more into leads.</li>' : '') +
+        '<li class="list-item">Target high-DA directories first for compounding SEO value.</li>' +
+      '</ul>' +
+    '</div>';
 }
 
 // ============================================================
@@ -1295,48 +1533,54 @@ async function renderAnalytics(){
 // ============================================================
 function renderBusinesses(){
   const list = state.businesses || [];
-  content.innerHTML = `
-    <h1 class="h1">Businesses</h1>
-    <p class="subtitle">Manage your business profiles.</p>
-    <div class="section-title" style="margin-top:0;">Your Businesses (${list.length}/${state.limits.businesses || 1})</div>
-    <div id="bizList"></div>
-    ${list.length >= (state.limits.businesses || 1) ? `<div class="status warning">You've reached your business limit. Upgrade to add more.</div>` : `
-      <div class="card" id="bizFormCard">
-        <div class="section-title" style="margin-top:0;">Add Business</div>
-        <label class="label">Name</label>
-        <input class="input" id="bizName" placeholder="e.g. Blue Bottle Coffee" />
-        <label class="label">Category</label>
-        <input class="input" id="bizCategory" placeholder="e.g. Coffee shop" />
-        <label class="label">Website</label>
-        <input class="input" id="bizWebsite" type="url" placeholder="https://example.com" />
-        <label class="label">Phone</label>
-        <input class="input" id="bizPhone" placeholder="+234..." />
-        <label class="label">Email</label>
-        <input class="input" id="bizEmail" type="email" placeholder="hello@example.com" />
-        <label class="label">Description</label>
-        <textarea class="textarea" id="bizDesc" placeholder="What does your business do?"></textarea>
-        <button class="btn" id="bizAddBtn">Add Business</button>
-        <div id="bizFormResult"></div>
-      </div>
-    `}
-  `;
-  if (list.length) {
-    $('bizList').innerHTML = list.map(b => `
-      <div class="card card-tight">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <div style="min-width:0;">
-            <div style="font-weight:700;font-size:15px;">${esc(b.name)}</div>
-            <div style="font-size:12px;color:var(--text-2);margin-top:2px;">${esc(b.category || 'Business')}${b.website ? ' · ' + esc(b.website) : ''}</div>
-          </div>
-          ${state.business?.id === b.id ? '<span class="badge new">Active</span>' : `<button class="btn small secondary" data-switch="${b.id}" style="margin-top:0;">Switch</button>`}
-        </div>
-      </div>
-    `).join('');
-    $('bizList').querySelectorAll('[data-switch]').forEach(btn => {
-      btn.addEventListener('click', async () => {
+  const limit = state.limits.businesses || 1;
+  content.innerHTML =
+    '<h1 class="h1">Businesses</h1>' +
+    '<p class="subtitle">Manage your business profiles.</p>' +
+    '<div class="section-title" style="margin-top:0;">Your Businesses (' + list.length + '/' + limit + ')</div>' +
+    '<div id="bizList"></div>' +
+    (list.length >= limit
+      ? '<div class="status warning">You\'ve reached your business limit. Upgrade to add more.</div>'
+      : '<div class="card" id="bizFormCard">' +
+          '<div class="section-title" style="margin-top:0;">Add Business</div>' +
+          '<label class="label">Name</label>' +
+          '<input class="input" id="bizName" placeholder="e.g. Blue Bottle Coffee" />' +
+          '<label class="label">Category</label>' +
+          '<input class="input" id="bizCategory" placeholder="e.g. Coffee shop" />' +
+          '<label class="label">Website</label>' +
+          '<input class="input" id="bizWebsite" type="url" placeholder="https://example.com" />' +
+          '<label class="label">Phone</label>' +
+          '<input class="input" id="bizPhone" placeholder="+234..." />' +
+          '<label class="label">Email</label>' +
+          '<input class="input" id="bizEmail" type="email" placeholder="hello@example.com" />' +
+          '<label class="label">Description</label>' +
+          '<textarea class="textarea" id="bizDesc" placeholder="What does your business do?"></textarea>' +
+          '<button class="btn" id="bizAddBtn">Add Business</button>' +
+          '<div id="bizFormResult"></div>' +
+        '</div>');
+
+  if (list.length){
+    $('bizList').innerHTML = list.map(function(b){
+      return '<div class="card card-tight">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">' +
+          '<div style="min-width:0;">' +
+            '<div style="font-weight:700;font-size:15px;">' + esc(b.name) + '</div>' +
+            '<div style="font-size:12px;color:var(--text-2);margin-top:2px;">' +
+              esc(b.category || 'Business') +
+              (b.website ? ' · ' + esc(b.website) : '') +
+            '</div>' +
+          '</div>' +
+          (state.business && state.business.id === b.id
+            ? '<span class="badge new">Active</span>'
+            : '<button class="btn small secondary" data-switch="' + b.id + '" style="margin-top:0;">Switch</button>') +
+        '</div>' +
+      '</div>';
+    }).join('');
+    $('bizList').querySelectorAll('[data-switch]').forEach(function(btn){
+      btn.addEventListener('click', async function(){
         const id = Number(btn.getAttribute('data-switch'));
-        const biz = state.businesses.find(b => b.id === id);
-        if (biz) {
+        const biz = state.businesses.find(function(b){ return b.id === id; });
+        if (biz){
           state.business = biz;
           updateHeader();
           await loadAnalytics();
@@ -1345,35 +1589,33 @@ function renderBusinesses(){
         }
       });
     });
-  } else {
-    $('bizList').innerHTML = '';
   }
 
   const addBtn = $('bizAddBtn');
   if (!addBtn) return;
-  addBtn.addEventListener('click', async () => {
+  addBtn.addEventListener('click', async function(){
     const name = $('bizName').value.trim();
     if (!name) return toast('Business name is required', 'error');
     addBtn.disabled = true;
     addBtn.innerHTML = '<span class="spin"></span>Creating...';
     try {
       const body = {
-        name,
+        name: name,
         category: $('bizCategory').value.trim(),
         website: $('bizWebsite').value.trim(),
         phone: $('bizPhone').value.trim(),
         email: $('bizEmail').value.trim(),
         description: $('bizDesc').value.trim()
       };
-      const r = await api('/api/businesses/create', { method: 'POST', body });
+      const r = await api('/api/businesses/create', { method: 'POST', body: body });
       toast('Business created!');
       await loadBusinesses();
       state.business = r.business || state.businesses[0] || state.business;
       updateHeader();
       await loadAnalytics();
       renderTab();
-    } catch (e) {
-      $('bizFormResult').innerHTML = `<div class="status error" style="margin-top:12px;">${esc(e.message)}</div>`;
+    } catch (e){
+      $('bizFormResult').innerHTML = '<div class="status error" style="margin-top:12px;">' + esc(e.message) + '</div>';
     } finally {
       addBtn.disabled = false;
       addBtn.textContent = 'Add Business';
@@ -1414,58 +1656,54 @@ function renderKnowledgeBase(){
       '<strong>Premium</strong>: unlimited audits, 30 video ads/month, full directory access, Q&amp;A finder, backlinks, social posting.'
     ]}
   ];
-  content.innerHTML = `
-    <h1 class="h1">Knowledge Base</h1>
-    <p class="subtitle">Quick answers to common questions.</p>
-    ${topics.map((t, i) => `
-      <details class="kb-item" ${i === 0 ? 'open' : ''}>
-        <summary>${esc(t.q)}</summary>
-        <div class="kb-content">
-          <ul class="kb-list">
-            ${t.a.map(p => `<li>${p}</li>`).join('')}
-          </ul>
-        </div>
-      </details>
-    `).join('')}
-  `;
+
+  content.innerHTML =
+    '<h1 class="h1">Knowledge Base</h1>' +
+    '<p class="subtitle">Quick answers to common questions.</p>' +
+    topics.map(function(t, i){
+      return '<details class="kb-item" ' + (i === 0 ? 'open' : '') + '>' +
+        '<summary>' + esc(t.q) + '</summary>' +
+        '<div class="kb-content"><ul class="kb-list">' +
+          t.a.map(function(p){ return '<li>' + p + '</li>'; }).join('') +
+        '</ul></div>' +
+      '</details>';
+    }).join('');
 }
 
 // ============================================================
 // SETTINGS
 // ============================================================
 function renderSettings(){
-  content.innerHTML = `
-    <h1 class="h1">Settings</h1>
-    <p class="subtitle">Account and preferences.</p>
+  const isPremium = state.isAdmin || state.plan === 'premium';
+  content.innerHTML =
+    '<h1 class="h1">Settings</h1>' +
+    '<p class="subtitle">Account and preferences.</p>' +
+    '<div class="card">' +
+      '<div class="section-title" style="margin-top:0;">Account</div>' +
+      '<div class="label" style="margin-top:0;">Email</div>' +
+      '<div class="listing-field-value">' + esc((state.user && state.user.email) || '—') + '</div>' +
+      '<div class="label">Name</div>' +
+      '<div class="listing-field-value">' + esc((state.user && state.user.name) || '—') + '</div>' +
+      '<div class="label">API Key</div>' +
+      '<div class="listing-field-value" style="font-family:\'JetBrains Mono\',monospace;font-size:11px;word-break:break-all;">' + esc(state.apiKey || '—') + '</div>' +
+      '<button class="btn small secondary" id="copyKeyBtn" style="margin-top:8px;">Copy API Key</button>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="section-title" style="margin-top:0;">Plan</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+        '<div>' +
+          '<div style="font-weight:700;font-size:15px;">' + (state.isAdmin ? '🛡️ Admin' : (state.plan === 'premium' ? '⭐ Premium' : 'Free')) + '</div>' +
+          '<div style="font-size:12px;color:var(--text-2);margin-top:2px;">' + (isPremium ? 'All features unlocked' : 'Upgrade for unlimited features') + '</div>' +
+        '</div>' +
+        (!isPremium ? '<button class="btn small" onclick="location.href=\'/pay.html\'" style="margin-top:0;">Upgrade</button>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div class="section-title" style="margin-top:0;">Session</div>' +
+      '<button class="btn danger" id="settingsLogout">⏻ Sign Out</button>' +
+    '</div>';
 
-    <div class="card">
-      <div class="section-title" style="margin-top:0;">Account</div>
-      <div class="label" style="margin-top:0;">Email</div>
-      <div class="listing-field-value">${esc(state.user?.email || '—')}</div>
-      <div class="label">Name</div>
-      <div class="listing-field-value">${esc(state.user?.name || '—')}</div>
-      <div class="label">API Key</div>
-      <div class="listing-field-value" style="font-family:'JetBrains Mono',monospace;font-size:11px;word-break:break-all;">${esc(state.apiKey || '—')}</div>
-      <button class="btn small secondary" id="copyKeyBtn" style="margin-top:8px;">Copy API Key</button>
-    </div>
-
-    <div class="card">
-      <div class="section-title" style="margin-top:0;">Plan</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-weight:700;font-size:15px;">${state.isAdmin ? '🛡️ Admin' : (state.plan === 'premium' ? '⭐ Premium' : 'Free')}</div>
-          <div style="font-size:12px;color:var(--text-2);margin-top:2px;">${state.plan === 'premium' || state.isAdmin ? 'All features unlocked' : 'Upgrade for unlimited features'}</div>
-        </div>
-        ${(!state.isAdmin && state.plan !== 'premium') ? `<button class="btn small" onclick="location.href='/pay.html'" style="margin-top:0;">Upgrade</button>` : ''}
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="section-title" style="margin-top:0;">Session</div>
-      <button class="btn danger" id="settingsLogout">⏻ Sign Out</button>
-    </div>
-  `;
-  $('copyKeyBtn').addEventListener('click', () => copy(state.apiKey || '', 'API key copied!'));
+  $('copyKeyBtn').addEventListener('click', function(){ copy(state.apiKey || '', 'API key copied!'); });
   $('settingsLogout').addEventListener('click', handleLogout);
 }
 
@@ -1473,46 +1711,54 @@ function renderSettings(){
 // UPGRADE PAYWALL
 // ============================================================
 function renderUpgrade(tabKey){
-  const labels = { video: 'Video Ads', keywords: 'Keyword Research', qa: 'Q&A Finder', directories: 'Directory Submissions', backlinks: 'Backlinks', social: 'Social Posting' };
-  content.innerHTML = `
-    <h1 class="h1">${esc(labels[tabKey] || 'Premium Feature')}</h1>
-    <p class="subtitle">This tool is part of the Premium plan.</p>
-    <div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1));border-color:rgba(139,92,246,0.3);text-align:center;padding:32px 20px;">
-      <div style="font-size:48px;margin-bottom:12px;">⭐</div>
-      <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Unlock every growth tool</div>
-      <div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto;">Video ads, keyword research, Q&amp;A finder, directory listings, backlinks, social posting, and unlimited SEO audits.</div>
-      <button class="btn" onclick="location.href='/pay.html'">Upgrade for $${state.limits.price}/mo</button>
-      <button class="btn ghost small" onclick="window.navigateTo('home')" style="margin-top:8px;">Back to Home</button>
-    </div>
-  `;
+  const labels = {
+    video: 'Video Ads',
+    keywords: 'Keyword Research',
+    qa: 'Q&A Finder',
+    directories: 'Directory Submissions',
+    backlinks: 'Backlinks',
+    social: 'Social Posting'
+  };
+  content.innerHTML =
+    '<h1 class="h1">' + esc(labels[tabKey] || 'Premium Feature') + '</h1>' +
+    '<p class="subtitle">This tool is part of the Premium plan.</p>' +
+    '<div class="card" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1));border-color:rgba(139,92,246,0.3);text-align:center;padding:32px 20px;">' +
+      '<div style="font-size:48px;margin-bottom:12px;">⭐</div>' +
+      '<div style="font-size:18px;font-weight:800;margin-bottom:8px;">Unlock every growth tool</div>' +
+      '<div style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:20px;max-width:360px;margin-left:auto;margin-right:auto;">Video ads, keyword research, Q&amp;A finder, directory listings, backlinks, social posting, and unlimited SEO audits.</div>' +
+      '<button class="btn" onclick="location.href=\'/pay.html\'">Upgrade for $' + state.limits.price + '/mo</button>' +
+      '<button class="btn ghost small" onclick="window.navigateTo(\'home\')" style="margin-top:8px;">Back to Home</button>' +
+    '</div>';
 }
 
 // ============================================================
 // INIT
 // ============================================================
-async function init(){
-  try { state.user = JSON.parse(localStorage.getItem('ate_user') || 'null'); } catch { state.user = null; }
-  state.apiKey = state.user?.apiKey || state.user?.api_key || '';
+window.navigateTo = navigateTo;
 
-  // Try to refresh user info if we have a token but no user record
-  if (!state.user) {
+async function init(){
+  try { state.user = JSON.parse(localStorage.getItem('ate_user') || 'null'); }
+  catch (e){ state.user = null; }
+  state.apiKey = (state.user && (state.user.apiKey || state.user.api_key)) || '';
+
+  if (!state.user){
     try {
       const r = await api('/api/auth/me');
-      if (r?.user) {
+      if (r && r.user){
         state.user = r.user;
         state.apiKey = r.user.apiKey || r.user.api_key || '';
-        try { localStorage.setItem('ate_user', JSON.stringify(r.user)); } catch {}
+        try { localStorage.setItem('ate_user', JSON.stringify(r.user)); } catch (e){}
       }
-    } catch {}
+    } catch (e){}
   }
 
   await Promise.all([
-    loadPlan().catch(() => {}),
-    loadBusinesses().catch(() => {}),
-    loadCountries().catch(() => {}),
-    loadDirCountries().catch(() => {})
+    loadPlan().catch(function(){}),
+    loadBusinesses().catch(function(){}),
+    loadCountries().catch(function(){}),
+    loadDirCountries().catch(function(){})
   ]);
-  await loadAnalytics().catch(() => {});
+  await loadAnalytics().catch(function(){});
 
   updateHeader();
   renderNav();
@@ -1520,22 +1766,18 @@ async function init(){
   startIdleWatcher();
 }
 
-// Expose navigation globally (used by inline onclick handlers)
-window.navigateTo = navigateTo;
-
-// Wire up header + drawer + idle controls
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function(){
   const hb = $('hamburgerBtn'); if (hb) hb.addEventListener('click', openDrawer);
   const dc = $('drawerClose'); if (dc) dc.addEventListener('click', closeDrawer);
-  const do_ = $('drawerOverlay'); if (do_) do_.addEventListener('click', closeDrawer);
+  const dov = $('drawerOverlay'); if (dov) dov.addEventListener('click', closeDrawer);
   const hl = $('headerLogoutBtn'); if (hl) hl.addEventListener('click', handleLogout);
-  const is_ = $('idleStayBtn'); if (is_) is_.addEventListener('click', () => { touchActivity(); hideWarn(); });
-  const il = $('idleLogoutBtn'); if (il) il.addEventListener('click', () => forceLogout('manual'));
+  const isb = $('idleStayBtn'); if (isb) isb.addEventListener('click', function(){ touchActivity(); hideWarn(); });
+  const ilb = $('idleLogoutBtn'); if (ilb) ilb.addEventListener('click', function(){ forceLogout('manual'); });
 });
 
-init().catch((e) => {
+init().catch(function(e){
   console.error('Init failed:', e);
-  content.innerHTML = `<div class="status error">Failed to load app: ${esc(e.message)}</div>`;
+  content.innerHTML = '<div class="status error">Failed to load app: ' + esc(e.message) + '</div>';
 });
 
 })();
