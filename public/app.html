@@ -294,19 +294,19 @@ if (!AUTH_TOKEN) {
 let deferredPrompt;
 const pwaBanner = document.getElementById('pwaBanner');
 const pwaInstallBtn = document.getElementById('pwaInstallBtn');
-window.addEventListener('beforeinstallprompt', (e) => {
+window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault();
   deferredPrompt = e;
   if (pwaBanner) pwaBanner.classList.add('show');
 });
-if (pwaInstallBtn) pwaInstallBtn.addEventListener('click', async () => {
+if (pwaInstallBtn) pwaInstallBtn.addEventListener('click', async function(){
   if (!deferredPrompt) return;
   deferredPrompt.prompt();
   await deferredPrompt.userChoice;
   deferredPrompt = null;
   if (pwaBanner) pwaBanner.classList.remove('show');
 });
-window.addEventListener('appinstalled', () => {
+window.addEventListener('appinstalled', function(){
   if (pwaBanner) pwaBanner.classList.remove('show');
   deferredPrompt = null;
 });
@@ -323,27 +323,27 @@ let warnShown = false;
 let countdownInterval = null;
 let remainingSec = 60;
 
-function touchActivity() {
+function touchActivity(){
   try { localStorage.setItem(ACTIVITY_KEY, String(Date.now())); } catch (e) {}
   if (warnShown) hideWarn();
 }
-function getLastActivity() {
+function getLastActivity(){
   try { return parseInt(localStorage.getItem(ACTIVITY_KEY) || '0', 10) || Date.now(); }
   catch (e) { return Date.now(); }
 }
-function handleLogout() {
-  if (confirm('Sign out of Auto Traffic Engine?')) {
+function handleLogout(){
+  if (confirm('Sign out of Auto Traffic Engine?')){
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem('ate_user');
     location.replace('/login.html');
   }
 }
-function forceLogout(reason) {
+function forceLogout(reason){
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem('ate_user');
   location.replace('/login.html?expired=1&redirect=' + encodeURIComponent(location.pathname));
 }
-function showWarn() {
+function showWarn(){
   if (warnShown) return;
   warnShown = true;
   const o = document.getElementById('idleOverlay');
@@ -352,40 +352,40 @@ function showWarn() {
   remainingSec = 60;
   updateCountdown();
   clearInterval(countdownInterval);
-  countdownInterval = setInterval(() => {
+  countdownInterval = setInterval(function(){
     remainingSec -= 1;
     if (remainingSec <= 0) { clearInterval(countdownInterval); return; }
     updateCountdown();
   }, 1000);
 }
-function hideWarn() {
+function hideWarn(){
   warnShown = false;
   const o = document.getElementById('idleOverlay');
   if (o) o.classList.remove('show');
   clearInterval(countdownInterval);
 }
-function updateCountdown() {
+function updateCountdown(){
   const el = document.getElementById('idleCountdown');
   if (el) el.textContent = String(remainingSec);
 }
-function checkIdle() {
+function checkIdle(){
   if (!localStorage.getItem(TOKEN_KEY)) return;
   const idleMs = Date.now() - getLastActivity();
   if (idleMs >= IDLE_TIMEOUT_MS) { forceLogout('idle'); return; }
-  if (idleMs >= IDLE_TIMEOUT_MS - IDLE_WARN_MS) {
+  if (idleMs >= IDLE_TIMEOUT_MS - IDLE_WARN_MS){
     if (!warnShown) showWarn();
     const s = Math.ceil((IDLE_TIMEOUT_MS - idleMs) / 1000);
     if (s < remainingSec) { remainingSec = s; updateCountdown(); }
   }
 }
-function startIdleWatcher() {
-  ['mousemove','mousedown','keydown','touchstart','scroll','click','focus'].forEach((ev) =>
-    document.addEventListener(ev, touchActivity, { passive: true })
-  );
+function startIdleWatcher(){
+  ['mousemove','mousedown','keydown','touchstart','scroll','click','focus'].forEach(function(ev){
+    document.addEventListener(ev, touchActivity, { passive: true });
+  });
   if (!localStorage.getItem(ACTIVITY_KEY)) touchActivity();
   idleCheckInterval = setInterval(checkIdle, CHECK_INTERVAL_MS);
 }
-window.addEventListener('storage', (e) => {
+window.addEventListener('storage', function(e){
   if (e.key === TOKEN_KEY && !e.newValue) location.replace('/login.html');
   if (e.key === ACTIVITY_KEY && warnShown) hideWarn();
 });
@@ -408,7 +408,7 @@ const state = {
   tab: 'home',
   isAdmin: false
 };
-const $ = (id) => document.getElementById(id);
+const $ = function(id){ return document.getElementById(id); };
 const content = $('content');
 
 const NAV_GROUPS = [
@@ -474,7 +474,7 @@ async function copy(text, label){
   try {
     await navigator.clipboard.writeText(text);
     toast(label || 'Copied!');
-  } catch (e) {
+  } catch (e){
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'absolute';
@@ -482,7 +482,7 @@ async function copy(text, label){
     document.body.appendChild(ta);
     ta.select();
     try { document.execCommand('copy'); toast(label || 'Copied!'); }
-    catch (e2) { toast('Copy failed', 'error'); }
+    catch (e2){ toast('Copy failed', 'error'); }
     finally { ta.remove(); }
   }
 }
@@ -1039,7 +1039,12 @@ function renderQA(){
             }
             const d = await api('/api/questions/' + q.id + '/draft', {
               method: 'POST',
-              body: { blogUrl: blogUrl, blogTitle: (state.business && state.business.name) || 'Full guide' }
+              body: {
+                blogUrl: blogUrl,
+                blogTitle: (state.business && state.business.name) || 'Full guide',
+                blog_url: blogUrl,
+                blog_title: (state.business && state.business.name) || 'Full guide'
+              }
             });
             const draftText =
               (d.draft && (d.draft.draft_text || d.draft.draftText || d.draft.text || d.draft.content)) || '';
@@ -1072,13 +1077,17 @@ function renderQA(){
 function renderDirectories(){
   const countries = state.dirCountries || [];
   const totalSites = countries.reduce(function(n, c){ return n + (c.total || 0); }, 0);
+  const hasWebsite = state.business && (state.business.website || state.business.url);
 
   content.innerHTML =
     '<h1 class="h1">Directory Submissions</h1>' +
-    '<p class="subtitle">Get listed on ' + (totalSites || 'hundreds of') + ' directories worldwide to build authority and drive referral traffic.</p>' +
+    '<p class="subtitle">Get listed on ' + (totalSites || 'hundreds of') + ' classified sites worldwide to build authority, drive referral traffic, and capture retargetable leads.</p>' +
     (!state.business ?
-      '<div class="card"><div class="status warning">Register a business first before generating directory listings.</div></div>'
+      '<div class="card"><div class="status warning">Register a business first (with a website) before generating directory listings.</div></div>'
       :
+      (!hasWebsite ?
+        '<div class="card"><div class="status warning">Your business has no website. Add one in <strong>Businesses → Edit</strong> so we can generate tracked links.</div></div>'
+        : '') +
       '<div class="card">' +
         '<label class="label">Country</label>' +
         '<select class="select" id="dirCountry">' +
@@ -1086,7 +1095,7 @@ function renderDirectories(){
             ? countries.map(function(c){ return '<option value="' + esc(c.code) + '">' + esc(c.name) + ' — ' + (c.total || 0) + ' sites</option>'; }).join('')
             : '<option value="">Loading countries…</option>') +
         '</select>' +
-        '<button class="btn" id="dirFindBtn">Find Directories</button>' +
+        '<button class="btn" id="dirFindBtn">Show Classified Sites</button>' +
         '<div id="dirResults"></div>' +
       '</div>' +
       '<div id="dirPostings"></div>');
@@ -1106,10 +1115,10 @@ function renderDirectories(){
             return '<div class="listing-item">' +
               '<div class="listing-header">' +
                 '<div class="listing-platform">' + esc(p.platform || p.site_name || p.directory_name || 'Directory') + '</div>' +
-                '<span class="badge ' + ((p.status === 'posted' || p.status === 'submitted') ? 'posted' : 'pending') + '">' + esc(p.status || 'posted') + '</span>' +
+                '<span class="badge posted">posted</span>' +
               '</div>' +
               (liveUrl ? '<div class="listing-field"><div class="listing-field-label">Live URL</div><div class="listing-field-value"><a href="' + esc(liveUrl) + '" target="_blank" rel="noopener">' + esc(liveUrl) + '</a></div></div>' : '') +
-              (tracked ? '<div class="listing-field"><div class="listing-field-label">Tracked Link</div><div class="listing-field-value"><a href="' + esc(tracked) + '" target="_blank" rel="noopener">' + esc(tracked) + '</a></div></div>' : '') +
+              (tracked ? '<div class="listing-field"><div class="listing-field-label">Tracked Link (clicks → Leads)</div><div class="listing-field-value"><a href="' + esc(tracked) + '" target="_blank" rel="noopener">' + esc(tracked) + '</a></div></div>' : '') +
             '</div>';
           }).join('');
       }
@@ -1120,12 +1129,12 @@ function renderDirectories(){
     const country = $('dirCountry').value;
     if (!country) return toast('Select a country', 'error');
     $('dirFindBtn').disabled = true;
-    $('dirFindBtn').innerHTML = '<span class="spin"></span>Loading directories...';
+    $('dirFindBtn').innerHTML = '<span class="spin"></span>Loading sites...';
     try {
       const r = await api('/api/directories/browse?country=' + encodeURIComponent(country));
-      const listings = r.listings || r.directories || [];
+      const listings = r.listings || [];
       if (!listings.length){
-        $('dirResults').innerHTML = '<div class="status info" style="margin-top:16px;">No directories found for that country.</div>';
+        $('dirResults').innerHTML = '<div class="status info" style="margin-top:16px;">No directories returned for that country.</div>';
         return;
       }
       renderDirectoryListings(listings);
@@ -1133,123 +1142,119 @@ function renderDirectories(){
       $('dirResults').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
     } finally {
       $('dirFindBtn').disabled = false;
-      $('dirFindBtn').textContent = 'Find Directories';
+      $('dirFindBtn').textContent = 'Show Classified Sites';
     }
   });
 }
 
 function renderDirectoryListings(listings){
+  const typeBadge = function(t){
+    const map = { General: 'new', RealEstate: 'pending', Jobs: 'clicked', Cars: 'success', Services: 'pending', Business: 'new' };
+    return '<span class="badge ' + (map[t] || 'source') + '">' + esc(t || 'General') + '</span>';
+  };
+
   $('dirResults').innerHTML =
-    '<div class="section-title">Available Directories (' + listings.length + ')</div>' +
+    '<div class="section-title">Available Sites (' + listings.length + ') — Click <strong>Copy &amp; Open</strong> on any site</div>' +
     listings.map(function(l, i){
-      const site = l.url || l.site_url;
       return '<div class="listing-item">' +
         '<div class="listing-header">' +
-          '<div class="listing-platform">' + esc(l.name || l.site_name || 'Directory') + '</div>' +
-          (l.da ? '<span class="badge source">DA ' + esc(l.da) + '</span>' : '') +
+          '<div class="listing-platform">' + esc(l.name) + '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + typeBadge(l.type) +
+            (l.da ? '<span class="badge source">DA ' + esc(l.da) + '</span>' : '') +
+          '</div>' +
         '</div>' +
-        (site ? '<div class="listing-field"><div class="listing-field-label">Website</div><div class="listing-field-value"><a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(site) + '</a></div></div>' : '') +
-        '<div class="listing-actions" style="margin-top:8px;">' +
-          '<button class="btn small" data-gen-idx="' + i + '">Generate Listing</button>' +
+        '<div class="listing-field">' +
+          '<div class="listing-field-label">Website</div>' +
+          '<div class="listing-field-value"><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.url) + '</a></div>' +
         '</div>' +
-        '<div id="dir-gen-' + i + '"></div>' +
+        '<button class="btn" data-copy-open="' + i + '" style="margin-top:10px;">📋 Copy Sales Copy &amp; Open Site</button>' +
+        '<div id="dir-slot-' + i + '"></div>' +
       '</div>';
     }).join('');
 
-  $('dirResults').querySelectorAll('[data-gen-idx]').forEach(function(btn){
+  $('dirResults').querySelectorAll('[data-copy-open]').forEach(function(btn){
     btn.addEventListener('click', async function(){
-      const i = Number(btn.getAttribute('data-gen-idx'));
+      const i = Number(btn.getAttribute('data-copy-open'));
       const l = listings[i];
-      const slot = $('dir-gen-' + i);
+      const slot = $('dir-slot-' + i);
+
+      // 1. Open the directory IMMEDIATELY (user gesture — no popup block)
+      const target = l.submitUrl || l.url;
+      window.open(target, '_blank', 'noopener,noreferrer');
+
+      // 2. Load state
       btn.disabled = true;
-      btn.innerHTML = '<span class="spin"></span>Generating...';
+      const originalLabel = btn.innerHTML;
+      btn.innerHTML = '<span class="spin"></span>Generating copy...';
+      slot.innerHTML = '';
+
       try {
+        // 3. Generate tracked link + sales copy
         const r = await api('/api/directories/generate', {
           method: 'POST',
-          body: { businessId: state.business.id, listing: l }
+          body: {
+            businessId: state.business.id,
+            directory: { name: l.name, url: l.url, submitUrl: l.submitUrl, type: l.type }
+          }
         });
-        const title = r.title || (r.listing && r.listing.title) || '';
-        const description = r.description || (r.listing && r.listing.description) || '';
-        slot.innerHTML =
-          '<div class="listing-field">' +
-            '<div class="listing-field-label">Title</div>' +
-            '<div class="listing-field-value">' + esc(title) + '</div>' +
-          '</div>' +
-          '<div class="listing-field">' +
-            '<div class="listing-field-label">Description</div>' +
-            '<div class="listing-field-value">' + esc(description) + '</div>' +
-          '</div>' +
-          '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">' +
-            '<button class="btn small secondary" data-copy-title="' + i + '">Copy Title</button>' +
-            '<button class="btn small secondary" data-copy-desc="' + i + '">Copy Description</button>' +
-            '<button class="btn small secondary" data-open-submit="' + i + '">Open Submission Page</button>' +
-          '</div>' +
-          '<div style="margin-top:10px;">' +
-            '<label class="label">Paste Live URL after submitting</label>' +
-            '<input class="input" id="dir-url-' + i + '" placeholder="https://directory.com/your-listing" />' +
-            '<button class="btn small" data-mark-posted="' + i + '" style="margin-top:8px;">Mark as Posted</button>' +
-          '</div>' +
-          '<div id="dir-posted-' + i + '"></div>';
 
-        slot.querySelector('[data-copy-title="' + i + '"]').addEventListener('click', function(){
-          copy(title, 'Title copied!');
+        // 4. Copy to clipboard
+        await copy(r.salesCopy, '✅ Sales copy copied! Paste it in the ad form.');
+
+        // 5. Show preview + mark-as-posted
+        slot.innerHTML =
+          '<div class="listing-field" style="margin-top:10px;">' +
+            '<div class="listing-field-label">✅ Sales Copy (already copied to clipboard)</div>' +
+            '<div class="listing-field-value" style="white-space:pre-wrap;font-family:\'JetBrains Mono\',monospace;font-size:11.5px;line-height:1.6;">' + esc(r.salesCopy) + '</div>' +
+            '<button class="btn small secondary" data-recopy="' + i + '" style="margin-top:6px;">Copy Again</button>' +
+          '</div>' +
+          '<div class="listing-field">' +
+            '<div class="listing-field-label">Your Tracked Link (embedded in the copy)</div>' +
+            '<div class="listing-field-value"><a href="' + esc(r.trackedUrl) + '" target="_blank" rel="noopener">' + esc(r.trackedUrl) + '</a> — every click is logged as a Lead</div>' +
+          '</div>' +
+          '<div style="margin-top:12px;">' +
+            '<label class="label">After posting, paste the live URL of your ad</label>' +
+            '<input class="input" id="dir-url-' + i + '" placeholder="https://site.com/your-listing" />' +
+            '<button class="btn small" data-mark-posted="' + i + '" style="margin-top:8px;">✓ Mark as Posted</button>' +
+          '</div>' +
+          '<div id="dir-done-' + i + '"></div>';
+
+        slot.querySelector('[data-recopy="' + i + '"]').addEventListener('click', function(){
+          copy(r.salesCopy, 'Copied again!');
         });
-        slot.querySelector('[data-copy-desc="' + i + '"]').addEventListener('click', function(){
-          copy(description, 'Description copied!');
-        });
-        slot.querySelector('[data-open-submit="' + i + '"]').addEventListener('click', function(){
-          const u = l.submit_url || l.submitUrl || l.url || l.site_url;
-          if (u) window.open(u, '_blank', 'noopener');
-        });
+
         slot.querySelector('[data-mark-posted="' + i + '"]').addEventListener('click', async function(){
-          const url = $('dir-url-' + i).value.trim();
-          if (!url) return toast('Paste the live URL first', 'error');
+          const liveUrl = $('dir-url-' + i).value.trim();
+          if (!liveUrl) return toast('Paste the live URL first', 'error');
           const markBtn = slot.querySelector('[data-mark-posted="' + i + '"]');
           markBtn.disabled = true;
           markBtn.innerHTML = '<span class="spin"></span>Saving...';
           try {
-            const p = await api('/api/directories/mark-posted', {
+            await api('/api/directories/mark-posted', {
               method: 'POST',
               body: {
                 businessId: state.business.id,
-                platform: l.name || l.site_name || 'Directory',
-                listingUrl: url
+                platform: l.name,
+                listingUrl: liveUrl
               }
             });
-            let trackedUrl = p.trackedUrl || p.tracked_url;
-            if (!trackedUrl){
-              try {
-                const tl = await api('/api/links/create', {
-                  method: 'POST',
-                  body: {
-                    businessId: state.business.id,
-                    channel: 'directory',
-                    platform: l.name || l.site_name || 'Directory',
-                    targetUrl: url
-                  }
-                });
-                trackedUrl = tl.trackedUrl;
-              } catch (e2) {}
-            }
-            $('dir-posted-' + i).innerHTML =
-              '<div class="status success" style="margin-top:8px;"><strong>Saved!</strong>' +
-                (trackedUrl ? '<br>Tracked link: <a href="' + esc(trackedUrl) + '" target="_blank" rel="noopener">' + esc(trackedUrl) + '</a> <button class="btn small secondary" data-copy-tracked="' + i + '" style="width:auto;padding:3px 8px;min-height:0;font-size:11px;">Copy</button>' : '') +
+            $('dir-done-' + i).innerHTML =
+              '<div class="status success" style="margin-top:8px;">' +
+                '<strong>Logged!</strong> Your ad URL is saved. Clicks on <code>' + esc(r.trackedUrl) + '</code> will appear in <strong>Leads</strong> for retargeting.' +
               '</div>';
-            const cb = $('dir-posted-' + i).querySelector('[data-copy-tracked]');
-            if (cb) cb.addEventListener('click', function(){ copy(trackedUrl, 'Tracked link copied!'); });
-            markBtn.textContent = 'Posted ✓';
+            markBtn.textContent = '✓ Posted';
             loadAnalytics();
           } catch (e){
-            $('dir-posted-' + i).innerHTML = '<div class="status error" style="margin-top:8px;">' + esc(e.message) + '</div>';
+            $('dir-done-' + i).innerHTML = '<div class="status error" style="margin-top:8px;">' + esc(e.message) + '</div>';
             markBtn.disabled = false;
-            markBtn.textContent = 'Mark as Posted';
+            markBtn.textContent = '✓ Mark as Posted';
           }
         });
       } catch (e){
-        slot.innerHTML = '<div class="status error" style="margin-top:8px;">' + esc(e.message) + '</div>';
+        slot.innerHTML = '<div class="status error" style="margin-top:10px;">' + esc(e.message) + '</div>';
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Generate Listing';
+        btn.innerHTML = originalLabel;
       }
     });
   });
@@ -1634,9 +1639,9 @@ function renderKnowledgeBase(){
       'Tracked links show up in <strong>Home</strong>, <strong>Leads</strong>, and <strong>Analytics</strong>.'
     ]},
     { q: 'How do I submit to a directory?', a: [
-      'Open <strong>Directories</strong>, pick a country, click <strong>Find Directories</strong>.',
-      'Click <strong>Generate Listing</strong> on any site — you get a title + description tailored to that directory.',
-      'Copy the content, submit it on the directory site, then paste the live URL back and click <strong>Mark as Posted</strong>.'
+      'Open <strong>Directories</strong>, pick a country, click <strong>Show Classified Sites</strong>.',
+      'Click <strong>Copy Sales Copy &amp; Open Site</strong> — the site opens in a new tab, the sales copy is copied to your clipboard.',
+      'Paste the title + body into the classified ad form, submit it, then paste the live URL back and click <strong>Mark as Posted</strong>.'
     ]},
     { q: 'What does the SEO Audit check?', a: [
       'Title tags, meta descriptions, headings, image alt text, links, page speed, mobile friendliness.',
