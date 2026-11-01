@@ -1312,3 +1312,62 @@ export default {
   pool, initSchema, initSocialSchema, initLeadsSchema, initUsersSchema,
   getBusinessPostCount, canPostLink,
 };
+
+// ============================================================
+// DIRECTORY POSTINGS
+// Tracks which classified sites a user has marked as "posted"
+// so the UI can show progress and store the live listing URL.
+// ============================================================
+export async function initDirectoryPostingsSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS directory_postings (
+      id            SERIAL PRIMARY KEY,
+      api_key       TEXT NOT NULL,
+      business_id   INTEGER,
+      directory_name TEXT NOT NULL,
+      directory_url TEXT,
+      posted_url    TEXT,
+      title         TEXT,
+      posted_at     TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (api_key, business_id, directory_name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_dir_postings_lookup
+      ON directory_postings (api_key, business_id);
+  `);
+}
+
+export async function markDirectoryPosted({
+  apiKey, businessId, directoryName, directoryUrl, postedUrl, title,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO directory_postings
+       (api_key, business_id, directory_name, directory_url, posted_url, title)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (api_key, business_id, directory_name) DO UPDATE
+       SET posted_url    = EXCLUDED.posted_url,
+           title         = EXCLUDED.title,
+           directory_url = EXCLUDED.directory_url,
+           posted_at     = NOW()
+     RETURNING *`,
+    [apiKey, businessId, directoryName, directoryUrl || null, postedUrl || null, title || null]
+  );
+  return rows[0];
+}
+
+export async function listDirectoryPostings(apiKey, businessId) {
+  const { rows } = await pool.query(
+    `SELECT * FROM directory_postings
+     WHERE api_key = $1 AND business_id = $2
+     ORDER BY posted_at DESC`,
+    [apiKey, businessId]
+  );
+  return rows;
+}
+
+export async function unmarkDirectoryPosted({ apiKey, businessId, directoryName }) {
+  await pool.query(
+    `DELETE FROM directory_postings
+     WHERE api_key = $1 AND business_id = $2 AND directory_name = $3`,
+    [apiKey, businessId, directoryName]
+  );
+}
