@@ -115,6 +115,7 @@ a:hover{color:var(--accent)}
 .score-block{text-align:center}
 .score-num{font-size:44px;font-weight:800;line-height:1;background:linear-gradient(135deg,var(--accent-l),#60a5fa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.03em}
 .score-num.good{background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.score-num.bad{background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .score-label{font-size:11px;color:var(--text-3);margin-top:4px;text-transform:uppercase;letter-spacing:.1em;font-weight:700}
 .score-arrow{color:var(--accent-l);font-size:24px;opacity:.7}
 .list{list-style:none;display:flex;flex-direction:column;gap:6px}
@@ -711,36 +712,25 @@ async function loadDirCountries(){
 // Tab router
 // ============================================================
 function renderTab(){
-    const defaultUrl = (state.business && (state.business.website || state.business.url)) || '';
-  content.innerHTML =
-    '<h1 class="h1">SEO Audit</h1>' +
-    '<p class="subtitle">25+ professional checks across Technical, On-Page, Content, and Social — with prioritized fixes.</p>' +
-    '<div class="card">' +
-      '<label class="label">Website URL</label>' +
-      '<input class="input" id="auditUrl" type="url" placeholder="https://example.com" value="' + esc(defaultUrl) + '" />' +
-      '<label class="label">Target Keyword (optional)</label>' +
-      '<input class="input" id="auditKeyword" placeholder="best coffee shop near me" />' +
-      '<button class="btn" id="auditBtn">Run SEO Audit</button>' +
-      '<div id="auditResult"></div>' +
-    '</div>';
-
-  $('auditBtn').addEventListener('click', async function(){
-    const url = $('auditUrl').value.trim();
-    const keyword = $('auditKeyword').value.trim();
-    if (!url) return toast('Enter a URL', 'error');
-    $('auditBtn').disabled = true;
-    $('auditBtn').innerHTML = '<span class="spin"></span>Auditing (25+ checks)...';
-    $('auditResult').innerHTML = '<div class="skeleton skeleton-line" style="height:80px;margin-top:16px;"></div><div class="skeleton skeleton-line" style="height:80px;"></div><div class="skeleton skeleton-line" style="height:80px;"></div>';
-    try {
-      const r = await api('/api/seo/audit', { method: 'POST', body: { url: url, keyword: keyword } });
-      renderAuditResult(r);
-    } catch (e){
-      $('auditResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
-    } finally {
-      $('auditBtn').disabled = false;
-      $('auditBtn').textContent = 'Run SEO Audit';
-    }
-  });
+  content.scrollTop = 0;
+  switch (state.tab){
+    case 'home': return renderHome();
+    case 'seo': return renderSEO();
+    case 'video': return renderVideo();
+    case 'keywords': return renderKeywords();
+    case 'qa': return renderQA();
+    case 'directories': return renderDirectories();
+    case 'backlinks': return renderBacklinks();
+    case 'social': return renderSocial();
+    case 'campaigns': return renderCampaigns();
+    case 'leads': return renderLeads();
+    case 'reviews': return renderReviews();
+    case 'analytics': return renderAnalytics();
+    case 'businesses': return renderBusinesses();
+    case 'kb': return renderKnowledgeBase();
+    case 'settings': return renderSettings();
+    default: return renderHome();
+  }
 }
 
 // ============================================================
@@ -795,13 +785,13 @@ function renderHome(){
 }
 
 // ============================================================
-// SEO
+// SEO AUDIT (professional — 25+ checks)
 // ============================================================
 function renderSEO(){
   const defaultUrl = (state.business && (state.business.website || state.business.url)) || '';
   content.innerHTML =
     '<h1 class="h1">SEO Audit</h1>' +
-    '<p class="subtitle">Scan your site for SEO issues and get AI-powered fixes.</p>' +
+    '<p class="subtitle">25+ professional checks across Technical, On-Page, Content, and Social — with prioritized fixes.</p>' +
     '<div class="card">' +
       '<label class="label">Website URL</label>' +
       '<input class="input" id="auditUrl" type="url" placeholder="https://example.com" value="' + esc(defaultUrl) + '" />' +
@@ -816,28 +806,43 @@ function renderSEO(){
     const keyword = $('auditKeyword').value.trim();
     if (!url) return toast('Enter a URL', 'error');
     $('auditBtn').disabled = true;
-    $('auditBtn').innerHTML = '<span class="spin"></span>Running audit...';
-    $('auditResult').innerHTML = '';
+    $('auditBtn').innerHTML = '<span class="spin"></span>Auditing (25+ checks)...';
+    $('auditResult').innerHTML =
+      '<div class="skeleton skeleton-line" style="height:80px;margin-top:16px;"></div>' +
+      '<div class="skeleton skeleton-line" style="height:80px;"></div>' +
+      '<div class="skeleton skeleton-line" style="height:80px;"></div>';
     try {
-      const r = await api('/api/audit', { method: 'POST', body: { url: url, keyword: keyword } });
+      const r = await api('/api/seo/audit', { method: 'POST', body: { url: url, keyword: keyword } });
       renderAuditResult(r);
-    }  const score = r.score || 0;
+    } catch (e){
+      $('auditResult').innerHTML = '<div class="status error">' + esc(e.message) + '</div>';
+    } finally {
+      $('auditBtn').disabled = false;
+      $('auditBtn').textContent = 'Run SEO Audit';
+    }
+  });
+}
+
+function renderAuditResult(r){
+  const score = r.score || 0;
   const afterScore = r.afterScore || score;
   const grade = r.grade || 'F';
   const afterGrade = r.afterGrade || grade;
-  const gradeColor = function(g){
-    return g === 'A' ? 'good' : g === 'B' ? 'good' : g === 'C' ? '' : 'bad';
+
+  const gradeClass = function(g){
+    return (g === 'A' || g === 'B') ? 'good' : (g === 'C' || g === 'D') ? '' : 'bad';
   };
 
-  // Category cards
+  // Category bars
   const catLabels = { technical: 'Technical', onpage: 'On-Page', content: 'Content', social: 'Social' };
   const catBars = Object.keys(r.categories || {}).map(function(k){
     const c = r.categories[k];
     if (!c || c.max === 0) return '';
     const color = c.score >= 80 ? 'var(--success)' : c.score >= 50 ? 'var(--warning)' : 'var(--error)';
-    return '<div style="flex:1;min-width:120px;">' +
+    return '<div style="flex:1;min-width:130px;">' +
       '<div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:4px;">' +
-        '<span>' + esc(catLabels[k] || k) + '</span><span style="color:var(--text);">' + c.score + '</span>' +
+        '<span>' + esc(catLabels[k] || k) + '</span>' +
+        '<span style="color:var(--text);">' + c.score + '</span>' +
       '</div>' +
       '<div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;">' +
         '<div style="height:100%;width:' + c.score + '%;background:' + color + ';transition:width .4s;"></div>' +
@@ -845,12 +850,12 @@ function renderSEO(){
     '</div>';
   }).join('');
 
-  // Metrics grid
+  // Metrics
   const m = r.metrics || {};
   const metricCells = [
     { label: 'TTFB', value: (m.ttfb || 0) + 'ms' },
     { label: 'Page Size', value: (m.pageSizeKb || 0) + ' KB' },
-    { label: 'Word Count', value: m.wordCount || 0 },
+    { label: 'Words', value: m.wordCount || 0 },
     { label: 'Images', value: m.imagesCount || 0 },
     { label: 'H1 / H2', value: (m.h1Count || 0) + ' / ' + (m.h2Count || 0) },
     { label: 'Links', value: m.linkCount || 0 }
@@ -861,31 +866,34 @@ function renderSEO(){
     '</div>';
   }).join('');
 
-  // Issues grouped by severity
+  // Issues by severity
   const issues = r.issues || [];
   const critical = issues.filter(function(i){ return i.severity === 'critical'; });
   const warnings = issues.filter(function(i){ return i.severity === 'warning'; });
-  const info = issues.filter(function(i){ return i.severity === 'info'; });
+  const infos = issues.filter(function(i){ return i.severity === 'info'; });
 
   const renderIssue = function(i){
     const sevColor = i.severity === 'critical' ? 'var(--error)' : i.severity === 'warning' ? 'var(--warning)' : 'var(--info)';
+    const sevBadge = i.severity === 'critical' ? 'failed' : i.severity === 'warning' ? 'pending' : 'source';
     return '<div class="listing-item" style="border-left:3px solid ' + sevColor + ';margin-bottom:10px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">' +
         '<div style="font-weight:700;font-size:13px;color:var(--text);">' + esc(i.title) + '</div>' +
-        '<span class="badge ' + (i.severity === 'critical' ? 'failed' : i.severity === 'warning' ? 'pending' : 'source') + '">' + esc(i.severity) + '</span>' +
+        '<span class="badge ' + sevBadge + '">' + esc(i.severity) + '</span>' +
       '</div>' +
       '<div style="font-size:12px;color:var(--text-2);line-height:1.5;margin-bottom:8px;">' + esc(i.description) + '</div>' +
       (i.fix ?
-        '<div style="padding:8px 10px;background:rgba(16,185,129,0.08);border-left:2px solid var(--success);border-radius:4px;font-size:12px;color:#6ee7b7;line-height:1.5;"><strong>Fix:</strong> ' + esc(i.fix) + '</div>'
+        '<div style="padding:8px 10px;background:rgba(16,185,129,0.08);border-left:2px solid var(--success);border-radius:4px;font-size:12px;color:#6ee7b7;line-height:1.5;">' +
+          '<strong>Fix:</strong> ' + esc(i.fix) +
+        '</div>'
         : '') +
     '</div>';
   };
 
-  let html =
+  const html =
     // Score row
     '<div class="score-row" style="padding:28px 20px;gap:32px;">' +
       '<div class="score-block">' +
-        '<div class="score-num ' + gradeColor(grade) + '">' + score + '</div>' +
+        '<div class="score-num ' + gradeClass(grade) + '">' + score + '</div>' +
         '<div class="score-label">Grade ' + grade + '</div>' +
       '</div>' +
       '<div class="score-arrow">→</div>' +
@@ -906,7 +914,7 @@ function renderSEO(){
       metricCells +
     '</div>' +
 
-    // Critical / Warnings / Info
+    // Issues
     (critical.length ?
       '<div class="section-title" style="color:#fca5a5;">🚨 Critical Issues (' + critical.length + ')</div>' +
       critical.map(renderIssue).join('')
@@ -915,10 +923,10 @@ function renderSEO(){
       '<div class="section-title" style="color:#fcd34d;">⚠️ Warnings (' + warnings.length + ')</div>' +
       warnings.map(renderIssue).join('')
       : '') +
-    (info.length ?
+    (infos.length ?
       '<details style="margin-top:20px;">' +
-        '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);padding:8px 0;">ℹ️ Suggestions (' + info.length + ') — click to expand</summary>' +
-        '<div style="margin-top:10px;">' + info.map(renderIssue).join('') + '</div>' +
+        '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);padding:8px 0;">ℹ️ Suggestions (' + infos.length + ') — click to expand</summary>' +
+        '<div style="margin-top:10px;">' + infos.map(renderIssue).join('') + '</div>' +
       '</details>'
       : '') +
 
@@ -927,37 +935,13 @@ function renderSEO(){
       '<details style="margin-top:16px;">' +
         '<summary style="cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6ee7b7;padding:8px 0;">✅ Passed Checks (' + r.passes.length + ') — click to expand</summary>' +
         '<ul class="list" style="margin-top:10px;">' +
-          r.passes.map(function(p){ return '<li class="list-item success"><strong>' + esc(p.title) + '</strong> — ' + esc(p.detail) + '</li>'; }).join('') +
+          r.passes.map(function(p){
+            return '<li class="list-item success"><strong>' + esc(p.title) + '</strong> — ' + esc(p.detail) + '</li>';
+          }).join('') +
         '</ul>' +
       '</details>'
       : '');
 
-  $('auditResult').innerHTML = html;
-}
-
-function renderAuditResult(r){
-  const before = (r.before && r.before.score) != null ? r.before.score : 0;
-  const after = (r.after && r.after.score) != null ? r.after.score : null;
-  const issues = (r.before && r.before.issues) || [];
-  const fixes = r.fixes || [];
-  let html = '<div class="score-row">' +
-    '<div class="score-block"><div class="score-num ' + (before >= 70 ? 'good' : '') + '">' + before + '</div><div class="score-label">Current</div></div>' +
-    (after !== null ? '<div class="score-arrow">→</div><div class="score-block"><div class="score-num good">' + after + '</div><div class="score-label">After Fix</div></div>' : '') +
-    '</div>';
-  if (issues.length){
-    html += '<div class="section-title">Issues Found (' + issues.length + ')</div><ul class="list">';
-    issues.slice(0, 20).forEach(function(i){
-      html += '<li class="list-item ' + (i.severity || 'warning') + '"><strong>' + esc(i.type || 'Issue') + ':</strong> ' + esc(i.description || i.detail || '') + '</li>';
-    });
-    html += '</ul>';
-  }
-  if (fixes.length){
-    html += '<div class="section-title">Recommended Fixes</div><ul class="list">';
-    fixes.slice(0, 15).forEach(function(f){
-      html += '<li class="list-item success"><strong>' + esc(f.title || 'Fix') + ':</strong> ' + esc(f.description || f.detail || '') + '</li>';
-    });
-    html += '</ul>';
-  }
   $('auditResult').innerHTML = html;
 }
 
@@ -1081,7 +1065,7 @@ function renderKeywords(){
 function renderQA(){
   content.innerHTML =
     '<h1 class="h1">Q&A Finder</h1>' +
-    '<p class="subtitle">Find questions people are asking across Reddit, Quora, Nairaland, and more.</p>' +
+    '<p class="subtitle">Find questions people are asking across Reddit, Lemmy, StackExchange, Nairaland, and more.</p>' +
     '<div class="card">' +
       '<label class="label">Topic / Keyword</label>' +
       '<input class="input" id="qaKeyword" placeholder="e.g. best coffee shop Lagos" />' +
@@ -1118,11 +1102,11 @@ function renderQA(){
         questions.map(function(q, i){
           return '<div class="q-card">' +
             '<div class="q-head">' +
-              '<span class="q-badge ' + esc((q.platform || 'default').toLowerCase()) + '">' + esc(q.platform || 'web') + '</span>' +
+              '<span class="q-badge ' + esc((q.platform || q.source || 'default').toLowerCase()) + '">' + esc(q.platform || q.source || 'web') + '</span>' +
               '<div class="q-title">' + esc(q.title || '') + '</div>' +
             '</div>' +
             '<div class="q-actions">' +
-              '<button class="btn small secondary" data-open-url="' + esc(q.question_url || '') + '">Open</button>' +
+              '<button class="btn small secondary" data-open-url="' + esc(q.question_url || q.url || '') + '">Open</button>' +
               '<button class="btn small secondary" data-draft-q="' + i + '">Draft Answer</button>' +
             '</div>' +
             '<div id="draft-' + i + '"></div>' +
@@ -1290,18 +1274,15 @@ function renderDirectoryListings(listings){
       const l = listings[i];
       const slot = $('dir-slot-' + i);
 
-      // 1. Open the directory IMMEDIATELY (user gesture — no popup block)
       const target = l.submitUrl || l.url;
       window.open(target, '_blank', 'noopener,noreferrer');
 
-      // 2. Load state
       btn.disabled = true;
       const originalLabel = btn.innerHTML;
       btn.innerHTML = '<span class="spin"></span>Generating copy...';
       slot.innerHTML = '';
 
       try {
-        // 3. Generate tracked link + sales copy
         const r = await api('/api/directories/generate', {
           method: 'POST',
           body: {
@@ -1310,10 +1291,8 @@ function renderDirectoryListings(listings){
           }
         });
 
-        // 4. Copy to clipboard
         await copy(r.salesCopy, '✅ Sales copy copied! Paste it in the ad form.');
 
-        // 5. Show preview + mark-as-posted
         slot.innerHTML =
           '<div class="listing-field" style="margin-top:10px;">' +
             '<div class="listing-field-label">✅ Sales Copy (already copied to clipboard)</div>' +
@@ -1382,8 +1361,9 @@ function renderBacklinks(){
     '<div class="card">' +
       '<label class="label">URLs to Submit (one per line, or comma-separated)</label>' +
       '<textarea class="textarea" id="blUrls" rows="6" placeholder="https://example.com/page-1&#10;https://example.com/page-2"></textarea>' +
-'<button class="btn" id="blSubmitBtn">Submit for Indexing</button>' +
-'<button class="btn secondary small" id="blTestBtn" style="margin-top:8px;">🔍 Test Indexer (verify key file)</button>' +      '<div id="blResult"></div>' +
+      '<button class="btn" id="blSubmitBtn">Submit for Indexing</button>' +
+      '<button class="btn secondary small" id="blTestBtn" style="margin-top:8px;">🔍 Test Indexer (verify key file)</button>' +
+      '<div id="blResult"></div>' +
     '</div>' +
     '<div id="blJobs"></div>';
 
@@ -1406,34 +1386,16 @@ function renderBacklinks(){
       const r = await api('/api/backlink/submit', {
         method: 'POST',
         body: { businessId: state.business.id, urls: urls }
-      });  $('blTestBtn').addEventListener('click', async function(){
-    $('blTestBtn').disabled = true;
-    $('blTestBtn').innerHTML = '<span class="spin"></span>Testing...';
-    try {
-      const r = await api('/api/indexnow/verify');
-      $('blResult').innerHTML =
-        '<div class="status ' + (r.ok ? 'success' : 'error') + '" style="margin-top:16px;">' +
-          '<strong>' + (r.ok ? '✅ IndexNow is ready' : '❌ IndexNow setup issue') + '</strong><br>' +
-          'Key file: <code>' + esc(r.keyLocation || '—') + '</code><br>' +
-          (r.keyCheck && r.keyCheck.reason ? '<span style="color:#fca5a5;">Reason: ' + esc(r.keyCheck.reason) + '</span><br>' : '') +
-          '<div style="margin-top:8px;font-size:12px;color:var(--text-2);line-height:1.5;">' + esc(r.hint || '') + '</div>' +
-          (r.setup ? '<div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.5;">' + esc(r.setup) + '</div>' : '') +
-        '</div>';
-    } catch (e){
-      $('blResult').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
-    } finally {
-      $('blTestBtn').disabled = false;
-      $('blTestBtn').innerHTML = '🔍 Test Indexer (verify key file)';
-    }
-  });
-      const success = r.indexnow && r.indexnow.ok;
+      });
+      const success = r.ok === true || (r.indexnow && r.indexnow.ok);
       const statusCode = (r.indexnow && r.indexnow.statusCode) || '—';
       $('blResult').innerHTML =
-        '<div class="status ' + (success ? 'success' : 'warning') + '" style="margin-top:16px;">' +
-          '<strong>' + (success ? '✅ Submitted to IndexNow' : '⚠️ Submission issue') + '</strong><br>' +
-          'Status code: ' + esc(statusCode) + '<br>' +
+        '<div class="status ' + (success ? 'success' : 'error') + '" style="margin-top:16px;">' +
+          '<strong>' + (success ? '✅ Submitted to IndexNow' : '❌ Submission failed') + '</strong><br>' +
+          'Status code: ' + esc(String(statusCode)) + '<br>' +
           'Engines covered: <strong>Bing, Yandex, Seznam, Naver</strong>' +
-          (r.indexnow && r.indexnow.error ? '<br><span style="color:var(--error);">' + esc(r.indexnow.error) + '</span>' : '') +
+          (r.error ? '<div style="margin-top:8px;color:#fca5a5;">' + esc(r.error) + '</div>' : '') +
+          (r.indexnow && r.indexnow.reason ? '<div style="margin-top:8px;color:#fca5a5;">' + esc(r.indexnow.reason) + '</div>' : '') +
           (r.google && r.google.note ? '<div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.5;"><strong>Google:</strong> ' + esc(r.google.note) + '</div>' : '') +
         '</div>' +
         (r.jobs && r.jobs.length ?
@@ -1462,6 +1424,27 @@ function renderBacklinks(){
     } finally {
       $('blSubmitBtn').disabled = false;
       $('blSubmitBtn').textContent = 'Submit for Indexing';
+    }
+  });
+
+  $('blTestBtn').addEventListener('click', async function(){
+    $('blTestBtn').disabled = true;
+    $('blTestBtn').innerHTML = '<span class="spin"></span>Testing...';
+    try {
+      const r = await api('/api/indexnow/verify');
+      $('blResult').innerHTML =
+        '<div class="status ' + (r.ok ? 'success' : 'error') + '" style="margin-top:16px;">' +
+          '<strong>' + (r.ok ? '✅ IndexNow is ready' : '❌ IndexNow setup issue') + '</strong><br>' +
+          'Key file: <code>' + esc(r.keyLocation || '—') + '</code><br>' +
+          (r.keyCheck && r.keyCheck.reason ? '<span style="color:#fca5a5;">Reason: ' + esc(r.keyCheck.reason) + '</span><br>' : '') +
+          '<div style="margin-top:8px;font-size:12px;color:var(--text-2);line-height:1.5;">' + esc(r.hint || '') + '</div>' +
+          (r.setup ? '<div style="margin-top:10px;font-size:12px;color:var(--text-2);line-height:1.5;">' + esc(r.setup) + '</div>' : '') +
+        '</div>';
+    } catch (e){
+      $('blResult').innerHTML = '<div class="status error" style="margin-top:16px;">' + esc(e.message) + '</div>';
+    } finally {
+      $('blTestBtn').disabled = false;
+      $('blTestBtn').innerHTML = '🔍 Test Indexer (verify key file)';
     }
   });
 }
@@ -1812,16 +1795,18 @@ function renderKnowledgeBase(){
       'Open <strong>Indexer</strong>, paste one URL per line (or comma-separated).',
       'Click <strong>Submit for Indexing</strong> — we submit to <strong>Bing, Yandex, Seznam, Naver</strong> via IndexNow.',
       'Each URL also gets a tracked link — clicks land in Leads.',
+      'If submission fails, click <strong>🔍 Test Indexer</strong> to verify your key file is publicly reachable.',
       '<strong>Google:</strong> the public ping endpoint was retired in 2023. Upload your <code>sitemap.xml</code> in Google Search Console (free, one-time).'
     ]},
     { q: 'What does the SEO Audit check?', a: [
-      'Title tags, meta descriptions, headings, image alt text, links, page speed, mobile friendliness.',
-      'You get a score before vs. after fixes, plus a prioritised list of issues and AI-generated fixes.'
+      '25+ professional checks across 4 categories: <strong>Technical</strong> (HTTPS, response time, compression, viewport, charset), <strong>On-Page</strong> (title, meta description, H1/H2, canonical, robots, lang), <strong>Content</strong> (word count, images, internal links), <strong>Social</strong> (Open Graph, Twitter cards, JSON-LD).',
+      'Each issue includes a specific fix instruction and a severity level (critical / warning / suggestion).',
+      'You get a weighted score (0-100), letter grade (A-F), category breakdown, and a simulated "after fixes" score.'
     ]},
     { q: 'How do I find Q&A opportunities?', a: [
       'Open <strong>Q&amp;A Finder</strong>, enter a topic and country.',
-      'We search Reddit, Quora, Nairaland, Lemmy, and Stack Exchange for relevant questions.',
-      'Click <strong>Draft Answer</strong> to generate a contextual answer that links back to your site.'
+      'We search Reddit, Lemmy (multiple instances), StackExchange, Nairaland, and any Discourse forums you configure.',
+      'Click <strong>Draft Answer</strong> to generate a contextual sales-focused answer that links back to your site.'
     ]},
     { q: 'What is a good click rate?', a: [
       'A healthy tracked-link click rate is <strong>2–8%</strong> depending on channel.',
