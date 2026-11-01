@@ -64,7 +64,7 @@ import { findQuestions, listSupportedCountries } from './questionFinder.js';
 import { generateDraft } from './draftGenerator.js';
 import { initTrackedLinksSchema, registerTrackedLinkRoutes } from './trackedLinks.js';
 
-let dirModule = null;
+let dirModule = null;import { registerDirectoryRoutes } from './directoryData.js';
 try {
   dirModule = await import('./directoryGenerator.js');
 } catch (e) {
@@ -1079,7 +1079,7 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
 // TRACKED LINKS (4-in-1 bot feedback loop)
 // ============================================================
 registerTrackedLinkRoutes(app, requireApiKey);
-
+registerDirectoryRoutes(app, requireApiKey);
 // ============================================================
 // SMART LINK
 // ============================================================
