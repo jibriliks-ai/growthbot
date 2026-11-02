@@ -65,13 +65,12 @@ import { generateDraft } from './draftGenerator.js';
 import { initTrackedLinksSchema, registerTrackedLinkRoutes } from './trackedLinks.js';
 
 let dirModule = null;import { registerDirectoryRoutes } from './directoryData.js';
-import { registerBacklinkRoutes } from './searchSubmitter.js';
-try {
+import { registerFeatureRoutes } from './features.js';
+import { registerFeatureRoutes } from './features.js';
   dirModule = await import('./directoryGenerator.js');
 } catch (e) {
   console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
 }
-import { registerSeoRoutes } from './seoAuditor.js';
 // ============================================================
 // CONFIG
 // ============================================================
@@ -1121,9 +1120,8 @@ async function boot() {
 // === Route registration (all imports + middleware in scope here) ===
 registerTrackedLinkRoutes(app, requireApiKey);
 registerDirectoryRoutes(app, requireApiKey);
-registerBacklinkRoutes(app, requireApiKey);
-registerSeoRoutes(app, requireApiKey);
-
+registerFeatureRoutes(app, requireApiKey);
+registerFeatureRoutes(app, requireApiKey);
     app.listen(PORT, () => {
       console.log(`ðŸš€ Auto Traffic Engine v3.8.1 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
