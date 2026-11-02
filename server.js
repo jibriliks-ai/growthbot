@@ -66,7 +66,7 @@ import { initTrackedLinksSchema, registerTrackedLinkRoutes } from './trackedLink
 
 let dirModule = null;import { registerDirectoryRoutes } from './directoryData.js';
 import { registerBacklinkRoutes } from './searchSubmitter.js';
-try {registerBacklinkRoutes(app, requireApiKey);
+try {
   dirModule = await import('./directoryGenerator.js');
 } catch (e) {
   console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
@@ -1045,10 +1045,6 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
 // ============================================================
 // TRACKED LINKS (4-in-1 bot feedback loop)
 // ============================================================
-registerTrackedLinkRoutes(app, requireApiKey);
-registerBacklinkRoutes(app, requireApiKey);
-registerSeoRoutes(app, requireApiKey);
-registerDirectoryRoutes(app, requireApiKey);
 // ============================================================
 // SMART LINK
 // ============================================================
@@ -1120,6 +1116,13 @@ async function boot() {
     }
 
     startScheduler();
+
+
+// === Route registration (all imports + middleware in scope here) ===
+registerTrackedLinkRoutes(app, requireApiKey);
+registerDirectoryRoutes(app, requireApiKey);
+registerBacklinkRoutes(app, requireApiKey);
+registerSeoRoutes(app, requireApiKey);
 
     app.listen(PORT, () => {
       console.log(`ðŸš€ Auto Traffic Engine v3.8.1 on port ${PORT}`);
