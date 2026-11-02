@@ -66,9 +66,7 @@ import { initTrackedLinksSchema, registerTrackedLinkRoutes } from './trackedLink
 
 let dirModule = null;import { registerDirectoryRoutes } from './directoryData.js';
 import { registerFeatureRoutes } from './features.js';
-import { registerFeatureRoutes } from './features.js';
   dirModule = await import('./directoryGenerator.js');
-} catch (e) {
   console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
 }
 // ============================================================
@@ -252,7 +250,6 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
     const user = await createUser({ email, passwordHash, name, apiKey, role: 'user' });
     const token = signToken({ userId: user.id, email: user.email, role: user.role, apiKey: user.api_key });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, apiKey: user.api_key } });
-  } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Email already registered' });
     res.status(500).json({ error: e.message });
   }
@@ -267,7 +264,6 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     await updateUserLastLogin(user.id);
     const token = signToken({ userId: user.id, email: user.email, role: user.role, apiKey: user.api_key });
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, apiKey: user.api_key } });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/auth/me', requireAuth, async (req, res) => {
@@ -275,7 +271,6 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
     const user = await findUserById(req.user.userId);
     if (!user) return res.status(401).json({ error: 'User not found' });
     res.json({ user });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/auth/logout', (req, res) => res.json({ ok: true }));
@@ -296,7 +291,6 @@ app.get('/api/admin/overview', requireAdmin, async (req, res) => {
         (SELECT COUNT(*)::int FROM drafts WHERE status = 'posted') AS drafts_posted;
     `);
     res.json({ total_users: totalUsers, ...rows[0] });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/admin/users', requireAdmin, async (req, res) => {
@@ -308,21 +302,18 @@ app.get('/api/admin/all-businesses', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(`SELECT b.*, u.email as owner_email FROM businesses b LEFT JOIN users u ON u.api_key = b.api_key ORDER BY b.created_at DESC`);
     res.json({ businesses: rows });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/admin/all-leads', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(`SELECT l.*, b.name as business_name FROM leads l JOIN businesses b ON b.id = l.business_id ORDER BY l.created_at DESC LIMIT 500`);
     res.json({ leads: rows });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/admin/all-campaigns', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(`SELECT c.*, b.name as business_name FROM campaigns c JOIN businesses b ON b.id = c.business_id ORDER BY c.created_at DESC`);
     res.json({ campaigns: rows });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/admin/claim-legacy', requireAdmin, async (req, res) => {
@@ -333,7 +324,6 @@ app.post('/api/admin/claim-legacy', requireAdmin, async (req, res) => {
     if (!blog) return res.status(404).json({ error: 'No blog with that key' });
     const updated = await claimLegacyKey(apiKey, req.user.userId);
     res.json({ ok: true, apiKey, message: `Linked to key "${apiKey}"`, user: updated });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
@@ -341,7 +331,6 @@ app.put('/api/admin/users/:id/role', requireAdmin, async (req, res) => {
     const { role } = req.body || {};
     if (!['user', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
     res.json({ user: await updateUserRole(Number(req.params.id), role) });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ============================================================
@@ -369,7 +358,6 @@ app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => 
       },
       isAdmin: false,
     });
-  } catch (e) { res.status(500).json({ error: 'Failed to check plan' }); }
 });
 
 // ============================================================
@@ -388,7 +376,6 @@ app.post('/api/audit', auditLimiter, requireApiKey, async (req, res) => {
     const result = await fullAudit({ url, keyword, openai: aiClient, autoFix });
     await logAudit({ apiKey: req.apiKey, url, keyword, scoreBefore: result.before.score, scoreAfter: result.after?.score ?? null, issues: result.before.issues, fixes: result.fixes, fixedHtml: result.fixedHtml }).catch(() => {});
     res.json(result);
-  } catch (e) { res.status(500).json({ error: 'Audit failed', details: e.message }); }
 });
 
 // ============================================================
@@ -424,7 +411,6 @@ app.post('/api/keywords', generalLimiter, requireApiKey, async (req, res) => {
     const dataForSeo = process.env.DATAFORSEO_LOGIN && process.env.DATAFORSEO_PASSWORD
       ? { login: process.env.DATAFORSEO_LOGIN, password: process.env.DATAFORSEO_PASSWORD } : null;
     res.json(await analyzeKeywords({ seeds, manualKeywords, url, country, language, dataForSeo }));
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ============================================================
@@ -445,7 +431,6 @@ app.post('/api/create-video', videoLimiter, requireApiKey, async (req, res) => {
     const result = await createVideo({ topic, businessName, durationSeconds, style });
     if (result.renderId) await createRenderJob(req.apiKey, result.renderId, result.script, result.clips).catch(() => {});
     res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/video-status/:renderId', async (req, res) => {
@@ -453,7 +438,6 @@ app.get('/api/video-status/:renderId', async (req, res) => {
     const status = await pollShotstackStatus(req.params.renderId);
     if (status?.status === 'done' && status.url) await updateRenderJob(req.params.renderId, 'done', status.url).catch(() => {});
     res.json(status);
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ============================================================
@@ -466,7 +450,6 @@ app.post('/api/social/connect', generalLimiter, requireApiKey, async (req, res) 
   try {
     const account = await upsertSocialAccount({ apiKey: req.apiKey, platform, accountId, accountName, accessTokenEnc: encryptToken(accessToken), expiresAt: expiresAt ? new Date(expiresAt) : null });
     res.json({ ok: true, account: { ...account, access_token_enc: undefined } });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/social/accounts', generalLimiter, requireApiKey, async (req, res) => {
@@ -543,7 +526,6 @@ app.get('/api/social/facebook/callback', async (req, res) => {
     apiKey = decoded.apiKey;
     returnUrl = decoded.returnUrl || '';
     if (!apiKey) throw new Error('Missing apiKey');
-  } catch (e) {
     return res.redirect(buildRedirect({ fb_error: 'invalid_state' }));
   }
 
@@ -601,7 +583,6 @@ app.get('/api/social/facebook/callback', async (req, res) => {
     };
     const sessionBlob = Buffer.from(JSON.stringify(pickerPayload)).toString('base64url');
     return res.redirect(buildRedirect({ fb_choose: '1', session: sessionBlob }));
-  } catch (e) {
     console.error('âŒ Facebook OAuth error:', {
       graphVersion: FB_GRAPH_VERSION,
       status: e.response?.status,
@@ -620,7 +601,6 @@ app.post('/api/social/facebook/select-page', generalLimiter, requireApiKey, asyn
   let payload;
   try {
     payload = JSON.parse(Buffer.from(session, 'base64url').toString());
-  } catch (e) {
     return res.status(400).json({ error: 'Invalid session blob' });
   }
   if (Date.now() - (payload.issuedAt || 0) > 15 * 60 * 1000) {
@@ -639,7 +619,6 @@ app.post('/api/social/facebook/select-page', generalLimiter, requireApiKey, asyn
       accessTokenEnc: page.token, expiresAt: null,
     });
     res.json({ ok: true, page: { id: page.id, name: page.name } });
-  } catch (e) {
     console.error('Page select error:', e.message);
     res.status(500).json({ error: e.message });
   }
@@ -671,7 +650,6 @@ app.get('/api/social/facebook/debug', requireAdmin, async (req, res) => {
       status: r.status,
       facebookResponse: r.data,
     };
-  } catch (e) {
     diagnostics.graphProbe = { error: e.message };
   }
 
@@ -685,7 +663,6 @@ app.post('/api/businesses', generalLimiter, requireApiKey, async (req, res) => {
   try {
     const isAdmin = req.user && req.user.role === 'admin';
     res.json({ business: await createBusiness({ apiKey: req.apiKey, ...req.body, isAdmin }) });
-  } catch (e) {
     if (e.code === 'BUSINESS_LIMIT') return res.status(403).json({ error: 'BUSINESS_LIMIT', message: e.message, limit: e.limit, count: e.count });
     res.status(500).json({ error: e.message });
   }
@@ -697,7 +674,6 @@ app.get('/api/businesses/list', generalLimiter, requireApiKey, async (req, res) 
     const isAdmin = req.user && req.user.role === 'admin';
     const limit = isAdmin ? 999999 : await getBusinessLimitForPlan(req.apiKey);
     res.json({ businesses, limit, count: businesses.length });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/businesses/me', generalLimiter, requireApiKey, async (req, res) => {
@@ -710,7 +686,6 @@ app.get('/api/businesses/:id', generalLimiter, async (req, res) => {
     const b = await getBusiness(Number(req.params.id));
     if (!b) return res.status(404).json({ error: 'Not found' });
     res.json({ business: b });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/businesses/:id', generalLimiter, requireApiKey, async (req, res) => {
@@ -734,7 +709,6 @@ app.post('/api/campaigns', generalLimiter, requireApiKey, async (req, res) => {
     const business = await getBusiness(Number(businessId));
     const { links, errors } = await createSmartLinkForCampaign({ campaign, business, platforms, createSmartLinkFn: createSmartLink });
     res.json({ campaign, links: links.map((l) => ({ ...l, publicUrl: smartLinkUrl(l.slug) })), errors });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/campaigns/:id', generalLimiter, async (req, res) => {
@@ -743,7 +717,6 @@ app.get('/api/campaigns/:id', generalLimiter, async (req, res) => {
     if (!campaign) return res.status(404).json({ error: 'Not found' });
     const links = await listSmartLinks(campaign.id);
     res.json({ campaign, links: links.map((l) => ({ ...l, publicUrl: smartLinkUrl(l.slug) })) });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/businesses/:id/campaigns', generalLimiter, async (req, res) => {
@@ -760,7 +733,6 @@ app.get('/api/campaigns/:id/links', generalLimiter, async (req, res) => {
   try {
     const links = await listSmartLinks(Number(req.params.id));
     res.json({ links: links.map((l) => ({ ...l, publicUrl: smartLinkUrl(l.slug) })) });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ============================================================
@@ -771,7 +743,6 @@ app.post('/api/leads', generalLimiter, requireApiKey, async (req, res) => {
   if (!businessId) return res.status(400).json({ error: 'businessId required' });
   try {
     res.json({ lead: await createLead({ businessId: Number(businessId), campaignId: campaignId ? Number(campaignId) : null, sourcePlatform, name, phone, email, intent, notes, status: 'new' }) });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/businesses/:id/leads', generalLimiter, async (req, res) => {
@@ -830,7 +801,6 @@ app.all('/api/questions/find', questionLimiter, requireApiKey, async (req, res) 
     const found = await findQuestions({ keyword, country, limitPerSource: 10 });
     const saved = await saveQuestionFinds(Number(businessId), keyword, country, found.results);
     res.json({ keyword, country, totalFound: found.totalFound, newlySaved: saved.length, sourceStatus: found.sourceStatus, warnings: found.warnings, questions: saved });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/businesses/:id/questions', generalLimiter, requireApiKey, async (req, res) => {
@@ -868,7 +838,6 @@ app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, re
     if (!result.ok) return res.status(422).json({ error: 'DRAFT_REJECTED', reason: result.reason, draft: result.draft });
     const saved = await saveDraft({ businessId: question.business_id, questionId: question.id, draftText: result.draft, blogUrl, platform: result.platform, wordCount: result.wordCount });
     res.json({ draft: saved, platform: result.platform, wordCount: result.wordCount, quality: result.quality, variants: result.variants });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/businesses/:id/drafts', generalLimiter, requireApiKey, async (req, res) => {
@@ -907,7 +876,6 @@ app.post('/api/directories/translate', dirTranslateLimiter, requireApiKey, async
 
   try {
     res.json(await dirModule.translateListing({ postTitle, postContent, targetLang }));
-  } catch (e) {
     console.error('Directory translate error:', e.message);
     res.status(500).json({ error: e.message });
   }
@@ -930,7 +898,6 @@ app.post('/api/directories/mark-posted', generalLimiter, requireApiKey, async (r
       title: title || null,
     });
     res.json({ ok: true, posting });
-  } catch (e) {
     console.error('mark-posted error:', e.message);
     res.status(500).json({ error: e.message });
   }
@@ -942,7 +909,6 @@ app.get('/api/directories/postings', generalLimiter, requireApiKey, async (req, 
   try {
     const postings = await listDirectoryPostings(req.apiKey, businessId);
     res.json({ postings });
-  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -959,7 +925,6 @@ app.delete('/api/directories/postings', generalLimiter, requireApiKey, async (re
       directoryName,
     });
     res.json({ ok: true });
-  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -988,7 +953,6 @@ app.post('/api/payment/demo-upgrade', generalLimiter, requireApiKey, async (req,
     const blog = await upgradeToPremium(req.apiKey, req.body.email || 'demo@example.com');
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
     res.json({ ok: true, plan: blog.plan });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ============================================================
@@ -1014,7 +978,6 @@ app.post('/api/webhook/flutterwave', webhookLimiter, async (req, res) => {
     if (Number(verified.amount) < PREMIUM_PRICE_USD) return;
     if (verified.currency !== 'USD') return;
     await upgradeToPremium(apiKey, verified.customer?.email || '');
-  } catch (e) { console.error('Webhook error:', e.message); }
 });
 
 app.get('/api/webhook/whatsapp', (req, res) => {
@@ -1052,7 +1015,6 @@ app.get('/l/:slug', async (req, res) => {
     const result = await resolveSmartLink({ slug: req.params.slug, ip: getClientIp(req), userAgent: req.headers['user-agent'] || null, referrer: req.headers['referer'] || null });
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.redirect(302, result.redirectUrl);
-  } catch (e) {
     if (e.code === 'LINK_NOT_FOUND') return res.status(404).send('Link not found');
     res.status(500).send('Redirect failed');
   }
@@ -1103,7 +1065,6 @@ async function boot() {
             try {
               await pool.query(`UPDATE users SET email = LOWER($1), password_hash = $2, role = 'admin', updated_at = NOW() WHERE id = $3`, [adminEmail, hashPassword(adminPassword), existingAdmin.id]);
               console.log(`âœ… Admin synced: ${adminEmail}`);
-            } catch (syncErr) {
               if (syncErr.code === '23505') console.warn(`âš ï¸  Cannot sync admin: email in use`);
               else throw syncErr;
             }
@@ -1121,7 +1082,6 @@ async function boot() {
 registerTrackedLinkRoutes(app, requireApiKey);
 registerDirectoryRoutes(app, requireApiKey);
 registerFeatureRoutes(app, requireApiKey);
-registerFeatureRoutes(app, requireApiKey);
     app.listen(PORT, () => {
       console.log(`ðŸš€ Auto Traffic Engine v3.8.1 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
@@ -1131,7 +1091,6 @@ registerFeatureRoutes(app, requireApiKey);
       console.log(`   Facebook Graph API version: ${FB_GRAPH_VERSION}`);
       console.log(`   iframe embedding: âœ… allowed (Blogspot-safe)`);
     });
-  } catch (e) {
     console.error('âŒ Boot failed:', e.message);
     process.exit(1);
   }
