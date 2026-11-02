@@ -1,6 +1,6 @@
 ﻿// ============================================================
-// Auto Traffic Engine â€” Main Express server
-// v3.8.1 â€” Facebook OAuth version alignment + debug endpoint
+// Auto Traffic Engine -- Main Express server (v3.9.0)
+// Clean route ordering; consolidated feature routes.
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -34,18 +34,15 @@ import {
   createLead, listLeads, updateLead, markLeadDelivered,
   listReviews, getBusinessAnalytics,
   getSocialAccounts, upsertSocialAccount,
-  saveQuestionFinds, listQuestionFinds, getQuestionFind,
-  saveDraft, listDrafts, updateDraftStatus,
+  listQuestionFinds, listDrafts, updateDraftStatus,
   createUser, findUserByEmail, findUserById, updateUserLastLogin,
   findAdminUser, countUsers, listAllUsers, claimLegacyKey, updateUserRole,
-  canPostLink,
   markDirectoryPosted, listDirectoryPostings, unmarkDirectoryPosted,
   pool,
 } from './db.js';
 
 import { fullAudit } from './seoEngine.js';
 import { submitWithJobLog, verifyKeyFile, verifySitemap } from './indexnow.js';
-import { generateListingPackages } from './listingGenerator.js';
 import { analyzeKeywords } from './keywordEngine.js';
 import {
   createVideo, pollShotstackStatus, DURATION_PRESETS, STYLE_TEMPLATES,
@@ -60,19 +57,19 @@ import {
   isWhatsAppConfigured,
   smartLinkUrl,
 } from './leadEngine.js';
-import { findQuestions, listSupportedCountries } from './questionFinder.js';
-import { generateDraft } from './draftGenerator.js';
+import { listSupportedCountries } from './questionFinder.js';
 import { initTrackedLinksSchema, registerTrackedLinkRoutes } from './trackedLinks.js';
-
-let dirModule = null;import { registerDirectoryRoutes } from './directoryData.js';
+import { registerDirectoryRoutes } from './directoryData.js';
 import { registerFeatureRoutes } from './features.js';
-import { registerBacklinkRoutes } from './searchSubmitter.js';
+
+// Optional directory generator (dynamic import)
+let dirModule = null;
 try {
   dirModule = await import('./directoryGenerator.js');
 } catch (e) {
-  console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
+  console.warn('[!] directoryGenerator.js not available - directory feature disabled');
 }
-import { registerSeoRoutes } from './seoAuditor.js';
+
 // ============================================================
 // CONFIG
 // ============================================================
@@ -84,7 +81,6 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const PREMIUM_PRICE_USD = 29;
 
-// Single source of truth for Graph API version â€” matches socialPoster.js
 const FB_GRAPH_VERSION = process.env.FACEBOOK_GRAPH_VERSION || 'v23.0';
 const FB_OAUTH_BASE = `https://www.facebook.com/${FB_GRAPH_VERSION}/dialog/oauth`;
 const FB_GRAPH_BASE = `https://graph.facebook.com/${FB_GRAPH_VERSION}`;
@@ -110,11 +106,10 @@ app.use(helmet({
   frameguard: false,
 }));
 
-// Allow the app to be embedded in iframes (Blogspot etc.)
 app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'ALLOWALL');
   res.removeHeader('X-Frame-Options');
-  res.setHeader('Content-Security-Policy', "frame-ancestors *");
+  res.setHeader('Content-Security-Policy', 'frame-ancestors *');
   next();
 });
 
@@ -151,7 +146,6 @@ const checkPlanLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { er
 const auditLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Too many audits' } });
 const videoLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { error: 'Too many video requests' } });
 const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 1000, message: { error: 'Webhook rate limit' } });
-const questionLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 30, message: { error: 'Too many question searches' } });
 const draftLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 40, message: { error: 'Too many draft requests' } });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many auth attempts' } });
 const dirLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Too many directory requests' } });
@@ -206,7 +200,7 @@ function getClientIp(req) {
 // ============================================================
 app.get('/health', (req, res) => {
   res.json({
-    ok: true, version: '3.8.1', env: NODE_ENV,
+    ok: true, version: '3.9.0', env: NODE_ENV,
     uptime: Math.round(process.uptime()), ai: AI_PROVIDER,
     demoMode: process.env.DEMO_MODE === 'true',
     price: { USD: PREMIUM_PRICE_USD },
@@ -224,7 +218,7 @@ app.get('/health', (req, res) => {
       whatsapp: isWhatsAppConfigured(),
       indexnow: Boolean(process.env.INDEXNOW_KEY),
       directoryGenerator: Boolean(dirModule),
-            trackedLinks: true,
+      trackedLinks: true,
       tokenEncryption: Boolean(process.env.TOKEN_ENCRYPTION_KEY),
     },
     time: new Date().toISOString(),
@@ -375,7 +369,8 @@ app.get('/api/check-plan', checkPlanLimiter, requireApiKey, async (req, res) => 
 });
 
 // ============================================================
-// SEO AUDIT
+// SEO AUDIT (legacy endpoint — /api/audit)
+// The new /api/seo/audit is provided by features.js.
 // ============================================================
 app.post('/api/audit', auditLimiter, requireApiKey, async (req, res) => {
   const { url, keyword = '', autoFix = true } = req.body;
@@ -394,7 +389,7 @@ app.post('/api/audit', auditLimiter, requireApiKey, async (req, res) => {
 });
 
 // ============================================================
-// BACKLINK
+// BACKLINK (legacy endpoints — features.js adds /api/backlink/submit, /api/backlink/jobs)
 // ============================================================
 app.post('/api/backlink/indexnow', generalLimiter, requireApiKey, async (req, res) => {
   const { urls, siteUrl, url } = req.body;
@@ -414,7 +409,6 @@ app.get('/api/backlink/sitemap', generalLimiter, requireApiKey, async (req, res)
   try { res.json(await verifySitemap(new URL('/sitemap.xml', req.query.url).toString())); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
-
 
 // ============================================================
 // KEYWORDS
@@ -483,26 +477,20 @@ app.post('/api/social/post-now', generalLimiter, requireApiKey, async (req, res)
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// === FACEBOOK OAUTH WITH IFRAME-SAFE RETURN URL ===
 app.get('/api/social/facebook/connect', generalLimiter, requireApiKey, (req, res) => {
   const appId = process.env.FACEBOOK_APP_ID;
   const redirectUri = process.env.FACEBOOK_REDIRECT_URI;
   if (!appId || !redirectUri) {
-    return res.status(500).json({ error: 'Facebook OAuth not configured on server. Add FACEBOOK_APP_ID and FACEBOOK_REDIRECT_URI to env.' });
+    return res.status(500).json({ error: 'Facebook OAuth not configured. Add FACEBOOK_APP_ID and FACEBOOK_REDIRECT_URI.' });
   }
-  // returnUrl = the page to send the user back to after OAuth (e.g., Blogspot URL)
   const returnUrl = req.query.redirect || '';
   const state = Buffer.from(JSON.stringify({ apiKey: req.apiKey, returnUrl })).toString('base64url');
-  // pages_manage_metadata is NOT a valid scope â€” removed. These 3 cover posting.
   const scopes = 'pages_show_list,pages_read_engagement,pages_manage_posts';
   const authUrl =
-    `${FB_OAUTH_BASE}?` +
-    `client_id=${appId}` +
+    `${FB_OAUTH_BASE}?client_id=${appId}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&state=${state}` +
-    `&scope=${scopes}` +
-    `&response_type=code`;
-  console.log('ðŸ”µ Facebook OAuth redirect:', { graphVersion: FB_GRAPH_VERSION, scopes, redirectUri });
+    `&state=${state}&scope=${scopes}&response_type=code`;
+  console.log('[FB] OAuth redirect:', { graphVersion: FB_GRAPH_VERSION, scopes, redirectUri });
   res.redirect(authUrl);
 });
 
@@ -510,22 +498,17 @@ app.get('/api/social/facebook/callback', async (req, res) => {
   const { code, state, error, error_description } = req.query;
   const FRONTEND = process.env.PUBLIC_BASE_URL || 'https://growthbot-aprv.onrender.com';
 
-  console.log('ðŸŸ¢ Facebook OAuth callback hit:', {
+  console.log('[FB] OAuth callback:', {
     graphVersion: FB_GRAPH_VERSION,
-    hasCode: !!code,
-    hasState: !!state,
-    error: error || null,
-    errorDescription: error_description || null,
+    hasCode: !!code, hasState: !!state,
+    error: error || null, errorDescription: error_description || null,
   });
 
-  // Helper: build a redirect to app.html with returnUrl attached
   const buildRedirect = (params) => {
-    let apiKeyForError = '';
     let returnForUrl = '';
     try {
       if (state) {
         const decoded = JSON.parse(Buffer.from(state, 'base64url').toString());
-        apiKeyForError = decoded.apiKey || '';
         returnForUrl = decoded.returnUrl || '';
       }
     } catch {}
@@ -539,11 +522,10 @@ app.get('/api/social/facebook/callback', async (req, res) => {
     return res.redirect(buildRedirect({ fb_error: error_description || 'cancelled' }));
   }
 
-  let apiKey, returnUrl = '';
+  let apiKey;
   try {
     const decoded = JSON.parse(Buffer.from(state, 'base64url').toString());
     apiKey = decoded.apiKey;
-    returnUrl = decoded.returnUrl || '';
     if (!apiKey) throw new Error('Missing apiKey');
   } catch (e) {
     return res.redirect(buildRedirect({ fb_error: 'invalid_state' }));
@@ -570,14 +552,14 @@ app.get('/api/social/facebook/callback', async (req, res) => {
 
     const pagesResult = await listFacebookPages(longToken);
     if (!pagesResult.ok) {
-      console.error('âŒ listFacebookPages failed:', pagesResult.error);
+      console.error('[X] listFacebookPages failed:', pagesResult.error);
       return res.redirect(buildRedirect({ fb_error: pagesResult.error }));
     }
     const pages = pagesResult.pages || [];
 
     if (pages.length === 0) {
       return res.redirect(buildRedirect({
-        fb_error: 'No Facebook Pages found. You must be an admin of at least one Page. Create one at facebook.com/pages/create, then reconnect.',
+        fb_error: 'No Facebook Pages found. Create one at facebook.com/pages/create, then reconnect.',
       }));
     }
 
@@ -591,7 +573,6 @@ app.get('/api/social/facebook/callback', async (req, res) => {
       return res.redirect(buildRedirect({ fb_connected: '1', page: page.name }));
     }
 
-    // Multiple pages â€” send picker blob
     const pickerPayload = {
       apiKey,
       pages: pages.map((p) => ({
@@ -604,7 +585,7 @@ app.get('/api/social/facebook/callback', async (req, res) => {
     const sessionBlob = Buffer.from(JSON.stringify(pickerPayload)).toString('base64url');
     return res.redirect(buildRedirect({ fb_choose: '1', session: sessionBlob }));
   } catch (e) {
-    console.error('âŒ Facebook OAuth error:', {
+    console.error('[X] Facebook OAuth error:', {
       graphVersion: FB_GRAPH_VERSION,
       status: e.response?.status,
       facebookError: e.response?.data?.error,
@@ -641,14 +622,9 @@ app.post('/api/social/facebook/select-page', generalLimiter, requireApiKey, asyn
       accessTokenEnc: page.token, expiresAt: null,
     });
     res.json({ ok: true, page: { id: page.id, name: page.name } });
-  } catch (e) {
-    console.error('Page select error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// === FACEBOOK DIAGNOSTIC (admin only) ===
-// Visit while logged in as admin to see env vars + actual Facebook response.
 app.get('/api/social/facebook/debug', requireAdmin, async (req, res) => {
   const diagnostics = {
     graphVersion: FB_GRAPH_VERSION,
@@ -662,21 +638,16 @@ app.get('/api/social/facebook/debug', requireAdmin, async (req, res) => {
     },
     graphProbe: null,
   };
-
   try {
     const r = await axios.get(`${FB_GRAPH_BASE}/me`, {
       params: { access_token: 'INVALID_TEST_TOKEN_FOR_DIAG' },
       validateStatus: () => true,
       timeout: 10000,
     });
-    diagnostics.graphProbe = {
-      status: r.status,
-      facebookResponse: r.data,
-    };
+    diagnostics.graphProbe = { status: r.status, facebookResponse: r.data };
   } catch (e) {
     diagnostics.graphProbe = { error: e.message };
   }
-
   res.json(diagnostics);
 });
 
@@ -805,72 +776,15 @@ app.get('/api/businesses/:id/analytics', generalLimiter, async (req, res) => {
 });
 
 // ============================================================
-// Q&A
+// Q&A — read-only routes (find/draft are in features.js)
 // ============================================================
 app.get('/api/questions/sources', (req, res) => {
   res.json({ countries: listSupportedCountries() });
 });
 
-app.all('/api/questions/find', questionLimiter, requireApiKey, async (req, res) => {
-  const params = req.method === 'GET' ? req.query : (req.body || {});
-  const businessId = params.businessId;
-  const keyword = params.keyword || params.q;
-  const country = params.country || 'ng';
-  if (!businessId || !keyword) return res.status(400).json({ error: 'businessId and keyword required' });
-
-  const isAdmin = req.user && req.user.role === 'admin';
-  const blog = await getBlog(req.apiKey);
-  if ((!blog || blog.plan !== 'premium') && !isAdmin) {
-    return res.status(403).json({
-      error: 'PREMIUM_REQUIRED',
-      message: 'Question Finder is Premium. Log in as admin OR demo-upgrade this key.',
-      demoMode: process.env.DEMO_MODE === 'true',
-    });
-  }
-
-  try {
-    const found = await findQuestions({ keyword, country, limitPerSource: 10 });
-    const saved = await saveQuestionFinds(Number(businessId), keyword, country, found.results);
-    res.json({ keyword, country, totalFound: found.totalFound, newlySaved: saved.length, sourceStatus: found.sourceStatus, warnings: found.warnings, questions: saved });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 app.get('/api/businesses/:id/questions', generalLimiter, requireApiKey, async (req, res) => {
   try { res.json({ questions: await listQuestionFinds(Number(req.params.id), { status: req.query.status || null, limit: Number(req.query.limit) || 100 }) }); }
   catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/questions/:id/draft', draftLimiter, requireApiKey, async (req, res) => {
-  const { blogUrl, blogTitle } = req.body;
-  if (!blogUrl) return res.status(400).json({ error: 'blogUrl required' });
-  const isAdmin = req.user && req.user.role === 'admin';
-  const blog = await getBlog(req.apiKey);
-  if ((!blog || blog.plan !== 'premium') && !isAdmin) return res.status(403).json({ error: 'PREMIUM_REQUIRED' });
-  try {
-    const question = await getQuestionFind(Number(req.params.id));
-    if (!question) return res.status(404).json({ error: 'Question not found' });
-
-    if (!isAdmin) {
-      const linkStatus = await canPostLink(question.business_id, 5);
-      if (!linkStatus.allowed) {
-        return res.status(403).json({
-          error: 'LINK_LOCKED',
-          message: `New businesses must post ${linkStatus.required} times before including links. You have ${linkStatus.postCount}/${linkStatus.required} posts. ${linkStatus.remaining} more needed.`,
-          postCount: linkStatus.postCount, required: linkStatus.required, remaining: linkStatus.remaining,
-        });
-      }
-    }
-
-    const biz = await getBusiness(question.business_id);
-    const result = await generateDraft({
-      questionTitle: question.title, questionUrl: question.question_url,
-      blogTitle: blogTitle || blog.url || 'Full guide', blogUrl,
-      businessName: biz?.name || '', businessCategory: biz?.category || '',
-    });
-    if (!result.ok) return res.status(422).json({ error: 'DRAFT_REJECTED', reason: result.reason, draft: result.draft });
-    const saved = await saveDraft({ businessId: question.business_id, questionId: question.id, draftText: result.draft, blogUrl, platform: result.platform, wordCount: result.wordCount });
-    res.json({ draft: saved, platform: result.platform, wordCount: result.wordCount, quality: result.quality, variants: result.variants });
-  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/businesses/:id/drafts', generalLimiter, requireApiKey, async (req, res) => {
@@ -886,7 +800,7 @@ app.put('/api/drafts/:id/status', generalLimiter, requireApiKey, async (req, res
 });
 
 // ============================================================
-// DIRECTORIES
+// DIRECTORIES (read-only; submit is in features.js)
 // ============================================================
 app.get('/api/directories/countries', (req, res) => {
   if (!dirModule) return res.status(503).json({ error: 'Directory feature not available' });
@@ -894,7 +808,6 @@ app.get('/api/directories/countries', (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- Per-post translator â€” powers the language control next to every generated listing ---
 app.post('/api/directories/translate', dirTranslateLimiter, requireApiKey, async (req, res) => {
   if (!dirModule) return res.status(503).json({ error: 'Directory feature not available' });
   const { postTitle = '', postContent = '', targetLang } = req.body || {};
@@ -914,8 +827,6 @@ app.post('/api/directories/translate', dirTranslateLimiter, requireApiKey, async
     res.status(500).json({ error: e.message });
   }
 });
-
-// --- Track which directory sites have been posted to ---
 
 app.post('/api/directories/mark-posted', generalLimiter, requireApiKey, async (req, res) => {
   const { businessId, directoryName, directoryUrl, postedUrl, title } = req.body || {};
@@ -944,9 +855,7 @@ app.get('/api/directories/postings', generalLimiter, requireApiKey, async (req, 
   try {
     const postings = await listDirectoryPostings(req.apiKey, businessId);
     res.json({ postings });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/directories/postings', generalLimiter, requireApiKey, async (req, res) => {
@@ -955,16 +864,11 @@ app.delete('/api/directories/postings', generalLimiter, requireApiKey, async (re
     return res.status(400).json({ error: 'businessId and directoryName are required' });
   }
   try {
-    await unmarkDirectoryPosted({
-      apiKey: req.apiKey,
-      businessId: Number(businessId),
-      directoryName,
-    });
+    await unmarkDirectoryPosted({ apiKey: req.apiKey, businessId: Number(businessId), directoryName });
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 // ============================================================
 // PAYMENT
 // ============================================================
@@ -1043,9 +947,7 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
   try { res.json(await runReviewCron({ hoursAgo: 24, dryRun })); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
-// ============================================================
-// TRACKED LINKS (4-in-1 bot feedback loop)
-// ============================================================
+
 // ============================================================
 // SMART LINK
 // ============================================================
@@ -1061,10 +963,20 @@ app.get('/l/:slug', async (req, res) => {
 });
 
 // ============================================================
-// ROOT + ERROR
+// ROOT
 // ============================================================
 app.get('/', (req, res) => res.redirect('/app.html'));
 
+// ============================================================
+// === FEATURE ROUTES (MUST COME BEFORE 404 CATCH-ALL) ===
+// ============================================================
+registerTrackedLinkRoutes(app, requireApiKey);
+registerDirectoryRoutes(app, requireApiKey);
+registerFeatureRoutes(app, requireApiKey);
+
+// ============================================================
+// 404 + ERROR HANDLERS (AFTER all routes)
+// ============================================================
 app.use((req, res) => res.status(404).json({ error: 'Not found', path: req.path }));
 
 app.use((err, req, res, next) => {
@@ -1078,15 +990,16 @@ app.use((err, req, res, next) => {
 // ============================================================
 async function boot() {
   try {
-       if (process.env.DATABASE_URL) {
-      console.log('ðŸ”„ Initializing schemas...');
+    if (process.env.DATABASE_URL) {
+      console.log('[..] Initializing schemas...');
       await initSchema();
       await initSocialSchema();
       await initLeadsSchema();
       await initUsersSchema();
       await initDirectoryPostingsSchema();
     }
-      await initTrackedLinksSchema();
+    await initTrackedLinksSchema();
+
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -1097,20 +1010,20 @@ async function boot() {
           const apiKey = generateApiKey(adminEmail);
           await getOrCreateBlog(apiKey, 'unknown');
           await createUser({ email: adminEmail, passwordHash: hashPassword(adminPassword), name: 'Admin', apiKey, role: 'admin' });
-          console.log(`âœ… Admin created: ${adminEmail}`);
+          console.log(`[OK] Admin created: ${adminEmail}`);
         } else {
           const emailMatch = existingAdmin.email.toLowerCase() === adminEmail.toLowerCase();
           const passwordMatch = verifyPassword(adminPassword, existingAdmin.password_hash);
           if (!emailMatch || !passwordMatch) {
             try {
               await pool.query(`UPDATE users SET email = LOWER($1), password_hash = $2, role = 'admin', updated_at = NOW() WHERE id = $3`, [adminEmail, hashPassword(adminPassword), existingAdmin.id]);
-              console.log(`âœ… Admin synced: ${adminEmail}`);
+              console.log(`[OK] Admin synced: ${adminEmail}`);
             } catch (syncErr) {
-              if (syncErr.code === '23505') console.warn(`âš ï¸  Cannot sync admin: email in use`);
+              if (syncErr.code === '23505') console.warn(`[!] Cannot sync admin: email in use`);
               else throw syncErr;
             }
           } else {
-            console.log(`â„¹ï¸  Admin in sync: ${existingAdmin.email}`);
+            console.log(`[i] Admin in sync: ${existingAdmin.email}`);
           }
         }
       } catch (e) { console.warn('Admin setup failed:', e.message); }
@@ -1118,31 +1031,20 @@ async function boot() {
 
     startScheduler();
 
-
-// === Route registration (all imports + middleware in scope here) ===
-registerTrackedLinkRoutes(app, requireApiKey);
-registerDirectoryRoutes(app, requireApiKey);
-registerFeatureRoutes(app, requireApiKey);
-registerBacklinkRoutes(app, requireApiKey);
-registerSeoRoutes(app, requireApiKey);
-
     app.listen(PORT, () => {
-      console.log(`ðŸš€ Auto Traffic Engine v3.8.1 on port ${PORT}`);
+      console.log(`==> Auto Traffic Engine v3.9.0 on port ${PORT}`);
       console.log(`   Env: ${NODE_ENV}`);
       console.log(`   Public URL: ${PUBLIC_BASE_URL}`);
-      console.log(`   Directory generator: ${dirModule ? 'âœ…' : 'âš ï¸ not loaded'}`);
-      console.log(`   Facebook OAuth: ${process.env.FACEBOOK_APP_ID ? 'âœ… configured' : 'âš ï¸ not configured'}`);
+      console.log(`   Directory generator: ${dirModule ? '[OK]' : '[!] not loaded'}`);
+      console.log(`   Facebook OAuth: ${process.env.FACEBOOK_APP_ID ? '[OK] configured' : '[!] not configured'}`);
       console.log(`   Facebook Graph API version: ${FB_GRAPH_VERSION}`);
-      console.log(`   iframe embedding: âœ… allowed (Blogspot-safe)`);
+      console.log(`   iframe embedding: [OK] allowed (Blogspot-safe)`);
     });
   } catch (e) {
-    console.error('âŒ Boot failed:', e.message);
+    console.error('[X] Boot failed:', e.message);
     process.exit(1);
   }
 }
-
-// === SEO ROUTE REGISTRATION (MUST BE AFTER APP IS CREATED) ===
-// ============================================================
 
 boot();
 
