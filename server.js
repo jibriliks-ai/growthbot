@@ -1139,6 +1139,11 @@ registerSeoRoutes(app, requireApiKey);
   }
 }
 
+// === SEO ROUTE REGISTRATION (MUST BE AFTER APP IS CREATED) ===
+import { registerSeoRoutes } from './seoAuditor.js';
+registerSeoRoutes(app, requireApiKey);
+// ============================================================
+
 boot();
 
 process.on('SIGTERM', () => { process.exit(0); });
