@@ -71,7 +71,6 @@ try {registerBacklinkRoutes(app, requireApiKey);
 } catch (e) {
   console.warn('âš ï¸  directoryGenerator.js not available â€” directory feature disabled');
 }
-registerSeoRoutes(app, requireApiKey);
 import { registerSeoRoutes } from './seoAuditor.js';
 // ============================================================
 // CONFIG
@@ -1047,6 +1046,8 @@ app.post('/api/cron/reviews', requireCronSecret, async (req, res) => {
 // TRACKED LINKS (4-in-1 bot feedback loop)
 // ============================================================
 registerTrackedLinkRoutes(app, requireApiKey);
+registerBacklinkRoutes(app, requireApiKey);
+registerSeoRoutes(app, requireApiKey);
 registerDirectoryRoutes(app, requireApiKey);
 // ============================================================
 // SMART LINK
